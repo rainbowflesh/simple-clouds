@@ -11,6 +11,7 @@ import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.CloudMode;
 import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
 import dev.nonamecrackers2.simpleclouds.client.cloud.spawning.ClientSideCloudSpawningManager;
+import dev.nonamecrackers2.simpleclouds.client.config.SimpleCloudsClientConfigListeners;
 import dev.nonamecrackers2.simpleclouds.client.command.ClientCloudCommandHelper;
 import dev.nonamecrackers2.simpleclouds.client.command.profiling.ProfilingCommands;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
@@ -60,259 +61,257 @@ import nonamecrackers2.crackerslib.common.command.ConfigCommandBuilder;
 import nonamecrackers2.crackerslib.common.config.preset.ConfigPreset;
 import nonamecrackers2.crackerslib.common.config.preset.RegisterConfigPresetsEvent;
 
-public class SimpleCloudsClientEvents
-{
-	public static void registerOverlays(RegisterGuiLayersEvent event)
-	{
-		event.registerBelow(VanillaGuiLayers.DEBUG_OVERLAY, SimpleCloudsMod.id("simple_clouds_debug"), SimpleCloudsDebugOverlayRenderer::render);
+public class SimpleCloudsClientEvents {
+	public static void registerOverlays(RegisterGuiLayersEvent event) {
+		event.registerBelow(VanillaGuiLayers.DEBUG_OVERLAY, SimpleCloudsMod.id("simple_clouds_debug"),
+				SimpleCloudsDebugOverlayRenderer::render);
 	}
-	
-	public static void registerReloadListeners(RegisterClientReloadListenersEvent event)
-	{
+
+	public static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
 		CloudTypeDataManager manager = ClientSideCloudTypeManager.getInstance().getClientSideDataManager();
 		event.registerReloadListener(manager);
 		ClientSideCloudSpawningManager.optionalInitializeOnClient(manager);
 		event.registerReloadListener(ClientSideCloudSpawningManager.getClientInstance());
 		SimpleCloudsRenderer.initialize(CloudsRendererSettings.DEFAULT);
-		event.registerReloadListener((ResourceManagerReloadListener)(m -> {
+		event.registerReloadListener((ResourceManagerReloadListener) (m -> {
 			ComputeShader.destroyCompiledShaders();
 		}));
-		event.registerReloadListener(SimpleCloudsCompatHelper.getRendererReloadListener(SimpleCloudsRenderer.getInstance()));
+		event.registerReloadListener(
+				SimpleCloudsCompatHelper.getRendererReloadListener(SimpleCloudsRenderer.getInstance()));
 		CloudPreviewerScreen.addCloudMeshListener(event);
 	}
-	
-	public static void registerConfigMenu(RegisterConfigScreensEvent event)
-	{
-		event.builder(ConfigHomeScreen.builder(ImageTitle.ofMod(SimpleCloudsMod.MODID, 192, 96, 1.0F)).crackersDefault("https://github.com/nonamecrackers2/simple-clouds").build(SimpleCloudsConfigScreen::new))
+
+	public static void registerConfigMenu(RegisterConfigScreensEvent event) {
+		event.builder(ConfigHomeScreen.builder(ImageTitle.ofMod(SimpleCloudsMod.MODID, 192, 96, 1.0F))
+				.crackersDefault("https://github.com/nonamecrackers2/simple-clouds")
+				.build(SimpleCloudsConfigScreen::new))
 				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC)
 				.addSpec(ModConfig.Type.COMMON, SimpleCloudsConfig.COMMON_SPEC)
 				.addSpec(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC).register();
 	}
-	
-	public static void registerConfigMenuButton(ConfigMenuButtonEvent event)
-	{
+
+	public static void registerConfigMenuButton(ConfigMenuButtonEvent event) {
 		event.defaultButtonWithSingleCharacter('S', 0xFFADF7FF);
 	}
-	
-	public static void registerClientPresets(RegisterConfigPresetsEvent event)
-	{
-		event.registerPreset(ModConfig.Type.CLIENT, ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.medium"))
-				.setDescription(Component.translatable("simpleclouds.config.preset.medium.description"))
-				.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 10)
-				.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.STATIC)
-				.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.MEDIUM)
-				.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500).build());
-		event.registerPreset(ModConfig.Type.CLIENT, ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.low"))
-				.setDescription(Component.translatable("simpleclouds.config.preset.low.description"))
-				.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
-				.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
-				.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
-				.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500)
-				.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
-		event.registerPreset(ModConfig.Type.CLIENT, ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.ultra_low"))
-				.setDescription(Component.translatable("simpleclouds.config.preset.ultra_low.description"))
-				.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
-				.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
-				.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
-				.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.renderStormFog, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 1000)
-				.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
-		event.registerPreset(ModConfig.Type.CLIENT, ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.classic_style"))
-				.setDescription(Component.translatable("simpleclouds.config.preset.classic_style.description"))
-				.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.cubeNormals, true)
-				.setPreset(SimpleCloudsConfig.CLIENT.shadedClouds, false)
-				.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false).build());
+
+	public static void registerClientPresets(RegisterConfigPresetsEvent event) {
+		event.registerPreset(ModConfig.Type.CLIENT,
+				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.medium"))
+						.setDescription(Component.translatable("simpleclouds.config.preset.medium.description"))
+						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 10)
+						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.STATIC)
+						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.MEDIUM)
+						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500).build());
+		event.registerPreset(ModConfig.Type.CLIENT,
+				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.low"))
+						.setDescription(Component.translatable("simpleclouds.config.preset.low.description"))
+						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
+						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
+						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
+						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500)
+						.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
+		event.registerPreset(ModConfig.Type.CLIENT,
+				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.ultra_low"))
+						.setDescription(Component.translatable("simpleclouds.config.preset.ultra_low.description"))
+						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
+						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
+						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
+						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.renderStormFog, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 1000)
+						.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
+		event.registerPreset(ModConfig.Type.CLIENT,
+				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.classic_style"))
+						.setDescription(Component.translatable("simpleclouds.config.preset.classic_style.description"))
+						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.cubeNormals, true)
+						.setPreset(SimpleCloudsConfig.CLIENT.shadedClouds, false)
+						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false).build());
 	}
-	
+
 	@SubscribeEvent
-	public static void registerClientCommands(RegisterClientCommandsEvent event)
-	{
-		ConfigCommandBuilder.builder(event.getDispatcher(), "simpleclouds").addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC).register();
+	public static void registerClientCommands(RegisterClientCommandsEvent event) {
+		ConfigCommandBuilder.builder(event.getDispatcher(), "simpleclouds")
+				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC).register();
 		ClientCloudCommandHelper.register(event.getDispatcher());
 		ProfilingCommands.register(event.getDispatcher());
 	}
-	
+
 	@SubscribeEvent
-	public static void onAddConfigOptionToMenu(AddConfigEntryToMenuEvent event)
-	{
-		if (event.getModId().equals(SimpleCloudsMod.MODID) && event.getType() == ModConfig.Type.CLIENT)
-		{
-			if (event.isValue(SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup) || event.isValue(SimpleCloudsConfig.CLIENT.showVivecraftNotice))
+	public static void onAddConfigOptionToMenu(AddConfigEntryToMenuEvent event) {
+		if (event.getModId().equals(SimpleCloudsMod.MODID) && event.getType() == ModConfig.Type.CLIENT) {
+			if (event.isValue(SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup)
+					|| event.isValue(SimpleCloudsConfig.CLIENT.showVivecraftNotice))
 				event.setCanceled(true);
-			if (ClientCloudManager.isAvailableServerSide())
-			{
-				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudHeight) 
-						|| event.isValue(SimpleCloudsConfig.CLIENT.speedModifier) 
-						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudMode) 
-						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType) 
-						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed) 
+			if (ClientCloudManager.isRemoteServerAvailable()) {
+				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudHeight)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.speedModifier)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.whitelistAsBlacklist)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) 
-				{
+						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) {
+					event.setCanceled(true);
+				}
+			} else if (ClientCloudManager.isAvailableServerSide()) {
+				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.whitelistAsBlacklist)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) {
 					event.setCanceled(true);
 				}
 			}
-			if (!SimpleCloudsMod.dhLoaded())
-			{
-				if (event.isValue(SimpleCloudsConfig.CLIENT.distantShadows) || event.isValue(SimpleCloudsConfig.CLIENT.shadowDistance))
+			if (!SimpleCloudsMod.dhLoaded()) {
+				if (event.isValue(SimpleCloudsConfig.CLIENT.distantShadows)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.shadowDistance))
 					event.setCanceled(true);
 			}
 		}
 	}
-	
+
 	@SubscribeEvent
-	public static void onLevelLoad(LevelEvent.Load event)
-	{
+	public static void onLevelLoad(LevelEvent.Load event) {
 		if (event.getLevel().isClientSide())
 			SimpleCloudsRenderer.getInstance().getWorldEffectsManager().reset();
 	}
-	
+
 	@SubscribeEvent
-	public static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event)
-	{
+	public static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
 		CloudManager.get(event.getPlayer().level()).onPlayerJoin(event.getPlayer());
+		SimpleCloudsClientConfigListeners.syncSingleplayerConfig();
 		SimpleCloudsRenderer.getInstance().requestReload();
 	}
-	
+
 	@SubscribeEvent
-	public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event)
-	{
+	public static void onClientDisconnect(ClientPlayerNetworkEvent.LoggingOut event) {
 		ClientSideCloudTypeManager.getInstance().clearSynced();
 		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().reset();
 	}
-	
+
 	@SubscribeEvent
-	public static void modifyFog(ViewportEvent.RenderFog event)
-	{
-		if (event.getMode() == FogMode.FOG_TERRAIN && Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE)
-		{
-			if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.OFF)
-			{
+	public static void modifyFog(ViewportEvent.RenderFog event) {
+		if (event.getMode() == FogMode.FOG_TERRAIN
+				&& Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
+			if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.OFF) {
 				FogRenderer.setupNoFog();
 				return;
 			}
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();
-			float partialTick = (float)event.getPartialTick();
+			float partialTick = (float) event.getPartialTick();
 			float storminess = Mth.sqrt(effects.getDarkenFactor(partialTick, 2.0F));
 			RenderSystem.setShaderFogStart(RenderSystem.getShaderFogStart() * storminess);
 		}
 	}
-	
+
 	@SubscribeEvent
-	public static void modifyFogColor(ViewportEvent.ComputeFogColor event)
-	{
-		if (SimpleCloudsConfig.CLIENT.fogMode.get() != FogRenderMode.OFF && Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE)
-		{
+	public static void modifyFogColor(ViewportEvent.ComputeFogColor event) {
+		if (SimpleCloudsConfig.CLIENT.fogMode.get() != FogRenderMode.OFF
+				&& Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();
-			float partialTick = (float)event.getPartialTick();
+			float partialTick = (float) event.getPartialTick();
 			Color finalCol = effects.calculateFogColor(event.getRed(), event.getGreen(), event.getBlue(), partialTick);
-			event.setRed((float)finalCol.getRed() / 255.0F);
-			event.setGreen((float)finalCol.getGreen() / 255.0F);
-			event.setBlue((float)finalCol.getBlue() / 255.0F);
+			event.setRed((float) finalCol.getRed() / 255.0F);
+			event.setGreen((float) finalCol.getGreen() / 255.0F);
+			event.setBlue((float) finalCol.getBlue() / 255.0F);
 		}
 	}
-	
+
 	@SubscribeEvent
-	public static void onRenderDebugOverlay(CustomizeGuiOverlayEvent.DebugText event)
-	{
+	public static void onRenderDebugOverlay(CustomizeGuiOverlayEvent.DebugText event) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.getDebugOverlay().showDebugScreen())
-		{
+		if (mc.getDebugOverlay().showDebugScreen()) {
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			List<String> text = event.getRight();
 			text.add("");
 			text.add(ChatFormatting.GREEN + SimpleCloudsMod.MODID + ": " + SimpleCloudsMod.getModVersion());
 			text.add(renderer.getClientCloudManagerString());
-			if (SimpleCloudsRenderer.canRenderInDimension(mc.level))
-			{
+			if (SimpleCloudsRenderer.canRenderInDimension(mc.level)) {
 				CloudMeshGenerator generator = renderer.getMeshGenerator();
-				
+
 				var meshGenResult = generator.getMeshGenStatus();
 				CloudMeshGenerator.MeshGenStatus opaqueStatus = meshGenResult.getLeft();
 				CloudMeshGenerator.MeshGenStatus transparentStatus = meshGenResult.getRight();
-				text.add((opaqueStatus.isErroneous() ? ChatFormatting.RED : "") + "Mesh status opaque: " + opaqueStatus.getName());
-				text.add((transparentStatus.isErroneous() ? ChatFormatting.RED : "") + "Mesh status transparent: " + transparentStatus.getName());
-				
-				String opaqueGeomInfo = humanReadableByteCountSI(generator.getOpaqueBufferBytesUsed()) + "/" + humanReadableByteCountSI(generator.getOpaqueBufferSize());
-				String transparentGeomInfo = humanReadableByteCountSI(generator.getTransparentBufferBytesUsed()) + "/" + humanReadableByteCountSI(generator.getTransparentBufferSize());
+				text.add((opaqueStatus.isErroneous() ? ChatFormatting.RED : "") + "Mesh status opaque: "
+						+ opaqueStatus.getName());
+				text.add((transparentStatus.isErroneous() ? ChatFormatting.RED : "") + "Mesh status transparent: "
+						+ transparentStatus.getName());
+
+				String opaqueGeomInfo = humanReadableByteCountSI(generator.getOpaqueBufferBytesUsed()) + "/"
+						+ humanReadableByteCountSI(generator.getOpaqueBufferSize());
+				String transparentGeomInfo = humanReadableByteCountSI(generator.getTransparentBufferBytesUsed()) + "/"
+						+ humanReadableByteCountSI(generator.getTransparentBufferSize());
 				text.add("O: " + opaqueGeomInfo + " | T: " + transparentGeomInfo);
-				
+
 				int interval = generator.getMeshGenInterval();
 				text.add("Mesh gen frames: " + interval + "; Effective FPS: " + mc.getFps() / interval);
-				
+
 				text.add("Frustum culling: " + (SimpleCloudsConfig.CLIENT.frustumCulling.get() ? "ON" : "OFF"));
-				
+
 				boolean flag = ClientCloudManager.isAvailableServerSide();
 				text.add("Server-side: " + (flag ? ChatFormatting.GREEN : ChatFormatting.RED) + flag);
-				
+
 				CloudMode mode = renderer.getSettings().getCurrentCloudMode();
 				text.add("Cloud mode: " + mode);
-				
-				if (generator instanceof SingleRegionCloudMeshGenerator singleGenerator)
-				{
-					text.add("Fade start: " + singleGenerator.getFadeStart() + "; Fade end: " + singleGenerator.getFadeEnd());
+
+				if (generator instanceof SingleRegionCloudMeshGenerator singleGenerator) {
+					text.add("Fade start: " + singleGenerator.getFadeStart() + "; Fade end: "
+							+ singleGenerator.getFadeEnd());
 					if (singleGenerator.getCloudType() instanceof CloudType type)
 						text.add("Cloud type: " + type.id());
-				}
-				else if (generator instanceof MultiRegionCloudMeshGenerator multiRegion)
-				{
+				} else if (generator instanceof MultiRegionCloudMeshGenerator multiRegion) {
 					text.add("Cloud types: " + ClientSideCloudTypeManager.getInstance().getCloudTypes().size());
-					int formationCount =  multiRegion.getCloudFormationCount();
-					String formationText = "Cloud formations: " + formationCount + "/" + MultiRegionCloudMeshGenerator.MAX_CLOUD_FORMATIONS;
+					int formationCount = multiRegion.getCloudFormationCount();
+					String formationText = "Cloud formations: " + formationCount + "/"
+							+ MultiRegionCloudMeshGenerator.MAX_CLOUD_FORMATIONS;
 					if (formationCount > MultiRegionCloudMeshGenerator.MAX_CLOUD_FORMATIONS)
 						formationText = ChatFormatting.RED + formationText;
 					text.add(formationText);
 				}
-				
-				if (mc.level != null)
-				{
+
+				if (mc.level != null) {
 					CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
-					
+
 					text.add("Speed: " + round(manager.getCloudSpeed()) + "; Height: " + manager.getCloudHeight());
-					text.add("Scroll XYZ: " + round(manager.getScrollX()) + " / " + round(manager.getScrollY()) + " / " + round(manager.getScrollZ()));
-					
+					text.add("Scroll XYZ: " + round(manager.getScrollX()) + " / " + round(manager.getScrollY()) + " / "
+							+ round(manager.getScrollZ()));
+
 					WorldEffects effects = renderer.getWorldEffectsManager();
 					CloudType atCamera = effects.getCloudTypeAtCamera();
 					if (atCamera != null)
 						text.add(atCamera.id().toString());
 					else
 						text.add("UNKNOWN");
-					
-					String vanillaWeatherOverrideAppend = manager.shouldUseVanillaWeather() ? " (Vanilla Weather Enabled)" : "";
+
+					String vanillaWeatherOverrideAppend = manager.shouldUseVanillaWeather()
+							? " (Vanilla Weather Enabled)"
+							: "";
 					text.add("Storminess: " + round(effects.getStorminessAtCamera()) + vanillaWeatherOverrideAppend);
 				}
-			}
-			else
-			{
+			} else {
 				text.add(ChatFormatting.RED + "Disabled in this dimension");
 			}
 		}
 	}
-	
-	//https://stackoverflow.com/questions/3758606/how-can-i-convert-byte-size-into-a-human-readable-format-in-java#:~:text=public%20static%20String%20humanReadableByteCountSI,1000.0%2C%20ci.current())%3B%0A%7D
-	private static String humanReadableByteCountSI(long bytes)
-	{
+
+	// https://stackoverflow.com/questions/3758606/how-can-i-convert-byte-size-into-a-human-readable-format-in-java#:~:text=public%20static%20String%20humanReadableByteCountSI,1000.0%2C%20ci.current())%3B%0A%7D
+	private static String humanReadableByteCountSI(long bytes) {
 		if (-1000 < bytes && bytes < 1000)
 			return bytes + " B";
 		CharacterIterator ci = new StringCharacterIterator("kMGTPE");
-		while (bytes <= -999_950 || bytes >= 999_950)
-		{
+		while (bytes <= -999_950 || bytes >= 999_950) {
 			bytes /= 1000;
 			ci.next();
 		}
 		return String.format("%.1f %cB", bytes / 1000.0, ci.current());
 	}
-	
-	private static float round(float val)
-	{
-		return (float)Math.round(val * 100.0F) / 100.0F;
+
+	private static float round(float val) {
+		return (float) Math.round(val * 100.0F) / 100.0F;
 	}
 }

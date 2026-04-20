@@ -14,67 +14,61 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 
-public class ClientCloudManager extends CloudManager<ClientLevel>
-{
+public class ClientCloudManager extends CloudManager<ClientLevel> {
 	private boolean receivedSync;
-	
-	public ClientCloudManager(ClientLevel level)
-	{
-		super(level, ClientSideCloudTypeManager.getInstance(), ClientSideCloudSpawningManager.getClientInstance()::getConfig, ClientCloudGenerator::new);
+
+	public ClientCloudManager(ClientLevel level) {
+		super(level, ClientSideCloudTypeManager.getInstance(),
+				ClientSideCloudSpawningManager.getClientInstance()::getConfig, ClientCloudGenerator::new);
 	}
-	
+
 	@Override
-	public ClientCloudGenerator getCloudGenerator()
-	{
-		return (ClientCloudGenerator)super.getCloudGenerator();
+	public ClientCloudGenerator getCloudGenerator() {
+		return (ClientCloudGenerator) super.getCloudGenerator();
 	}
-	
+
 	@Override
-	public CloudMode getCloudMode()
-	{
+	public CloudMode getCloudMode() {
 		if (this.receivedSync && SimpleCloudsConfig.SERVER_SPEC.isLoaded())
 			return SimpleCloudsConfig.SERVER.cloudMode.get();
 		else
 			return SimpleCloudsConfig.CLIENT.cloudMode.get();
 	}
-	
+
 	@Override
-	public String getSingleModeCloudTypeRawId()
-	{
+	public String getSingleModeCloudTypeRawId() {
 		if (this.receivedSync && SimpleCloudsConfig.SERVER_SPEC.isLoaded())
 			return SimpleCloudsConfig.SERVER.singleModeCloudType.get();
 		else
 			return SimpleCloudsConfig.CLIENT.singleModeCloudType.get();
 	}
-	
+
 	@Override
-	protected void resetVanillaWeather()
-	{
+	protected void resetVanillaWeather() {
 		this.level.setRainLevel(0.0F);
 		this.level.setThunderLevel(0.0F);
 	}
-	
+
 	@Override
-	protected void tickLightning()
-	{
+	protected void tickLightning() {
 		if (this.receivedSync)
 			return;
-		
+
 		super.tickLightning();
 	}
-	
+
 	@Override
-	protected void attemptToSpawnLightning()
-	{
+	protected void attemptToSpawnLightning() {
 		Minecraft mc = Minecraft.getInstance();
 		Camera camera = mc.gameRenderer.getMainCamera();
 		int camX = camera.getBlockPosition().getX();
 		int camZ = camera.getBlockPosition().getZ();
-		for (int i = 0; i < SimpleCloudsConstants.LIGHTNING_SPAWN_ATTEMPTS; i++)
-		{
-			int x = this.random.nextInt(SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER) - SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER / 2 + camX;
-			int z = this.random.nextInt(SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER) - SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER / 2 + camZ;
-			var info = this.getCloudTypeAtWorldPos((float)x + 0.5F, (float)z + 0.5F);
+		for (int i = 0; i < SimpleCloudsConstants.LIGHTNING_SPAWN_ATTEMPTS; i++) {
+			int x = this.random.nextInt(SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER)
+					- SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER / 2 + camX;
+			int z = this.random.nextInt(SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER)
+					- SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER / 2 + camZ;
+			var info = this.getCloudTypeAtWorldPos((float) x + 0.5F, (float) z + 0.5F);
 			float fade = info.getRight();
 			CloudType type = info.getLeft();
 			if (!isValidLightning(type, fade, this.random))
@@ -83,51 +77,50 @@ public class ClientCloudManager extends CloudManager<ClientLevel>
 			break;
 		}
 	}
-	
+
 	@Override
-	protected void spawnLightning(CloudType type, float fade, int x, int z, boolean soundOnly)
-	{
-		int y = (int)(type.stormStart() * SimpleCloudsConstants.CLOUD_SCALE + this.getCloudHeight());
+	protected void spawnLightning(CloudType type, float fade, int x, int z, boolean soundOnly) {
+		int y = (int) this.getStormStartHeight(type);
 		float spreadnessFactor = this.random.nextFloat();
 		float length = spreadnessFactor * 300.0F + 200.0F;
 		float minPitch = 20.0F + spreadnessFactor * 40.0F;
 		float maxPitch = 80.0F + spreadnessFactor * 10.0F;
-		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(new BlockPos(x, y, z), soundOnly, this.random.nextInt(), 4, 2, length, 20.0F, minPitch, maxPitch);
+		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(new BlockPos(x, y, z), soundOnly,
+				this.random.nextInt(), 4, 2, length, 20.0F, minPitch, maxPitch);
 	}
-	
+
 	@Override
-	protected boolean determineUseVanillaWeather()
-	{
+	protected boolean determineUseVanillaWeather() {
 		return !this.receivedSync || super.determineUseVanillaWeather();
 	}
-	
+
 	@Override
-	public float getCloudSpeed()
-	{
+	public float getCloudSpeed() {
 		return this.receivedSync ? super.getCloudSpeed() : SimpleCloudsConfig.CLIENT.speedModifier.get().floatValue();
 	}
-	
+
 	@Override
-	public int getCloudHeight()
-	{
+	public int getCloudHeight() {
 		return this.receivedSync ? super.getCloudHeight() : SimpleCloudsConfig.CLIENT.cloudHeight.get();
 	}
-	
-	public void setReceivedSync()
-	{
+
+	public void setReceivedSync() {
 		this.receivedSync = true;
 	}
-	
-	public boolean hasReceivedSync()
-	{
+
+	public boolean hasReceivedSync() {
 		return this.receivedSync;
 	}
-	
-	public static boolean isAvailableServerSide()
-	{
+
+	public static boolean isRemoteServerAvailable() {
+		Minecraft mc = Minecraft.getInstance();
+		return isAvailableServerSide() && mc.getSingleplayerServer() == null;
+	}
+
+	public static boolean isAvailableServerSide() {
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.level != null)
-			return ((ClientCloudManager)CloudManager.get(mc.level)).hasReceivedSync();
+			return ((ClientCloudManager) CloudManager.get(mc.level)).hasReceivedSync();
 		else
 			return false;
 	}

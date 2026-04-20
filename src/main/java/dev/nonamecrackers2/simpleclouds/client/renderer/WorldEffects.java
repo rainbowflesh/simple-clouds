@@ -52,8 +52,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import nonamecrackers2.crackerslib.common.compat.CompatHelper;
 
-public class WorldEffects
-{
+public class WorldEffects {
 	public static final float EFFECTS_STRENGTH_MULTIPLER = 1.2F;
 	public static final int RAIN_SCAN_WIDTH = 32;
 	public static final int RAIN_SCAN_HEIGHT = 8;
@@ -66,7 +65,7 @@ public class WorldEffects
 			.add(0xFFF0FFB4, 10) // Yellow
 			.add(0xFFFFB4BE, 5) // Red
 			.build();
-//	private static final int RAINY_WATER_COLOR = 0xFF303030;
+	// private static final int RAINY_WATER_COLOR = 0xFF303030;
 	private final Minecraft mc;
 	private final SimpleCloudsRenderer renderer;
 	private @Nullable CloudType typeAtCamera;
@@ -79,61 +78,53 @@ public class WorldEffects
 	private final Map<Biome.Precipitation, List<PrecipitationQuad>> quadsByPrecipitation = Maps.newHashMap();
 	private final RandomSource random = RandomSource.create();
 	private int rainDelay = 20;
-	
-	protected WorldEffects(Minecraft mc, SimpleCloudsRenderer renderer)
-	{
+
+	protected WorldEffects(Minecraft mc, SimpleCloudsRenderer renderer) {
 		this.mc = mc;
 		this.renderer = renderer;
 	}
-	
-	public void renderPost(Matrix4f camMat, float partialTick, double camX, double camY, double camZ, float scale)
-	{
+
+	public void renderPost(Matrix4f camMat, float partialTick, double camX, double camY, double camZ, float scale) {
 		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
-		Pair<CloudType, Float> result = manager.getCloudTypeAtWorldPos((float)camX, (float)camZ);
+		Pair<CloudType, Float> result = manager.getCloudTypeAtWorldPos((float) camX, (float) camZ);
 		CloudType type = result.getLeft();
 		this.typeAtCamera = type;
 		this.fadeAtCamera = result.getRight();
-		
-		if (!manager.shouldUseVanillaWeather() && type.weatherType().causesDarkening())
-		{
-			float verticalFade = 1.0F - Mth.clamp(((float)camY - (type.stormStart() * SimpleCloudsConstants.CLOUD_SCALE + manager.getCloudHeight())) / SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F, 1.0F);
+
+		if (!manager.shouldUseVanillaWeather() && type.weatherType().causesDarkening()) {
+			float verticalFade = 1.0F - Mth.clamp(
+					((float) camY - manager.getStormStartHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F,
+					1.0F);
 			float factor = Mth.clamp((1.0F - result.getRight()) * 3.0F, 0.0F, 1.0F);
 			this.storminessAtCamera = type.storminess() * factor * verticalFade;
-		}
-		else
-		{
+		} else {
 			this.storminessAtCamera = 0.0F;
 		}
-		
-		if (!manager.shouldUseVanillaWeather())
-		{
-			float rainLevel = manager.getRainLevel((float)camX, (float)camY, (float)camZ);
+
+		if (!manager.shouldUseVanillaWeather()) {
+			float rainLevel = manager.getRainLevel((float) camX, (float) camY, (float) camZ);
 			this.mc.level.setRainLevel(rainLevel);
 		}
 	}
-	
-	public void renderRain(LightTexture texture, float partialTick, double camX, double camY, double camZ)
-	{
+
+	public void renderRain(LightTexture texture, float partialTick, double camX, double camY, double camZ) {
 		Tesselator tesselator = Tesselator.getInstance();
 		RenderSystem.depthMask(Minecraft.useShaderTransparency() || CompatHelper.areShadersRunning());
 		RenderSystem.colorMask(true, true, true, true);
 		RenderSystem.enableBlend();
 		RenderSystem.enableDepthTest();
-		
-		if (!this.quadsByPrecipitation.isEmpty())
-		{
+
+		if (!this.quadsByPrecipitation.isEmpty()) {
 			texture.turnOnLightLayer();
 			RenderSystem.defaultBlendFunc();
 			RenderSystem.disableCull();
 			RenderSystem.setShader(GameRenderer::getParticleShader);
-			for (var entry : this.quadsByPrecipitation.entrySet())
-			{
+			for (var entry : this.quadsByPrecipitation.entrySet()) {
 				RenderSystem.setShaderTexture(0, PrecipitationQuad.TEXTURE_BY_PRECIPITATION.get(entry.getKey()));
 				BufferBuilder builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
 				PoseStack stack = new PoseStack();
 				stack.translate(-camX, -camY, -camZ);
-				for (PrecipitationQuad quad : entry.getValue())
-				{
+				for (PrecipitationQuad quad : entry.getValue()) {
 					stack.pushPose();
 					int packedLight = LevelRenderer.getLightColor(this.mc.level, quad.getBlockPos());
 					quad.render(stack, builder, partialTick, packedLight, camX, camY, camZ);
@@ -145,31 +136,27 @@ public class WorldEffects
 			}
 			RenderSystem.enableCull();
 		}
-		
+
 		RenderSystem.disableBlend();
 		RenderSystem.defaultBlendFunc();
 	}
-	
-	public boolean hasLightningToRender()
-	{
+
+	public boolean hasLightningToRender() {
 		return !this.lightningBolts.isEmpty();
 	}
-	
-	public void forLightning(Consumer<LightningBolt> consumer)
-	{
+
+	public void forLightning(Consumer<LightningBolt> consumer) {
 		this.lightningBolts.forEach(consumer);
 	}
-	
-	public void renderLightning(float partialTick, double camX, double camY, double camZ)
-	{
+
+	public void renderLightning(float partialTick, double camX, double camY, double camZ) {
 		Tesselator tesselator = Tesselator.getInstance();
 		RenderSystem.depthMask(Minecraft.useShaderTransparency() || CompatHelper.areShadersRunning());
 		RenderSystem.colorMask(true, true, true, true);
 		RenderSystem.enableBlend();
 		RenderSystem.enableDepthTest();
-		
-		if (this.hasLightningToRender())
-		{
+
+		if (this.hasLightningToRender()) {
 			float currentFogStart = RenderSystem.getShaderFogStart();
 			RenderSystem.setShaderFogStart(Float.MAX_VALUE);
 			RenderSystem.applyModelViewMatrix();
@@ -179,12 +166,13 @@ public class WorldEffects
 			PoseStack stack = new PoseStack();
 			stack.pushPose();
 			stack.translate(-camX, -camY, -camZ);
-			for (LightningBolt bolt : this.lightningBolts)
-			{
-				if (bolt.getPosition().distance((float)camX, (float)camY, (float)camZ) <= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF && bolt.getFade(partialTick) > 0.5F)
+			for (LightningBolt bolt : this.lightningBolts) {
+				if (bolt.getPosition().distance((float) camX, (float) camY,
+						(float) camZ) <= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF && bolt.getFade(partialTick) > 0.5F)
 					this.mc.level.setSkyFlashTime(2);
-				float dist = bolt.getPosition().distance((float)camX, (float)camY, (float)camZ);
-				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, this.renderer.getFadeFactorForDistance(dist));
+				float dist = bolt.getPosition().distance((float) camX, (float) camY, (float) camZ);
+				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F,
+						this.renderer.getFadeFactorForDistance(dist));
 			}
 			stack.popPose();
 			MeshData meshData = builder.build();
@@ -193,86 +181,88 @@ public class WorldEffects
 			RenderSystem.applyModelViewMatrix();
 			RenderSystem.setShaderFogStart(currentFogStart);
 		}
-		
+
 		RenderSystem.disableBlend();
 		RenderSystem.defaultBlendFunc();
 	}
-	
-	public void spawnLightning(BlockPos pos, boolean onlySound, int seed, int depth, int branchCount, float maxBranchLength, float maxWidth, float minimumPitch, float maximumPitch)
-	{
+
+	public void spawnLightning(BlockPos pos, boolean onlySound, int seed, int depth, int branchCount,
+			float maxBranchLength, float maxWidth, float minimumPitch, float maximumPitch) {
 		Camera camera = this.mc.gameRenderer.getMainCamera();
 		Vec3 cameraPos = camera.getPosition();
-		Vector3f vec = new Vector3f((float)pos.getX() + 0.5F, (float)pos.getY() + 0.5F, (float)pos.getZ() + 0.5F);
-		
+		Vector3f vec = new Vector3f((float) pos.getX() + 0.5F, (float) pos.getY() + 0.5F, (float) pos.getZ() + 0.5F);
+
 		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
-		if (manager.getCloudMode() == CloudMode.AMBIENT) //Prevent lightning from spawning where no clouds are using AMBIENT mode
+		if (manager.getCloudMode() == CloudMode.AMBIENT) // Prevent lightning from spawning where no clouds are using
+															// AMBIENT mode
 		{
-			float dist = Vector2f.distance(vec.x, vec.z, (float)cameraPos.x, (float)cameraPos.z);
+			float dist = Vector2f.distance(vec.x, vec.z, (float) cameraPos.x, (float) cameraPos.z);
 			if (dist < SimpleCloudsConstants.AMBIENT_MODE_FADE_END)
 				return;
 		}
-		
+
 		SoundEvent sound = SimpleCloudsSounds.DISTANT_THUNDER.get();
 		int attenuation = SimpleCloudsConfig.CLIENT.thunderAttenuationDistance.get();
-		float dist = vec.distance((float)cameraPos.x, (float)cameraPos.y, (float)cameraPos.z);
-		if (dist < SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF)
-		{
+		float dist = vec.distance((float) cameraPos.x, (float) cameraPos.y, (float) cameraPos.z);
+		if (dist < SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF) {
 			sound = SimpleCloudsSounds.CLOSE_THUNDER.get();
 			attenuation = SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF;
 		}
-		float fade = 1.0F - Math.min(Math.max(dist - (float)SimpleCloudsConstants.THUNDER_PITCH_FULL_DIST, 0.0F) / ((float)SimpleCloudsConstants.THUNDER_PITCH_MINIMUM_DIST - (float)SimpleCloudsConstants.THUNDER_PITCH_FULL_DIST), 1.0F);
-		RandomSource random = RandomSource.create((long)seed);
-		AdjustableAttenuationSoundInstance instance = new AdjustableAttenuationSoundInstance(sound, SoundSource.WEATHER, 1.0F + this.random.nextFloat() * 4.0F, 0.5F + fade * 0.5F, random, (double)pos.getX() + 0.5D, (float)pos.getY() + 0.5D, (double)pos.getZ() + 0.5D, attenuation);
-		int time = Mth.floor(dist / SimpleCloudsConstants.SOUND_METERS_PER_SECOND) * 20; 
+		float fade = 1.0F - Math.min(Math.max(dist - (float) SimpleCloudsConstants.THUNDER_PITCH_FULL_DIST, 0.0F)
+				/ ((float) SimpleCloudsConstants.THUNDER_PITCH_MINIMUM_DIST
+						- (float) SimpleCloudsConstants.THUNDER_PITCH_FULL_DIST),
+				1.0F);
+		RandomSource random = RandomSource.create((long) seed);
+		AdjustableAttenuationSoundInstance instance = new AdjustableAttenuationSoundInstance(sound, SoundSource.WEATHER,
+				1.0F + this.random.nextFloat() * 4.0F, 0.5F + fade * 0.5F, random, (double) pos.getX() + 0.5D,
+				(float) pos.getY() + 0.5D, (double) pos.getZ() + 0.5D, attenuation);
+		int time = Mth.floor(dist / SimpleCloudsConstants.SOUND_METERS_PER_SECOND) * 20;
 		this.mc.getSoundManager().playDelayed(instance, time);
-		if (!onlySound)
-		{
+		if (!onlySound) {
 			float r = 1.0F;
 			float g = 1.0F;
 			float b = 1.0F;
-			if (SimpleCloudsConfig.CLIENT.lightningColorVariation.get())
-			{
+			if (SimpleCloudsConfig.CLIENT.lightningColorVariation.get()) {
 				int color = LIGHTNING_COLORS.getRandomValue(random).get();
-				r = (float)FastColor.ARGB32.red(color) / 255.0F;
-				g = (float)FastColor.ARGB32.green(color) / 255.0F;
-				b = (float)FastColor.ARGB32.blue(color) / 255.0F;
+				r = (float) FastColor.ARGB32.red(color) / 255.0F;
+				g = (float) FastColor.ARGB32.green(color) / 255.0F;
+				b = (float) FastColor.ARGB32.blue(color) / 255.0F;
 			}
-			this.lightningBolts.add(new LightningBolt(random, vec, depth, branchCount, maxBranchLength, maxWidth, minimumPitch, maximumPitch, r, g, b));
+			this.lightningBolts.add(new LightningBolt(random, vec, depth, branchCount, maxBranchLength, maxWidth,
+					minimumPitch, maximumPitch, r, g, b));
 		}
 	}
-//	
-//	public void modifyLightMapTexture(float partialTick, int pixelX, int pixelY, Vector3f color)
-//	{
-//	}
-	
-	public float getStorminessAtCamera()
-	{
+	//
+	// public void modifyLightMapTexture(float partialTick, int pixelX, int pixelY,
+	// Vector3f color)
+	// {
+	// }
+
+	public float getStorminessAtCamera() {
 		return this.storminessAtCamera;
 	}
-	
-	public void tick()
-	{
+
+	public void tick() {
 		if (this.rainDelay > 0)
 			this.rainDelay--;
-		
+
 		var lightning = this.lightningBolts.iterator();
-		while (lightning.hasNext())
-		{
+		while (lightning.hasNext()) {
 			LightningBolt bolt = lightning.next();
 			if (bolt.isDead())
 				lightning.remove();
 			bolt.tick();
 		}
-		
+
 		float rainIntensity = this.mc.level.getRainLevel(1.0F);
 		BlockPos camPos = this.mc.gameRenderer.getMainCamera().getBlockPosition();
-		float xRot = SimpleCloudsConfig.CLIENT.rainAngle.get().floatValue() * ((float)Math.PI / 180.0F);
+		float xRot = SimpleCloudsConfig.CLIENT.rainAngle.get().floatValue() * ((float) Math.PI / 180.0F);
 		Vector2f direction = CloudManager.get(this.mc.level).calculateWindDirection();
-		float yRot = (float)-Mth.atan2((double)direction.x, (double)direction.y);
-		float xRotCos = Mth.cos(xRot - (float)Math.PI / 2.0F);
-		int xOffset = Mth.floor(Mth.sin(-yRot) * xRotCos * ((float)RAIN_SCAN_WIDTH / 2.0F));
-		int zOffset = Mth.floor(Mth.cos(-yRot) * xRotCos * ((float)RAIN_SCAN_WIDTH / 2.0F));
-		int radius = Mth.floor((float)RAIN_SCAN_WIDTH / 2.0F * (Minecraft.useFancyGraphics() ? 1.0F : 0.5F));
+		float yRot = (float) -Mth.atan2((double) direction.x, (double) direction.y);
+		float xRotCos = Mth.cos(xRot - (float) Math.PI / 2.0F);
+		int xOffset = Mth.floor(Mth.sin(-yRot) * xRotCos * ((float) RAIN_SCAN_WIDTH / 2.0F));
+		int zOffset = Mth.floor(Mth.cos(-yRot) * xRotCos * ((float) RAIN_SCAN_WIDTH / 2.0F));
+		int radius = Mth.floor((float) RAIN_SCAN_WIDTH / 2.0F * (Minecraft.useFancyGraphics() ? 1.0F : 0.5F));
 		int minX = camPos.getX() - radius - xOffset;
 		int minY = camPos.getY() + RAIN_HEIGHT_OFFSET;
 		int minZ = camPos.getZ() - radius - zOffset;
@@ -281,15 +271,11 @@ public class WorldEffects
 		int maxZ = camPos.getZ() + radius - zOffset;
 		AABB box = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
 		Biome biome = this.mc.level.getBiome(camPos).value();
-		if (rainIntensity > 0.0F && biome.hasPrecipitation() && this.rainDelay == 0)
-		{
-			for (int x = minX; x < maxX; x++)
-			{
-				for (int z = minZ; z < maxZ; z++)
-				{
+		if (rainIntensity > 0.0F && biome.hasPrecipitation() && this.rainDelay == 0) {
+			for (int x = minX; x < maxX; x++) {
+				for (int z = minZ; z < maxZ; z++) {
 					int height = this.mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-					for (int y = minY; y < maxY; y++)
-					{
+					for (int y = minY; y < maxY; y++) {
 						if (height > y)
 							continue;
 						BlockPos pos = new BlockPos(x, y, z);
@@ -297,59 +283,53 @@ public class WorldEffects
 						if (precipitation == Biome.Precipitation.NONE)
 							continue;
 						RandomSource blockRandom = RandomSource.create(pos.asLong());
-						if (!this.precipitationQuads.containsKey(pos))
-						{
-							if (blockRandom.nextInt(100) <= 2)
-							{
+						if (!this.precipitationQuads.containsKey(pos)) {
+							if (blockRandom.nextInt(100) <= 2) {
 								float widthModifier = precipitation == Biome.Precipitation.SNOW ? 4.0F : 2.0F;
-								PrecipitationQuad quad = new PrecipitationQuad(precipitation, this.mc.level::clip, pos, xRot + this.random.nextFloat() * 0.1F, yRot + this.random.nextFloat() * 0.1F, 60 + this.random.nextInt(60), rainIntensity * widthModifier);
+								PrecipitationQuad quad = new PrecipitationQuad(precipitation, this.mc.level::clip, pos,
+										xRot + this.random.nextFloat() * 0.1F, yRot + this.random.nextFloat() * 0.1F,
+										60 + this.random.nextInt(60), rainIntensity * widthModifier);
 								this.precipitationQuads.put(pos, quad);
-								this.quadsByPrecipitation.computeIfAbsent(precipitation, p -> Lists.newArrayList()).add(quad);
+								this.quadsByPrecipitation.computeIfAbsent(precipitation, p -> Lists.newArrayList())
+										.add(quad);
 							}
 						}
 					}
 				}
 			}
 		}
-		
+
 		var rain = this.precipitationQuads.entrySet().iterator();
-		while (rain.hasNext())
-		{
+		while (rain.hasNext()) {
 			var entry = rain.next();
 			PrecipitationQuad quad = entry.getValue();
 			BlockPos pos = entry.getKey();
-			if (!box.contains(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) || quad.isDead())
-			{
+			if (!box.contains(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) || quad.isDead()) {
 				rain.remove();
 				this.quadsByPrecipitation.get(quad.getPrecipitation()).remove(quad);
-			}
-			else
-			{
+			} else {
 				quad.tick();
 			}
 		}
-		
+
 		this.storminessSmoothedO = this.storminessSmoothed;
 		this.storminessSmoothed += (this.storminessAtCamera - this.storminessSmoothed) / 25.0F;
 	}
-	
 
-	public Color calculateFogColor(float defaultR, float defaultG, float defaultB, float partialTick)
-	{
+	public Color calculateFogColor(float defaultR, float defaultG, float defaultB, float partialTick) {
 		float lerp = this.getDarkenFactor(partialTick);
 		return hsbLerp(defaultR, defaultG, defaultB, 0.68F, 0.2F, -0.05F, lerp);
 	}
-	
-	public Color calculateSkyColor(float defaultR, float defaultG, float defaultB, float partialTick)
-	{
+
+	public Color calculateSkyColor(float defaultR, float defaultG, float defaultB, float partialTick) {
 		float lerp = this.getDarkenFactor(partialTick);
 		return hsbLerp(defaultR, defaultG, defaultB, 0.63F, 0.1F, 0.05F, lerp);
 	}
-	
-	//TODO: Better lerping
-	private static Color hsbLerp(float r, float g, float b, float targetHue, float targetSaturation, float targetBrightness, float lerp)
-	{
-		float[] hsbFog = Color.RGBtoHSB((int)(r * 255.0F), (int)(g * 255.0F), (int)(b * 255.0F), null);
+
+	// TODO: Better lerping
+	private static Color hsbLerp(float r, float g, float b, float targetHue, float targetSaturation,
+			float targetBrightness, float lerp) {
+		float[] hsbFog = Color.RGBtoHSB((int) (r * 255.0F), (int) (g * 255.0F), (int) (b * 255.0F), null);
 		if (targetHue < hsbFog[0])
 			targetHue += 1.0F;
 		float hue = Mth.lerp(lerp, targetHue, hsbFog[0]);
@@ -357,41 +337,34 @@ public class WorldEffects
 		float bright = Mth.clamp(Mth.lerp(lerp, targetBrightness, hsbFog[2]), 0.0F, 1.0F);
 		return Color.getHSBColor(hue, sat, bright);
 	}
-	
-	public void reset()
-	{
+
+	public void reset() {
 		this.precipitationQuads.clear();
 		this.quadsByPrecipitation.clear();
 		this.rainDelay = 20;
 	}
-	
-	public @Nullable CloudType getCloudTypeAtCamera()
-	{
+
+	public @Nullable CloudType getCloudTypeAtCamera() {
 		return this.typeAtCamera;
 	}
-	
-	public float getFadeRegionAtCamera()
-	{
+
+	public float getFadeRegionAtCamera() {
 		return this.fadeAtCamera;
 	}
-	
-	public float getStorminessSmoothed(float partialTick)
-	{
+
+	public float getStorminessSmoothed(float partialTick) {
 		return Mth.lerp(partialTick, this.storminessSmoothedO, this.storminessSmoothed);
 	}
-	
-	public float getDarkenFactor(float partialTick, float strength)
-	{
+
+	public float getDarkenFactor(float partialTick, float strength) {
 		return Mth.clamp(1.0F - this.getStorminessSmoothed(partialTick) * strength, 0.1F, 1.0F);
 	}
-	
-	public float getDarkenFactor(float partialTick)
-	{
+
+	public float getDarkenFactor(float partialTick) {
 		return this.getDarkenFactor(partialTick, EFFECTS_STRENGTH_MULTIPLER);
 	}
-	
-	public List<LightningBolt> getLightningBolts()
-	{
+
+	public List<LightningBolt> getLightningBolts() {
 		return this.lightningBolts;
 	}
 }
