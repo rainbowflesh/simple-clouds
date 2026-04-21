@@ -184,10 +184,10 @@ public class SimpleCloudsConfig {
 					RestartType.NONE,
 					"How the amount of frames used to generate the entire mesh is calculated. Static will use the 'Frames To Generate Mesh' option. Dynamic will calculate it automatically depending on your FPS. Target FPS will target a certain perceived framerate for mesh generation");
 
-			this.framesToGenerateMesh = this.createRangedIntValue(5, 1, 32, "framesToGenerateMesh", RestartType.NONE,
+			this.framesToGenerateMesh = this.createRangedIntValue(4, 1, 32, "framesToGenerateMesh", RestartType.NONE,
 					"Specifies how many frames it should take to generate the entire cloud mesh. Higher values will improve performance at the cost of stuttery cloud movement");
 
-			this.targetMeshGenFps = this.createRangedIntValue(30, 1, 1000, "targetMeshGenFps", RestartType.NONE,
+			this.targetMeshGenFps = this.createRangedIntValue(24, 1, 480, "targetMeshGenFps", RestartType.NONE,
 					"Used to set the target FPS with the 'Target FPS' option in 'Generation Interval'");
 
 			builder.pop();
