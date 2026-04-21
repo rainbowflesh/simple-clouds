@@ -101,7 +101,7 @@ public class ClientCloudManager extends CloudManager<ClientLevel> {
 
 	@Override
 	public int getCloudHeight() {
-		return this.receivedSync ? super.getCloudHeight() : SimpleCloudsConfig.CLIENT.cloudHeight.get();
+		return this.receivedSync ? super.getCloudHeight() : SimpleCloudsConfig.COMMON.cloudHeight.get();
 	}
 
 	public void setReceivedSync() {

@@ -37,7 +37,6 @@ public class SimpleCloudsConfig {
 
 	public static class ClientConfig extends ConfigHelper {
 		public final ModConfigSpec.ConfigValue<Boolean> showCloudPreviewerInfoPopup;
-		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
 		public final ModConfigSpec.ConfigValue<Double> speedModifier;
 		public final ModConfigSpec.ConfigValue<Integer> framesToGenerateMesh;
 		public final ModConfigSpec.ConfigValue<Boolean> testSidesThatAreOccluded;
@@ -56,6 +55,11 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dimensionWhitelist;
 		public final ModConfigSpec.ConfigValue<Boolean> whitelistAsBlacklist;
 		public final ModConfigSpec.ConfigValue<FogRenderMode> fogMode;
+		public final ModConfigSpec.ConfigValue<Boolean> insideCloudFog;
+		public final ModConfigSpec.ConfigValue<Double> insideCloudFogHorizontalFade;
+		public final ModConfigSpec.ConfigValue<Double> insideCloudFogVerticalFadeDistance;
+		public final ModConfigSpec.ConfigValue<Double> insideCloudFogMaxVisibility;
+		public final ModConfigSpec.ConfigValue<Double> insideCloudFogColorBlend;
 		public final ModConfigSpec.ConfigValue<Boolean> lightningColorVariation;
 		public final ModConfigSpec.ConfigValue<Double> rainAngle;
 		public final ModConfigSpec.ConfigValue<Integer> thunderAttenuationDistance;
@@ -90,10 +94,6 @@ public class SimpleCloudsConfig {
 			this.speedModifier = this.createRangedDoubleValue(1.0D, 0.1D, 32.0D, "clientSideSpeedModifier",
 					RestartType.NONE, "Specifies the movement speed of the clouds");
 
-			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
-					CloudManager.CLOUD_HEIGHT_MAX, "clientSideCloudHeight", RestartType.NONE,
-					"Specifies the lowest Y level any cloud may spawn at");
-
 			this.dimensionWhitelist = this.createListValue(String.class, () -> {
 				return Lists.newArrayList("minecraft:overworld");
 			}, val -> {
@@ -108,6 +108,25 @@ public class SimpleCloudsConfig {
 
 			this.fogMode = this.createEnumValue(FogRenderMode.SCREEN_SPACE, "fogMode", RestartType.NONE,
 					"Specifies the type of world fog that should be used. Each has their own advantages and disadvantages, ranging from visual discrepancies to possible compatibility issues");
+
+			this.insideCloudFog = this.createValue(false, "insideCloudFog", RestartType.NONE,
+					"EXPEREMENTAL: Specifies if extra fog and visibility limiting should be applied when the camera is physically inside a cloud");
+
+			this.insideCloudFogHorizontalFade = this.createRangedDoubleValue(0.55D, 0.01D, 1.0D,
+					"insideCloudFogHorizontalFade", RestartType.NONE,
+					"Specifies how far into the horizontal body of a cloud the camera must be before the inside-cloud fog reaches full strength. Lower values make the effect kick in faster");
+
+			this.insideCloudFogVerticalFadeDistance = this.createRangedDoubleValue(40.0D, 1.0D, 256.0D,
+					"insideCloudFogVerticalFadeDistance", RestartType.NONE,
+					"Specifies how many blocks the inside-cloud fog takes to fade in vertically near the top and bottom of a cloud");
+
+			this.insideCloudFogMaxVisibility = this.createRangedDoubleValue(96.0D, 4.0D, 512.0D,
+					"insideCloudFogMaxVisibility", RestartType.NONE,
+					"Specifies the maximum visibility distance, in blocks, when fully inside a cloud. Lower values make cloud interiors denser");
+
+			this.insideCloudFogColorBlend = this.createRangedDoubleValue(0.5D, 0.0D, 1.0D,
+					"insideCloudFogColorBlend", RestartType.NONE,
+					"Specifies how strongly the world fog color blends toward the cloud color when inside a cloud");
 
 			this.rainAngle = this.createRangedDoubleValue(15.0D, 0.0D, 45.0D, "rainAngle", RestartType.NONE,
 					"Specifies the angle of the rain, perpendicular to the ground. Higher values makes it more horizontal");
@@ -176,7 +195,7 @@ public class SimpleCloudsConfig {
 			this.concurrentComputeDispatches = this.createValue(false, "concurrentComputeDispatches", RestartType.NONE,
 					"EXPERIMENTAL. Uses a slightly modified algorithm that removes sync calls between chunk generator compute dispatches at the cost of higher memory usage. May result in a performance boost");
 
-			this.testSidesThatAreOccluded = this.createValue(false, "testSidesThatAreOccluded", RestartType.NONE,
+			this.testSidesThatAreOccluded = this.createValue(true, "testSidesThatAreOccluded", RestartType.NONE,
 					"Specifies if faces that are not visible to the camera should be tested during mesh generation. Settings this to off can improve performance at the cost of visual issues with shadows and storm fog");
 
 			this.renderStormFog = this.createValue(true, "renderStormFog", RestartType.NONE,
@@ -209,7 +228,7 @@ public class SimpleCloudsConfig {
 
 			builder.comment("Single Mode").push("single_mode");
 
-			this.singleModeCloudType = this.createValue("simpleclouds:itty_bitty", "clientSideSingleModeCloudType",
+			this.singleModeCloudType = this.createValue("simpleclouds:cumulonimbus", "clientSideSingleModeCloudType",
 					RestartType.NONE,
 					"Specifies the cloud type that should be used when the SINGLE cloud mode is active");
 
@@ -239,6 +258,7 @@ public class SimpleCloudsConfig {
 	}
 
 	public static class CommonConfig extends ConfigHelper {
+		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMin;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMax;
 
@@ -246,6 +266,10 @@ public class SimpleCloudsConfig {
 			super(builder, SimpleCloudsMod.MODID);
 
 			builder.comment("Weather").push("weather");
+
+			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
+					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
+					"Specifies the lowest Y level any cloud may spawn at");
 
 			builder.comment("Lightning And Thunder").push("lightning_and_thunder");
 

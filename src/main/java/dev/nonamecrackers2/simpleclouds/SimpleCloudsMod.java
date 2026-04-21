@@ -30,15 +30,13 @@ import net.neoforged.neoforge.common.NeoForge;
 
 //TODO: Change API path from forge to neoforge
 @Mod(SimpleCloudsMod.MODID)
-public class SimpleCloudsMod
-{
+public class SimpleCloudsMod {
 	public static final String MODID = "simpleclouds";
 	private static final String DH_MODID = "distanthorizons";
 	private static ArtifactVersion version;
 	private static boolean dhLoaded;
-	
-	public SimpleCloudsMod(IEventBus modBus, ModContainer container)
-	{
+
+	public SimpleCloudsMod(IEventBus modBus, ModContainer container) {
 		version = container.getModInfo().getVersion();
 		IEventBus forgeBus = NeoForge.EVENT_BUS;
 		modBus.addListener(this::clientInit);
@@ -52,35 +50,29 @@ public class SimpleCloudsMod
 		container.registerConfig(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC);
 		SimpleCloudsAPIImpl.bootstrap();
 	}
-	
-	private static void setupSideOnly(IEventBus modBus, IEventBus forgeBus)
-	{
-		switch (FMLEnvironment.dist)
-		{
-		case CLIENT:
-		{
-			SimpleCloudsModClient.init(modBus, forgeBus);
-			break;
-		}
-		case DEDICATED_SERVER:
-		{
-			SimpleCloudsModServer.init(modBus, forgeBus);
-			break;
-		}
+
+	private static void setupSideOnly(IEventBus modBus, IEventBus forgeBus) {
+		switch (FMLEnvironment.dist) {
+			case CLIENT: {
+				SimpleCloudsModClient.init(modBus, forgeBus);
+				break;
+			}
+			case DEDICATED_SERVER: {
+				SimpleCloudsModServer.init(modBus, forgeBus);
+				break;
+			}
 		}
 	}
-	
-	private void commonInit(FMLCommonSetupEvent event)
-	{
+
+	private void commonInit(FMLCommonSetupEvent event) {
 		IEventBus forgeBus = NeoForge.EVENT_BUS;
 		forgeBus.register(CloudManagerEvents.class);
 		forgeBus.register(SimpleCloudsEvents.class);
 		SimpleCloudsConfigListeners.registerListener();
 		dhLoaded = ModList.get().isLoaded(DH_MODID);
 	}
-	
-	private void clientInit(FMLClientSetupEvent event)
-	{
+
+	private void clientInit(FMLClientSetupEvent event) {
 		IEventBus modBus = ModLoadingContext.get().getActiveContainer().getEventBus();
 		modBus.register(SimpleCloudsShaders.class);
 		modBus.addListener(SimpleCloudsClientEvents::registerConfigMenu);
@@ -88,27 +80,24 @@ public class SimpleCloudsMod
 		IEventBus forgeBus = NeoForge.EVENT_BUS;
 		forgeBus.register(SimpleCloudsClientEvents.class);
 		forgeBus.register(SimpleCloudsKeybinds.class);
-		
-		if (ModList.get().isLoaded(DH_MODID))
-		{
+		SimpleCloudsModClient.registerConfigListeners();
+
+		if (ModList.get().isLoaded(DH_MODID)) {
 			event.enqueueWork(() -> {
 				SimpleCloudsDhCompatHandler.initialize();
 			});
 		}
 	}
-	
-	public static ResourceLocation id(String path)
-	{
+
+	public static ResourceLocation id(String path) {
 		return ResourceLocation.fromNamespaceAndPath(MODID, path);
 	}
-	
-	public static ArtifactVersion getModVersion()
-	{
+
+	public static ArtifactVersion getModVersion() {
 		return version;
 	}
-	
-	public static boolean dhLoaded()
-	{
+
+	public static boolean dhLoaded() {
 		return dhLoaded;
 	}
 }

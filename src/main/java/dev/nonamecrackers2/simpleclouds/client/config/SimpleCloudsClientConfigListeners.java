@@ -27,7 +27,6 @@ public class SimpleCloudsClientConfigListeners {
 	public static void registerListener() {
 		ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
-				.addListener(SimpleCloudsConfig.CLIENT.cloudHeight, (o, n) -> onCloudHeightUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.speedModifier, (o, n) -> syncSingleplayerSpeed(n.floatValue()))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
@@ -44,18 +43,12 @@ public class SimpleCloudsClientConfigListeners {
 		if (!canSyncToSingleplayerServer())
 			return;
 		syncSingleplayerCloudMode(SimpleCloudsConfig.CLIENT.cloudMode.get());
-		syncSingleplayerCloudHeight(SimpleCloudsConfig.CLIENT.cloudHeight.get());
 		syncSingleplayerSpeed(SimpleCloudsConfig.CLIENT.speedModifier.get().floatValue());
 		syncSingleplayerSingleModeCloudType(SimpleCloudsConfig.CLIENT.singleModeCloudType.get());
 	}
 
 	public static void onCloudModeUpdated(CloudMode mode) {
 		syncSingleplayerCloudMode(mode);
-		requestReload(true);
-	}
-
-	public static void onCloudHeightUpdated(int height) {
-		syncSingleplayerCloudHeight(height);
 		requestReload(true);
 	}
 
@@ -144,16 +137,6 @@ public class SimpleCloudsClientConfigListeners {
 
 	private static boolean syncSingleplayerSingleModeCloudType(String type) {
 		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.singleModeCloudType.set(type));
-	}
-
-	private static boolean syncSingleplayerCloudHeight(int height) {
-		return executeForSingleplayerServer(server -> {
-			for (ServerLevel level : server.getAllLevels()) {
-				ServerCloudManager manager = (ServerCloudManager) CloudManager.get(level);
-				manager.setCloudHeight(height);
-				manager.queueSync(SyncType.MOVEMENT);
-			}
-		});
 	}
 
 	private static boolean syncSingleplayerSpeed(float speed) {

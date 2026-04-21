@@ -179,6 +179,8 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public void init(long seed) {
 		RandomSource random = this.setSeed(seed);
 		this.random = random;
+		if (SimpleCloudsConfig.COMMON_SPEC.isLoaded())
+			this.cloudHeight = SimpleCloudsConfig.COMMON.cloudHeight.get();
 		this.speed = 1.0F;
 		this.cloudGenerator.initialize(random, this.level);
 	}

@@ -15,6 +15,7 @@ uniform bool UseNormals;
 
 out vec4 vertexColor;
 out float fogDistance;
+out float vertexDistance;
 
 vec4 mixLight(vec3 lightDir0, vec3 lightDir1, vec3 normal, vec4 color) 
 {
@@ -34,7 +35,9 @@ void main()
 	vec3 sideOffset = vec3(info.x, info.y, info.z);
 	vec4 finalPos = vec4(transformedPos.xyz * info.radius + sideOffset, 1.0);
     gl_Position = ProjMat * ModelViewMat * finalPos;
-	fogDistance = length((ModelViewMat * finalPos).xz);
+	vec4 modelPos = ModelViewMat * finalPos;
+	fogDistance = length(modelPos.xz);
+	vertexDistance = length(modelPos.xyz);
 
     vec4 finalCol = vec4(mix(DarknessColorModifier, vec3(1.0), info.brightness), 1.0);
     if (UseNormals)

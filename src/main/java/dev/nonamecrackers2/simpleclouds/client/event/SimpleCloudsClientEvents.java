@@ -147,8 +147,7 @@ public class SimpleCloudsClientEvents {
 					|| event.isValue(SimpleCloudsConfig.CLIENT.showVivecraftNotice))
 				event.setCanceled(true);
 			if (ClientCloudManager.isRemoteServerAvailable()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudHeight)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.speedModifier)
+				if (event.isValue(SimpleCloudsConfig.CLIENT.speedModifier)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
@@ -200,11 +199,19 @@ public class SimpleCloudsClientEvents {
 				FogRenderer.setupNoFog();
 				return;
 			}
+			Minecraft mc = Minecraft.getInstance();
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();
 			float partialTick = (float) event.getPartialTick();
 			float storminess = Mth.sqrt(effects.getDarkenFactor(partialTick, 2.0F));
+			float insideCloudFactor = effects.getInsideCloudFactor(mc.gameRenderer.getMainCamera().getPosition().x,
+					mc.gameRenderer.getMainCamera().getPosition().y, mc.gameRenderer.getMainCamera().getPosition().z);
 			RenderSystem.setShaderFogStart(RenderSystem.getShaderFogStart() * storminess);
+			if (insideCloudFactor > 0.0F) {
+				RenderSystem.setShaderFogStart(Mth.lerp(insideCloudFactor, RenderSystem.getShaderFogStart(), 0.0F));
+				RenderSystem.setShaderFogEnd(Mth.lerp(insideCloudFactor, RenderSystem.getShaderFogEnd(),
+						WorldEffects.getInsideCloudMaxVisibility()));
+			}
 		}
 	}
 
@@ -212,13 +219,26 @@ public class SimpleCloudsClientEvents {
 	public static void modifyFogColor(ViewportEvent.ComputeFogColor event) {
 		if (SimpleCloudsConfig.CLIENT.fogMode.get() != FogRenderMode.OFF
 				&& Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
+			Minecraft mc = Minecraft.getInstance();
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();
 			float partialTick = (float) event.getPartialTick();
 			Color finalCol = effects.calculateFogColor(event.getRed(), event.getGreen(), event.getBlue(), partialTick);
-			event.setRed((float) finalCol.getRed() / 255.0F);
-			event.setGreen((float) finalCol.getGreen() / 255.0F);
-			event.setBlue((float) finalCol.getBlue() / 255.0F);
+			float red = (float) finalCol.getRed() / 255.0F;
+			float green = (float) finalCol.getGreen() / 255.0F;
+			float blue = (float) finalCol.getBlue() / 255.0F;
+			float insideCloudFactor = effects.getInsideCloudFactor(mc.gameRenderer.getMainCamera().getPosition().x,
+					mc.gameRenderer.getMainCamera().getPosition().y, mc.gameRenderer.getMainCamera().getPosition().z);
+			if (insideCloudFactor > 0.0F) {
+				float[] cloudColor = renderer.getCloudColor(partialTick);
+				float blend = insideCloudFactor * WorldEffects.getInsideCloudFogColorBlend();
+				red = Mth.lerp(blend, red, cloudColor[0]);
+				green = Mth.lerp(blend, green, cloudColor[1]);
+				blue = Mth.lerp(blend, blue, cloudColor[2]);
+			}
+			event.setRed(red);
+			event.setGreen(green);
+			event.setBlue(blue);
 		}
 	}
 

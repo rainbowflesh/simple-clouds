@@ -10,19 +10,19 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 import nonamecrackers2.crackerslib.common.util.data.ConfigLangGeneratorHelper;
 
-public class SimpleCloudsLangProvider extends LanguageProvider
-{
-	public SimpleCloudsLangProvider(PackOutput output)
-	{
+public class SimpleCloudsLangProvider extends LanguageProvider {
+	public SimpleCloudsLangProvider(PackOutput output) {
 		super(output, SimpleCloudsMod.MODID, "en_us");
 	}
-	
+
 	@Override
-	protected void addTranslations()
-	{
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.CLIENT_SPEC, this, ConfigLangGeneratorHelper.Info.ONLY_RANGE);
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.COMMON_SPEC, this, ConfigLangGeneratorHelper.Info.ONLY_RANGE);
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.SERVER_SPEC, this, ConfigLangGeneratorHelper.Info.ONLY_RANGE);
+	protected void addTranslations() {
+		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.CLIENT_SPEC, this,
+				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
+		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.COMMON_SPEC, this,
+				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
+		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.SERVER_SPEC, this,
+				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
 		this.add("gui.simpleclouds.cloud_previewer.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.add_layer.title", "Add Layer");
@@ -31,9 +31,9 @@ public class SimpleCloudsLangProvider extends LanguageProvider
 		this.add("gui.simpleclouds.cloud_previewer.current_layer", "Current Layer: %s");
 		this.add("simpleclouds.key.openGenPreviewer", "Open Cloud Gen Previewer");
 		this.add("simpleclouds.key.openDebug", "Open Debug Screen");
-		this.add("simpleclouds.key.categories.main", ModList.get().getModContainerById(SimpleCloudsMod.MODID).get().getModInfo().getDisplayName());
-		for (AbstractNoiseSettings.Param parameter : AbstractNoiseSettings.Param.values())
-		{
+		this.add("simpleclouds.key.categories.main",
+				ModList.get().getModContainerById(SimpleCloudsMod.MODID).get().getModInfo().getDisplayName());
+		for (AbstractNoiseSettings.Param parameter : AbstractNoiseSettings.Param.values()) {
 			String key = "gui.simpleclouds.noise_settings.param." + parameter.toString().toLowerCase() + ".name";
 			String[] splitted = parameter.toString().toLowerCase().split("_");
 			for (int i = 0; i < splitted.length; i++)
@@ -41,11 +41,14 @@ public class SimpleCloudsLangProvider extends LanguageProvider
 			this.add(key, StringUtils.join(splitted, " "));
 		}
 		this.add("simpleclouds.config.preset.medium", "Medium");
-		this.add("simpleclouds.config.preset.medium.description", "For more medium-end systems that can't handle high. Lowers the level of detail and makes the cloud mesh generate a bit slower.");
+		this.add("simpleclouds.config.preset.medium.description",
+				"For more medium-end systems that can't handle high. Lowers the level of detail and makes the cloud mesh generate a bit slower.");
 		this.add("simpleclouds.config.preset.low", "Low");
-		this.add("simpleclouds.config.preset.low.description", "For systems that are struggling a bit running this mod. Sets the level of detail to the lowest, disables transparency, and makes the cloud mesh generate a bit slower.");
+		this.add("simpleclouds.config.preset.low.description",
+				"For systems that are struggling a bit running this mod. Sets the level of detail to the lowest, disables transparency, and makes the cloud mesh generate a bit slower.");
 		this.add("simpleclouds.config.preset.ultra_low", "Ultra Low");
-		this.add("simpleclouds.config.preset.ultra_low.description", "If your system is REALLY struggling. Lowest level of detail, no transparency, and disables storm fog.");
+		this.add("simpleclouds.config.preset.ultra_low.description",
+				"If your system is REALLY struggling. Lowest level of detail, no transparency, and disables storm fog.");
 		this.add("simpleclouds.config.preset.classic_style", "Classic Style");
 		this.add("simpleclouds.config.preset.classic_style.description", "The classic Simple Clouds style");
 		this.add("gui.simpleclouds.noise_settings.param.range", "Range: %s - %s");
@@ -60,25 +63,38 @@ public class SimpleCloudsLangProvider extends LanguageProvider
 		this.add("gui.simpleclouds.cloud_previewer.load.title", "Load");
 		this.add("gui.simpleclouds.cloud_previewer.export.title", "Export");
 		this.add("gui.simpleclouds.cloud_previewer.popup.select.cloud_type", "Select a cloud type:");
-		this.add("gui.simpleclouds.cloud_previewer.popup.export.cloud_type", "What would you like to name your cloud type?");
-		this.add("gui.simpleclouds.cloud_previewer.popup.export.exists", "A file with that name already exists. Would you like to override it?");
-		this.add("gui.simpleclouds.cloud_previewer.popup.exported.cloud_type", "Your cloud type has been exported to %s");
-		this.add("gui.simpleclouds.cloud_previewer.info", "Welcome to the cloud previewer!\n\nAdd, remove, and customize noise layers seen in the left of the screen to create custom cloud types. Use the load button in the bottom right to load existing cloud types to edit them, and use the export button to export your cloud types as JSON files.");
-		this.add("gui.simpleclouds.requires_reload.info", "A config option was modified that requires the cloud renderer to be reloaded. Would you like to reload the renderer to apply the changes?");
-		this.add("gui.simpleclouds.requires_reload_resource_packs.info", "A config option was modified that requires resource packs to be reloaded. Would you like to reload resources to apply the changes?");
-		this.add("gui.simpleclouds.unknown_or_invalid_client_side_cloud_type.info", "Unknown or invalid cloud type '%s'. Please pick a valid cloud type. \n\nValid cloud types are as follows:\n\n%s");
-		this.add("gui.simpleclouds.reload_confirmation.server.info", "A config option was modified on the server that requires the cloud renderer to be reloaded. Please press 'Continue' to continue.");
+		this.add("gui.simpleclouds.cloud_previewer.popup.export.cloud_type",
+				"What would you like to name your cloud type?");
+		this.add("gui.simpleclouds.cloud_previewer.popup.export.exists",
+				"A file with that name already exists. Would you like to override it?");
+		this.add("gui.simpleclouds.cloud_previewer.popup.exported.cloud_type",
+				"Your cloud type has been exported to %s");
+		this.add("gui.simpleclouds.cloud_previewer.info",
+				"Welcome to the cloud previewer!\n\nAdd, remove, and customize noise layers seen in the left of the screen to create custom cloud types. Use the load button in the bottom right to load existing cloud types to edit them, and use the export button to export your cloud types as JSON files.");
+		this.add("gui.simpleclouds.requires_reload.info",
+				"A config option was modified that requires the cloud renderer to be reloaded. Would you like to reload the renderer to apply the changes?");
+		this.add("gui.simpleclouds.requires_reload_resource_packs.info",
+				"A config option was modified that requires resource packs to be reloaded. Would you like to reload resources to apply the changes?");
+		this.add("gui.simpleclouds.unknown_or_invalid_client_side_cloud_type.info",
+				"Unknown or invalid cloud type '%s'. Please pick a valid cloud type. \n\nValid cloud types are as follows:\n\n%s");
+		this.add("gui.simpleclouds.reload_confirmation.server.info",
+				"A config option was modified on the server that requires the cloud renderer to be reloaded. Please press 'Continue' to continue.");
 		this.add("command.simpleclouds.scroll.get", "The current cloud scroll position is [x: %s, y: %s, z: %s]");
 		this.add("command.simpleclouds.speed.get", "The current cloud speed is %s");
 		this.add("command.simpleclouds.seed.get", "The current cloud seed is %s");
 		this.add("command.simpleclouds.reinitialize", "Clouds have been reset");
-		this.add("command.simpleclouds.direction.get", "Clouds are currently moving in direction [x: %s, y: %s, z: %s] (%s)");
-		this.add("command.simpleclouds.direction.set", "Successfully set cloud direction to [x: %s, y: %s, z: %s] (%s)");
+		this.add("command.simpleclouds.direction.get",
+				"Clouds are currently moving in direction [x: %s, y: %s, z: %s] (%s)");
+		this.add("command.simpleclouds.direction.set",
+				"Successfully set cloud direction to [x: %s, y: %s, z: %s] (%s)");
 		this.add("command.simpleclouds.height.get", "Cloud height is set to %s");
 		this.add("command.simpleclouds.height.set", "Set cloud height to %s");
-		this.add("commands.simpleclouds.notClientSideOnly", "Client cloud commands can only be used when connected to servers that do not have Simple Clouds installed. If you're connected on singleplayer, or you are an operator on a dedicated server with Simple Clouds installed, please use '/simpleclouds clouds'");
-		this.add("commands.simpleclouds.client.configReferal", "This option is overriden by the CLIENT config. Please refer to the CLIENT config to change this option.");
-		this.add("command.simpleclouds.weather.override", "Simple Clouds is overriding vanilla weather, and the /weather command is disabled. To use vanilla weather, please do either of the following:\n1. Set the cloud mode in the SERVER config to AMBIENT.\n2. Set the cloud mode in the SERVER config to SINGLE, and set the single mode cloud type to a cloud type that has no weather associated with it (e.x. simpleclouds:itty_bitty)");
+		this.add("commands.simpleclouds.notClientSideOnly",
+				"Client cloud commands can only be used when connected to servers that do not have Simple Clouds installed. If you're connected on singleplayer, or you are an operator on a dedicated server with Simple Clouds installed, please use '/simpleclouds clouds'");
+		this.add("commands.simpleclouds.client.configReferal",
+				"This option is overridden by a config setting. Please use the config screen to change it.");
+		this.add("command.simpleclouds.weather.override",
+				"Simple Clouds is overriding vanilla weather, and the /weather command is disabled. To use vanilla weather, please do either of the following:\n1. Set the cloud mode in the SERVER config to AMBIENT.\n2. Set the cloud mode in the SERVER config to SINGLE, and set the single mode cloud type to a cloud type that has no weather associated with it (e.x. simpleclouds:itty_bitty)");
 		this.add("command.simpleclouds.clouds.spawn", "Spawned cloud %s at [%s, %s]");
 		this.add("command.simpleclouds.clouds.spawn.fail", "Too many cloud formations close by!");
 		this.add("command.simpleclouds.clouds.clear", "Removed %s cloud formations");
@@ -94,16 +110,24 @@ public class SimpleCloudsLangProvider extends LanguageProvider
 		this.add("gui.simpleclouds.error_screen.title", "Simple Clouds Error");
 		this.add("gui.simpleclouds.error_screen.description", "An error occured while initializing Simple Clouds.");
 		this.add("gui.simpleclouds.error_screen.no_errors", "There are no errors? What?");
-		this.add("gui.simpleclouds.error.recommendations", "Please try updating your graphics drivers. If the issue persists, please make a bug report on the Simple Clouds repository, linked below. Make sure to include the crash report with your issue.");
-		this.add("gui.simpleclouds.error.opengl", "The currently selected display adapter does not support Simple Clouds.\n\nSimple Clouds only supports display adapters that have OpenGL 4.3+ capabilities.\n\nPlease make sure:\n1. Your drivers are up to date\n2. You are not using integrated graphics instead of a discrete GPU to run Minecraft.\n\nIf you are a MacOS user, Simple Clouds IS NOT SUPPORTED as the OS is stuck on OpenGL 4.1. Unfortunately, this is a limitation that Simple Clouds cannot work around.");
-		this.add("gui.simpleclouds.error.unknown", "Please make a bug report on the mod's GitHub repository, linked below. Make sure to include the crash report and latest.log file with your issue.");
-		this.add("gui.simpleclouds.error.couldNotLoadMeshScript", "Failed to load the mesh compute shader. Please make a bug report on the mod's GitHub repository, linked below. Make sure to include the crash report and latest.log file with your issue.\n\nTo developers: If you are modifying the cube_mesh.comp file using a resource pack and have made an error, this message will appear on start up. Please see the latest.log for more details.");
-		this.add("gui.simpleclouds.error.compat.dh_oculus", "Simple Clouds does not currently support shaders with Distant Horizons. Please either remove Oculus/Iris to play with Simple Clouds, or remove Simple Clouds to play with shaders.");
-		this.add("gui.simpleclouds.error.coreShadersInitialization", "An error occured while initializing core shaders. If you are modifying them, please see the log for more details. If you are a user, please report this on the Simple Clouds GitHub.");
+		this.add("gui.simpleclouds.error.recommendations",
+				"Please try updating your graphics drivers. If the issue persists, please make a bug report on the Simple Clouds repository, linked below. Make sure to include the crash report with your issue.");
+		this.add("gui.simpleclouds.error.opengl",
+				"The currently selected display adapter does not support Simple Clouds.\n\nSimple Clouds only supports display adapters that have OpenGL 4.3+ capabilities.\n\nPlease make sure:\n1. Your drivers are up to date\n2. You are not using integrated graphics instead of a discrete GPU to run Minecraft.\n\nIf you are a MacOS user, Simple Clouds IS NOT SUPPORTED as the OS is stuck on OpenGL 4.1. Unfortunately, this is a limitation that Simple Clouds cannot work around.");
+		this.add("gui.simpleclouds.error.unknown",
+				"Please make a bug report on the mod's GitHub repository, linked below. Make sure to include the crash report and latest.log file with your issue.");
+		this.add("gui.simpleclouds.error.couldNotLoadMeshScript",
+				"Failed to load the mesh compute shader. Please make a bug report on the mod's GitHub repository, linked below. Make sure to include the crash report and latest.log file with your issue.\n\nTo developers: If you are modifying the cube_mesh.comp file using a resource pack and have made an error, this message will appear on start up. Please see the latest.log for more details.");
+		this.add("gui.simpleclouds.error.compat.dh_oculus",
+				"Simple Clouds does not currently support shaders with Distant Horizons. Please either remove Oculus/Iris to play with Simple Clouds, or remove Simple Clouds to play with shaders.");
+		this.add("gui.simpleclouds.error.coreShadersInitialization",
+				"An error occured while initializing core shaders. If you are modifying them, please see the log for more details. If you are a user, please report this on the Simple Clouds GitHub.");
 		this.add("gui.simpleclouds.error_screen.button.crash_report", "Crash Report");
-		this.add("gui.simpleclouds.error_screen.multiple", "More than one error has occured. Please see the 'crash-reports' folder for more information.");
+		this.add("gui.simpleclouds.error_screen.multiple",
+				"More than one error has occured. Please see the 'crash-reports' folder for more information.");
 		this.add("gui.simpleclouds.notice.title", "Simple Clouds Notice");
 		this.add("gui.simpleclouds.notice.close.title", "Close");
-		this.add("gui.simpleclouds.notice.vivecraft", "Vivecraft support is experimental. Please expect lower framerates, instability, and glitches/visual artifacts. Report bugs and issues on the official GitHub issue tracker.");
+		this.add("gui.simpleclouds.notice.vivecraft",
+				"Vivecraft support is experimental. Please expect lower framerates, instability, and glitches/visual artifacts. Report bugs and issues on the official GitHub issue tracker.");
 	}
 }

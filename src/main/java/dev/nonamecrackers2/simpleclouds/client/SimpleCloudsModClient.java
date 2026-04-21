@@ -8,20 +8,20 @@ import dev.nonamecrackers2.simpleclouds.common.packet.SimpleCloudsPayloadRegistr
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
-public class SimpleCloudsModClient
-{
-	public static void init(IEventBus modBus, IEventBus forgeBus)
-	{
+public class SimpleCloudsModClient {
+	public static void init(IEventBus modBus, IEventBus forgeBus) {
 		modBus.addListener(SimpleCloudsClientEvents::registerReloadListeners);
 		modBus.addListener(SimpleCloudsKeybinds::registerKeyMappings);
 		modBus.addListener(SimpleCloudsClientEvents::registerOverlays);
 		modBus.addListener(SimpleCloudsClientEvents::registerClientPresets);
 		modBus.addListener(SimpleCloudsModClient::registerPayloads);
+	}
+
+	public static void registerConfigListeners() {
 		SimpleCloudsClientConfigListeners.registerListener();
 	}
-	
-	public static void registerPayloads(RegisterPayloadHandlersEvent event)
-	{
+
+	public static void registerPayloads(RegisterPayloadHandlersEvent event) {
 		SimpleCloudsPayloadRegistrar.register(event, SimpleCloudsClientPacketHandlerImpl.INSTANCE);
 	}
 }

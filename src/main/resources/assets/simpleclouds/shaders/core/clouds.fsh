@@ -10,12 +10,21 @@ uniform vec4 FogColor;
 
 in vec4 vertexColor;
 in float fogDistance;
+in float vertexDistance;
 
 out vec4 fragColor;
 
+const float WALL_TRANSITION_DISTANCE = 64.0;
+const float WALL_TRANSITION_MIN_OPACITY = 0.5;
+
+float getWallTransitionOpacity(float distanceToCamera)
+{
+	return mix(WALL_TRANSITION_MIN_OPACITY, 1.0, smoothstep(0.0, WALL_TRANSITION_DISTANCE, distanceToCamera));
+}
+
 void main() 
 {
-	float fade = ColorModulator.a;
+	float fade = ColorModulator.a * getWallTransitionOpacity(vertexDistance);
 	float r = texture(BayerMatrixSampler, gl_FragCoord.xy * DitherScale).r;
 	if (fade < r)
 		discard;

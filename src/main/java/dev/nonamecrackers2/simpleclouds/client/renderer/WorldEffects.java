@@ -242,6 +242,64 @@ public class WorldEffects {
 		return this.storminessAtCamera;
 	}
 
+	public boolean isInsideCloudVolume(double camX, double camY, double camZ) {
+		if (this.mc.level == null)
+			return false;
+
+		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
+		Pair<CloudType, Float> result = manager.getCloudTypeAtWorldPos((float) camX, (float) camZ);
+		CloudType type = result.getLeft();
+		if (type == SimpleCloudsConstants.EMPTY)
+			return false;
+
+		int cloudHeightRange = type.noiseConfig().getHeightRange();
+		if (cloudHeightRange <= 0)
+			return false;
+
+		float cloudBottom = manager.getCloudHeight()
+				+ (float) type.noiseConfig().getStartHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+		float cloudTop = manager.getCloudHeight()
+				+ (float) type.noiseConfig().getEndHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+		return result.getRight() < 1.0F && camY >= cloudBottom && camY <= cloudTop;
+	}
+
+	public float getInsideCloudFactor(double camX, double camY, double camZ) {
+		if (!SimpleCloudsConfig.CLIENT.insideCloudFog.get())
+			return 0.0F;
+		if (this.mc.level == null)
+			return 0.0F;
+
+		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
+		Pair<CloudType, Float> result = manager.getCloudTypeAtWorldPos((float) camX, (float) camZ);
+		CloudType type = result.getLeft();
+		if (type == SimpleCloudsConstants.EMPTY)
+			return 0.0F;
+		int cloudHeightRange = type.noiseConfig().getHeightRange();
+		if (cloudHeightRange <= 0)
+			return 0.0F;
+
+		float horizontalFade = SimpleCloudsConfig.CLIENT.insideCloudFogHorizontalFade.get().floatValue();
+		float horizontalFactor = 1.0F - Mth.clamp(result.getRight() / horizontalFade, 0.0F, 1.0F);
+		if (horizontalFactor <= 0.0F)
+			return 0.0F;
+
+		float cloudBottom = manager.getCloudHeight()
+				+ (float) type.noiseConfig().getStartHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+		float cloudTop = manager.getCloudHeight()
+				+ (float) type.noiseConfig().getEndHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+		float verticalFactor = bandLerp((float) camY, cloudBottom, cloudTop,
+				SimpleCloudsConfig.CLIENT.insideCloudFogVerticalFadeDistance.get().floatValue());
+		return horizontalFactor * verticalFactor;
+	}
+
+	public static float getInsideCloudMaxVisibility() {
+		return SimpleCloudsConfig.CLIENT.insideCloudFogMaxVisibility.get().floatValue();
+	}
+
+	public static float getInsideCloudFogColorBlend() {
+		return SimpleCloudsConfig.CLIENT.insideCloudFogColorBlend.get().floatValue();
+	}
+
 	public void tick() {
 		if (this.rainDelay > 0)
 			this.rainDelay--;
@@ -362,6 +420,20 @@ public class WorldEffects {
 
 	public float getDarkenFactor(float partialTick) {
 		return this.getDarkenFactor(partialTick, EFFECTS_STRENGTH_MULTIPLER);
+	}
+
+	private static float bandLerp(float y, float minY, float maxY, float fadeDistance) {
+		if (maxY < minY) {
+			float oldMin = minY;
+			minY = maxY;
+			maxY = oldMin;
+		}
+		if (y < minY || y > maxY)
+			return 0.0F;
+		if (fadeDistance <= 0.0F)
+			return 1.0F;
+		float distanceFromNearestBoundary = Math.min(y - minY, maxY - y);
+		return Mth.clamp(distanceFromNearestBoundary / fadeDistance, 0.0F, 1.0F);
 	}
 
 	public List<LightningBolt> getLightningBolts() {
