@@ -16,6 +16,11 @@ import com.mojang.blaze3d.systems.RenderSystem;
 // https://jcgt.org/published/0002/02/09/paper.pdf and http://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
 public class WeightedBlendingTarget extends RenderTarget
 {
+	private static final int[] DRAW_BUFFERS = new int[] {GL30.GL_COLOR_ATTACHMENT0, GL30.GL_COLOR_ATTACHMENT1};
+	private static final float[] CLEAR_COLOR_BUFFER = new float[] {0.0F, 0.0F, 0.0F, 0.0F};
+	private static final float[] CLEAR_REVEALAGE_BUFFER = new float[] {1.0F, 0.0F, 0.0F, 0.0F};
+	private static final float[] CLEAR_DEPTH_BUFFER = new float[] {1.0F};
+
 	private final boolean highPrecisionDepth;
 	protected int revealageTextureId;
 	
@@ -142,7 +147,7 @@ public class WeightedBlendingTarget extends RenderTarget
 		GlStateManager._glBindFramebuffer(36160, this.frameBufferId);
 		if (viewport)
 			GlStateManager._viewport(0, 0, this.viewWidth, this.viewHeight);
-		GL20.glDrawBuffers(new int[] {GL30.GL_COLOR_ATTACHMENT0, GL30.GL_COLOR_ATTACHMENT1});
+		GL20.glDrawBuffers(DRAW_BUFFERS);
 	}
 	
 	@Override
@@ -151,10 +156,10 @@ public class WeightedBlendingTarget extends RenderTarget
 		RenderSystem.assertOnRenderThreadOrInit();
 		this.bindWrite(true);
 		
-		GL30.glClearBufferfv(GL11.GL_COLOR, 0, new float[] {0.0F, 0.0F, 0.0F, 0.0F});
-		GL30.glClearBufferfv(GL11.GL_COLOR, 1, new float[] {1.0F, 0.0F, 0.0F, 0.0F});
+		GL30.glClearBufferfv(GL11.GL_COLOR, 0, CLEAR_COLOR_BUFFER);
+		GL30.glClearBufferfv(GL11.GL_COLOR, 1, CLEAR_REVEALAGE_BUFFER);
 		
-		GL30.glClearBufferfv(GL11.GL_DEPTH, 0, new float[] {1.0F});
+		GL30.glClearBufferfv(GL11.GL_DEPTH, 0, CLEAR_DEPTH_BUFFER);
 		
 		this.unbindWrite();
 	}

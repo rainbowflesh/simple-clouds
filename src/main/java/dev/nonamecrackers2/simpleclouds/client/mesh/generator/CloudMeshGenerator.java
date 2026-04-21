@@ -675,6 +675,13 @@ public abstract class CloudMeshGenerator
 		
 		return result;
 	}
+
+	private static double getChunkDistanceSquared(AABB bounds)
+	{
+		double nearestCornerX = Math.max(Math.max(bounds.minX, -bounds.maxX), 0.0D);
+		double nearestCornerZ = Math.max(Math.max(bounds.minZ, -bounds.maxZ), 0.0D);
+		return nearestCornerX * nearestCornerX + nearestCornerZ * nearestCornerZ;
+	}
 	
 	protected Pair<CloudMeshGenerator.MeshGenStatus, CloudMeshGenerator.MeshGenStatus> finalizeMeshGen()
 	{
@@ -750,7 +757,9 @@ public abstract class CloudMeshGenerator
 			}
 		}, this.chunks.size() * 4);
 		
-		List<MeshChunk> completedChunks = this.completedGenTasks.stream().map(CloudMeshGenerator.ChunkGenTask::chunk).toList();
+		List<MeshChunk> completedChunks = Lists.newArrayListWithCapacity(this.completedGenTasks.size());
+		for (CloudMeshGenerator.ChunkGenTask completedGenTask : this.completedGenTasks)
+			completedChunks.add(completedGenTask.chunk());
 		
 		int elementBufferId = this.shader.getShaderStorageBuffer(elementBufferName).getId();
 		if (this.useFixedMeshDataSectionSize)
@@ -831,6 +840,8 @@ public abstract class CloudMeshGenerator
 	{
 		PreparedChunk chunkInfo = chunk.getChunkInfo();
 		AABB bounds = chunkInfo.bounds();
+		double cullDistance = this.cullDistance;
+		double cullDistanceSquared = cullDistance * cullDistance;
 		float minX = (float)bounds.minX + meshGenOffsetX;
 		float minZ = (float)bounds.minZ + meshGenOffsetZ;
 		float maxX = (float)bounds.maxX + meshGenOffsetX;
@@ -838,11 +849,7 @@ public abstract class CloudMeshGenerator
 		
 		if (frustum == null || ((MixinFrustumAccessor)frustum).simpleclouds$cubeInFrustum(minX, bounds.minY, minZ, maxX, bounds.maxY, maxZ))
 		{
-			double nearestCornerX = Math.max(Math.max(bounds.minX, -bounds.maxX), 0.0D);
-			double nearestCornerZ = Math.max(Math.max(bounds.minZ, -bounds.maxZ), 0.0D);
-			double dist =  Math.sqrt(nearestCornerX * nearestCornerX + nearestCornerZ * nearestCornerZ);
-			
-			if (this.cullDistance <= 0.0F || dist < this.cullDistance)
+			if (cullDistance <= 0.0D || getChunkDistanceSquared(bounds) < cullDistanceSquared)
 			{
 				CloudMeshGenerator.ChunkGenSettings settings = this.determineChunkGenSettings(minX, minZ, maxX, maxZ);
 				if (settings.skipChunk())
@@ -950,6 +957,8 @@ public abstract class CloudMeshGenerator
 	
 	public void forRenderableMeshChunks(@Nullable Frustum frustum, Function<MeshChunk, MeshChunk.BufferSet> bufferSetFunction, BiConsumer<MeshChunk, MeshChunk.BufferSet> function, boolean updateFade)
 	{
+		double cullDistance = this.cullDistance;
+		double cullDistanceSquared = cullDistance * cullDistance;
 		for (MeshChunk chunk : this.chunks)
 		{
 			MeshChunk.BufferSet bufferSet = bufferSetFunction.apply(chunk);
@@ -969,10 +978,7 @@ public abstract class CloudMeshGenerator
 				{
 					PreparedChunk chunkInfo = chunk.getChunkInfo();
 					AABB bounds = chunkInfo.bounds();
-					double nearestCornerX = Math.max(Math.max(bounds.minX, -bounds.maxX), 0.0D);
-					double nearestCornerZ = Math.max(Math.max(bounds.minZ, -bounds.maxZ), 0.0D);
-					double dist =  Math.sqrt(nearestCornerX * nearestCornerX + nearestCornerZ * nearestCornerZ);
-					if (this.cullDistance <= 0.0F || this.cullDistance > dist)
+					if (cullDistance <= 0.0D || cullDistanceSquared > getChunkDistanceSquared(bounds))
 					{
 						if (updateFade)
 							chunk.setFadeEnabled(true);
