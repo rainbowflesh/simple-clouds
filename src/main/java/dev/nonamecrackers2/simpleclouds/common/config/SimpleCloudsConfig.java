@@ -110,7 +110,7 @@ public class SimpleCloudsConfig {
 					"Specifies the type of world fog that should be used. Each has their own advantages and disadvantages, ranging from visual discrepancies to possible compatibility issues");
 
 			this.insideCloudFog = this.createValue(false, "insideCloudFog", RestartType.NONE,
-					"EXPEREMENTAL: Specifies if extra fog and visibility limiting should be applied when the camera is physically inside a cloud");
+					"EXPERIMENTAL. Specifies if extra fog and visibility limiting should be applied when the camera is physically inside a cloud");
 
 			this.insideCloudFogHorizontalFade = this.createRangedDoubleValue(0.55D, 0.01D, 1.0D,
 					"insideCloudFogHorizontalFade", RestartType.NONE,
@@ -180,7 +180,7 @@ public class SimpleCloudsConfig {
 
 			builder.comment("Mesh Generation").push("mesh_generation");
 
-			this.generationInterval = this.createEnumValue(GenerationInterval.TARGET_FPS, "generationInterval",
+			this.generationInterval = this.createEnumValue(GenerationInterval.DYNAMIC, "generationInterval",
 					RestartType.NONE,
 					"How the amount of frames used to generate the entire mesh is calculated. Static will use the 'Frames To Generate Mesh' option. Dynamic will calculate it automatically depending on your FPS. Target FPS will target a certain perceived framerate for mesh generation");
 
@@ -247,7 +247,7 @@ public class SimpleCloudsConfig {
 			this.distantShadows = this.createValue(true, "distantShadows", RestartType.NONE,
 					"Toggles shadows that appear on distant terrain");
 
-			this.shadowDistance = this.createRangedIntValue(5000, 500, 15000, "shadowDistance", RestartType.NONE,
+			this.shadowDistance = this.createRangedIntValue(4096, 512, 16384, "shadowDistance", RestartType.NONE,
 					"Specifies the distance shadows can render");
 
 			builder.pop();
