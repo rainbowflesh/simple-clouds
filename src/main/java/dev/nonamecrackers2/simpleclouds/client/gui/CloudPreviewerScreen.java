@@ -61,23 +61,32 @@ import nonamecrackers2.crackerslib.client.gui.Popup;
 import nonamecrackers2.crackerslib.client.gui.Screen3D;
 import nonamecrackers2.crackerslib.client.gui.widget.CyclableButton;
 
-public class CloudPreviewerScreen extends Screen3D
-{
+public class CloudPreviewerScreen extends Screen3D {
 	private static @Nullable SingleRegionCloudMeshGenerator generator;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final int PADDING = 10;
-	private static final Component WARNING_TOO_MANY_CUBES = Component.translatable("gui.simpleclouds.cloud_previewer.warning.too_many_cubes").withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withBold(true));;
-	private static final Component WEATHER_TYPE_TITLE = Component.translatable("gui.simpleclouds.cloud_previewer.weather_type.title");
-	private static final Component STORMINESS_TITLE = Component.translatable("gui.simpleclouds.cloud_previewer.storminess.title");
-	private static final Component STORM_START_TITLE = Component.translatable("gui.simpleclouds.cloud_previewer.storm_start.title");
-	private static final Component STORM_FADE_DISTANCE_TITLE = Component.translatable("gui.simpleclouds.cloud_previewer.storm_fade_distance.title");
-	private static final Component TRANSPARENCY_FADE_TITLE = Component.translatable("gui.simpleclouds.cloud_previewer.transparency_fade.title");
+	private static final Component WARNING_TOO_MANY_CUBES = Component
+			.translatable("gui.simpleclouds.cloud_previewer.warning.too_many_cubes")
+			.withStyle(Style.EMPTY.withColor(ChatFormatting.RED).withBold(true));;
+	private static final Component WEATHER_TYPE_TITLE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.weather_type.title");
+	private static final Component STORMINESS_TITLE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.storminess.title");
+	private static final Component STORM_START_TITLE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.storm_start.title");
+	private static final Component STORM_FADE_DISTANCE_TITLE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.storm_fade_distance.title");
+	private static final Component TRANSPARENCY_FADE_TITLE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.transparency_fade.title");
 	private static final Component LOAD = Component.translatable("gui.simpleclouds.cloud_previewer.load.title");
 	private static final Component EXPORT = Component.translatable("gui.simpleclouds.cloud_previewer.export.title");
-	private static final Component SELECT_A_CLOUD_TYPE = Component.translatable("gui.simpleclouds.cloud_previewer.popup.select.cloud_type");
-	private static final Component EXPORT_CLOUD_TYPE = Component.translatable("gui.simpleclouds.cloud_previewer.popup.export.cloud_type");
-	private static final Component FILE_ALREADY_EXISTS = Component.translatable("gui.simpleclouds.cloud_previewer.popup.export.exists");
+	private static final Component SELECT_A_CLOUD_TYPE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.popup.select.cloud_type");
+	private static final Component EXPORT_CLOUD_TYPE = Component
+			.translatable("gui.simpleclouds.cloud_previewer.popup.export.cloud_type");
+	private static final Component FILE_ALREADY_EXISTS = Component
+			.translatable("gui.simpleclouds.cloud_previewer.popup.export.exists");
 	private static final Component INFO = Component.translatable("gui.simpleclouds.cloud_previewer.info");
 	private Button addLayer;
 	private Button removeLayer;
@@ -90,35 +99,29 @@ public class CloudPreviewerScreen extends Screen3D
 	private float stormStart = 16.0F;
 	private float stormFadeDistance = 32.0F;
 	private float transparencyFade = 0.0F;
-	private final CloudInfo cloudType = new CloudInfo()
-	{
+	private final CloudInfo cloudType = new CloudInfo() {
 		@Override
-		public WeatherType weatherType() 
-		{
+		public WeatherType weatherType() {
 			return CloudPreviewerScreen.this.weatherType;
 		}
-		
+
 		@Override
-		public float storminess()
-		{
+		public float storminess() {
 			return CloudPreviewerScreen.this.storminess;
 		}
-		
+
 		@Override
-		public float stormStart()
-		{
+		public float stormStart() {
 			return CloudPreviewerScreen.this.stormStart;
 		}
-		
+
 		@Override
-		public float stormFadeDistance()
-		{
+		public float stormFadeDistance() {
 			return CloudPreviewerScreen.this.stormFadeDistance;
 		}
-		
+
 		@Override
-		public NoiseSettings noiseConfig()
-		{
+		public NoiseSettings noiseConfig() {
 			if (CloudPreviewerScreen.this.layers.isEmpty())
 				return NoiseSettings.EMPTY;
 			else if (CloudPreviewerScreen.this.layers.size() > 1)
@@ -126,9 +129,8 @@ public class CloudPreviewerScreen extends Screen3D
 			else
 				return CloudPreviewerScreen.this.layers.get(0);
 		}
-		
-		public float transparencyFade()
-		{
+
+		public float transparencyFade() {
 			return CloudPreviewerScreen.this.transparencyFade;
 		}
 	};
@@ -143,29 +145,25 @@ public class CloudPreviewerScreen extends Screen3D
 	private EditBox stormFadeDistanceBox;
 	private EditBox transparencyFadeBox;
 	private Button exportButton;
-	
-	public static void addCloudMeshListener(RegisterClientReloadListenersEvent event)
-	{
-		event.registerReloadListener((ResourceManagerReloadListener)(manager -> {
+
+	public static void addCloudMeshListener(RegisterClientReloadListenersEvent event) {
+		event.registerReloadListener((ResourceManagerReloadListener) (manager -> {
 			destroyMeshGenerator();
 		}));
 	}
-	
-	public static void destroyMeshGenerator()
-	{
-		if (generator != null)
-		{
+
+	public static void destroyMeshGenerator() {
+		if (generator != null) {
 			generator.close();
 			generator = null;
 		}
 	}
-	
-	public CloudPreviewerScreen(Screen prev)
-	{
+
+	public CloudPreviewerScreen(Screen prev) {
 		super(Component.translatable("gui.simpleclouds.cloud_previewer.title"), 0.25F, 5000.0F);
-		if (generator == null)
-		{
-			generator = CloudMeshGenerator.builder().testFacesFacingAway(true).createSingleRegion(SimpleCloudsConstants.EMPTY);
+		if (generator == null) {
+			generator = CloudMeshGenerator.builder().testFacesFacingAway(true)
+					.createSingleRegion(SimpleCloudsConstants.EMPTY);
 			generator.init(Minecraft.getInstance().getResourceManager());
 		}
 		this.prev = prev;
@@ -175,11 +173,9 @@ public class CloudPreviewerScreen extends Screen3D
 		this.cloudTypeDirectory = new File(this.directory, "cloudtypes");
 		this.rendersDirectory = new File(this.directory, "renders");
 	}
-	
-	private void swapToLayer(int index)
-	{
-		if (!this.layers.isEmpty())
-		{
+
+	private void swapToLayer(int index) {
+		if (!this.layers.isEmpty()) {
 			if (index >= this.layers.size())
 				index = 0;
 			else if (index < 0)
@@ -190,70 +186,55 @@ public class CloudPreviewerScreen extends Screen3D
 			this.addRenderableWidget(this.layerEditors.get(this.currentLayer));
 		}
 	}
-	
-	private void jumpLayer(int jump)
-	{
+
+	private void jumpLayer(int jump) {
 		this.swapToLayer(this.currentLayer + jump);
 	}
-	
-	private void generateMesh()
-	{
+
+	private void generateMesh() {
 		generator.setCloudType(this.cloudType);
 		generator.generateMesh();
 		this.needsMeshRegen = false;
 	}
-	
-	private EditBox valueEditor(float currentValue, EditBox box, Consumer<Float> valueSetter, float min, float max)
-	{
+
+	private EditBox valueEditor(float currentValue, EditBox box, Consumer<Float> valueSetter, float min, float max) {
 		box.setValue(String.valueOf(currentValue));
 		box.setResponder(s -> {
-			try
-			{
+			try {
 				float parsed = Float.parseFloat(s);
-				if (parsed < min || parsed > max)
-				{
+				if (parsed < min || parsed > max) {
 					valueSetter.accept(Mth.clamp(parsed, min, max));
 					box.setTextColor(ChatFormatting.RED.getColor());
-				}
-				else
-				{
+				} else {
 					valueSetter.accept(Float.parseFloat(s));
 					box.setTextColor(0xFFFFFFFF);
 				}
-			}
-			catch (NumberFormatException e)
-			{
+			} catch (NumberFormatException e) {
 				box.setTextColor(ChatFormatting.RED.getColor());
 			}
 			this.needsMeshRegen = true;
 		});
 		return box;
 	}
-	
-	private void loadCloudType()
-	{
-		Popup.<CloudType>createOptionListPopup(this, list -> 
-		{
-			for (var entry : ClientSideCloudTypeManager.getInstance().getCloudTypes().entrySet())
-			{
+
+	private void loadCloudType() {
+		Popup.<CloudType>createOptionListPopup(this, list -> {
+			for (var entry : ClientSideCloudTypeManager.getInstance().getCloudTypes().entrySet()) {
 				CloudType type = entry.getValue();
-				if (type.noiseConfig() instanceof AbstractNoiseSettings || type.noiseConfig() instanceof AbstractLayeredNoise)
-				{
+				if (type.noiseConfig() instanceof AbstractNoiseSettings
+						|| type.noiseConfig() instanceof AbstractLayeredNoise) {
 					MutableComponent name = Component.literal(entry.getKey().toString());
-					if (!ClientSideCloudTypeManager.getInstance().getClientSideDataManager().getCloudTypes().containsKey(entry.getKey()))
+					if (!ClientSideCloudTypeManager.getInstance().getClientSideDataManager().getCloudTypes()
+							.containsKey(entry.getKey()))
 						name.append(Component.literal(" (Server Side)").withStyle(ChatFormatting.DARK_GRAY));
 					list.addObject(name, type);
 				}
 			}
-		}, type -> 
-		{
+		}, type -> {
 			this.clearAllLayers();
-			if (type.noiseConfig() instanceof AbstractNoiseSettings<?> settings)
-			{
+			if (type.noiseConfig() instanceof AbstractNoiseSettings<?> settings) {
 				this.addLayer(new ModifiableNoiseSettings(settings));
-			}
-			else if (type.noiseConfig() instanceof AbstractLayeredNoise<?> layeredSettings)
-			{
+			} else if (type.noiseConfig() instanceof AbstractLayeredNoise<?> layeredSettings) {
 				for (AbstractNoiseSettings<?> settings : layeredSettings.getNoiseLayers())
 					this.addLayer(new ModifiableNoiseSettings(settings));
 			}
@@ -269,53 +250,44 @@ public class CloudPreviewerScreen extends Screen3D
 			this.transparencyFadeBox.setValue(String.valueOf(this.transparencyFade));
 		}, 400, 100, SELECT_A_CLOUD_TYPE);
 	}
-	
-	private void attemptToExportCloudType()
-	{
-		Popup.createTextFieldPopup(this, value -> 
-		{
-			File file = new File(this.cloudTypeDirectory, value.replaceAll("[^a-zA-Z0-9\\.\\-]", "_").toLowerCase() + ".json");
-			if (!file.exists())
-			{
+
+	private void attemptToExportCloudType() {
+		Popup.createTextFieldPopup(this, value -> {
+			File file = new File(this.cloudTypeDirectory,
+					value.replaceAll("[^a-zA-Z0-9\\.\\-]", "_").toLowerCase() + ".json");
+			if (!file.exists()) {
 				this.exportCloudType(file);
-				Popup.createInfoPopup(this, 200, Component.translatable("gui.simpleclouds.cloud_previewer.popup.exported.cloud_type", file.getAbsolutePath()));
-			}
-			else
-			{
-				Popup.createYesNoPopup(this, () -> 
-				{
+				Popup.createInfoPopup(this, 200, Component.translatable(
+						"gui.simpleclouds.cloud_previewer.popup.exported.cloud_type", file.getAbsolutePath()));
+			} else {
+				Popup.createYesNoPopup(this, () -> {
 					this.exportCloudType(file);
-					Popup.createInfoPopup(this, 200, Component.translatable("gui.simpleclouds.cloud_previewer.popup.exported.cloud_type", file.getAbsolutePath()));
+					Popup.createInfoPopup(this, 200, Component.translatable(
+							"gui.simpleclouds.cloud_previewer.popup.exported.cloud_type", file.getAbsolutePath()));
 				}, this::attemptToExportCloudType, 200, FILE_ALREADY_EXISTS);
 			}
 		}, 200, EXPORT_CLOUD_TYPE);
 	}
-	
-	private void exportCloudType(File file)
-	{
+
+	private void exportCloudType(File file) {
 		if (!this.cloudTypeDirectory.exists())
 			this.cloudTypeDirectory.mkdirs();
-		
-		try (FileWriter writer = new FileWriter(file))
-		{
+
+		try (FileWriter writer = new FileWriter(file)) {
 			GSON.toJson(this.cloudType.toJson(), writer);
-		}
-		catch (JsonIOException | IOException e)
-		{
+		} catch (JsonIOException | IOException e) {
 			LOGGER.error("Failed to export cloud type json file", e);
-		}
-		catch (JsonSyntaxException | IllegalStateException e)
-		{
+		} catch (JsonSyntaxException | IllegalStateException e) {
 			LOGGER.error("An internal error occured while serializing cloud type", e);
 		}
 	}
-	
-	private void addLayer(ModifiableNoiseSettings layer)
-	{
+
+	private void addLayer(ModifiableNoiseSettings layer) {
 		this.layers.add(layer);
-		LayerEditor editor = new LayerEditor(layer, this.minecraft, Math.max(200, this.width / 4), this.height - PADDING * 2 - this.toolbarHeight - this.font.lineHeight, 0, () -> {
-			this.needsMeshRegen = true;
-		});
+		LayerEditor editor = new LayerEditor(layer, this.minecraft, Math.max(200, this.width / 4),
+				this.height - PADDING * 2 - this.toolbarHeight - this.font.lineHeight, 0, () -> {
+					this.needsMeshRegen = true;
+				});
 		editor.setX(PADDING);
 		editor.setY(PADDING + this.font.lineHeight);
 		this.layerEditors.add(editor);
@@ -325,12 +297,10 @@ public class CloudPreviewerScreen extends Screen3D
 		this.exportButton.active = true;
 		this.needsMeshRegen = true;
 	}
-	
-	private void clearAllLayers()
-	{
+
+	private void clearAllLayers() {
 		var layerEditorIterator = this.layerEditors.iterator();
-		while (layerEditorIterator.hasNext())
-		{
+		while (layerEditorIterator.hasNext()) {
 			this.removeWidget(layerEditorIterator.next());
 			layerEditorIterator.remove();
 		}
@@ -340,127 +310,140 @@ public class CloudPreviewerScreen extends Screen3D
 		this.exportButton.active = false;
 		this.needsMeshRegen = true;
 	}
-	
+
 	@Override
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers)
-	{
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if (super.keyPressed(keyCode, scanCode, modifiers))
 			return true;
-		
-		if (keyCode == GLFW.GLFW_KEY_S)
-		{
+
+		if (keyCode == GLFW.GLFW_KEY_S) {
 			if (!this.rendersDirectory.exists())
 				this.rendersDirectory.mkdirs();
 
-			float oldFadeStart = generator.getFadeStart() / (float)generator.getCloudAreaMaxRadius();
-			float oldFadeEnd = generator.getFadeEnd() / (float)generator.getCloudAreaMaxRadius();
-			
+			float oldFadeStart = generator.getFadeStart() / (float) generator.getCloudAreaMaxRadius();
+			float oldFadeEnd = generator.getFadeEnd() / (float) generator.getCloudAreaMaxRadius();
+
 			generator.setFadeDistances(0.001F, 1.0F);
 			generator.generateMesh();
-			
-			try (CloudImageRenderer renderer = CloudImageRenderer.basicIsometric(this.rendersDirectory, generator))
-			{
-//				renderer.setBgCol(121.0F / 255.0F, 166.0F / 255.0F, 255.0F / 255.0F);
+
+			try (CloudImageRenderer renderer = CloudImageRenderer.basicIsometric(this.rendersDirectory, generator)) {
+				// renderer.setBgCol(121.0F / 255.0F, 166.0F / 255.0F, 255.0F / 255.0F);
 				renderer.setBgCol(0.0F, 1.0F, 0.0F);
 				renderer.initialize();
 				renderer.render();
-				renderer.exportToRenderedImage(m -> 
-				{
+				renderer.exportToRenderedImage(m -> {
 					this.minecraft.execute(() -> {
 						Popup.createInfoPopup(this, 300, m);
 					});
 				});
-				renderer.finalize();
-			}
-			catch (Exception e)
-			{
+				renderer.restoreWindow();
+			} catch (Exception e) {
 				LOGGER.warn("Failed to capture screenshot", e);
 			}
-			
+
 			generator.setFadeDistances(oldFadeStart, oldFadeEnd);
 			generator.generateMesh();
-			
+
 			return true;
 		}
-		
+
 		return false;
 	}
-	
+
 	@Override
-	protected void init()
-	{
+	protected void init() {
 		super.init();
-	
+
 		GridLayout layersToolbar = new GridLayout().columnSpacing(5);
 		GridLayout.RowHelper layersToolbarRow = layersToolbar.createRowHelper(4);
-		
-		this.addLayer = layersToolbarRow.addChild(Button.builder(Component.literal("+").withStyle(ChatFormatting.GREEN), b -> {
-			this.addLayer(new ModifiableNoiseSettings());
-		}).tooltip(Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.add_layer.title"))).width(20).build());
+
+		this.addLayer = layersToolbarRow
+				.addChild(Button.builder(Component.literal("+").withStyle(ChatFormatting.GREEN), b -> {
+					this.addLayer(new ModifiableNoiseSettings());
+				}).tooltip(Tooltip
+						.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.add_layer.title")))
+						.width(20).build());
 		this.addLayer.active = this.layers.size() < CloudMeshGenerator.MAX_NOISE_LAYERS;
-		
-		this.removeLayer = layersToolbarRow.addChild(Button.builder(Component.literal("-").withStyle(ChatFormatting.RED), b -> 
-		{
-			this.layers.remove(this.currentLayer);
-			this.removeWidget(this.layerEditors.get(this.currentLayer));
-			this.layerEditors.remove(this.currentLayer);
-			this.swapToLayer(this.currentLayer);
-			this.removeLayer.active = !this.layers.isEmpty();
-			this.exportButton.active = !this.layers.isEmpty();
-			this.addLayer.active = true;
-			this.needsMeshRegen = true;
-		}).tooltip(Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.remove_layer.title"))).width(20).build());
+
+		this.removeLayer = layersToolbarRow
+				.addChild(Button.builder(Component.literal("-").withStyle(ChatFormatting.RED), b -> {
+					this.layers.remove(this.currentLayer);
+					this.removeWidget(this.layerEditors.get(this.currentLayer));
+					this.layerEditors.remove(this.currentLayer);
+					this.swapToLayer(this.currentLayer);
+					this.removeLayer.active = !this.layers.isEmpty();
+					this.exportButton.active = !this.layers.isEmpty();
+					this.addLayer.active = true;
+					this.needsMeshRegen = true;
+				}).tooltip(Tooltip
+						.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.remove_layer.title")))
+						.width(20).build());
 		this.removeLayer.active = !this.layers.isEmpty();
-		
+
 		layersToolbarRow.addChild(Button.builder(Component.literal("<"), b -> {
 			this.jumpLayer(-1);
-		}).tooltip(Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.previous_layer.title"))).width(20).build());
-		
+		}).tooltip(
+				Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.previous_layer.title")))
+				.width(20).build());
+
 		layersToolbarRow.addChild(Button.builder(Component.literal(">"), b -> {
 			this.jumpLayer(1);
-		}).tooltip(Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.next_layer.title"))).width(20).build());
-		
+		}).tooltip(Tooltip.create(Component.translatable("gui.simpleclouds.cloud_previewer.button.next_layer.title")))
+				.width(20).build());
+
 		layersToolbar.arrangeElements();
 		int height = layersToolbar.getHeight();
 		this.toolbarHeight = height;
-		FrameLayout.alignInRectangle(layersToolbar, PADDING, this.height - height - PADDING, this.width / 2, height + PADDING, 0.0F, 0.5F);
+		FrameLayout.alignInRectangle(layersToolbar, PADDING, this.height - height - PADDING, this.width / 2,
+				height + PADDING, 0.0F, 0.5F);
 		layersToolbar.visitWidgets(this::addRenderableWidget);
-		
+
 		GridLayout secondaryToolbar = new GridLayout().spacing(5);
 		GridLayout.RowHelper secondaryToolbarRow = secondaryToolbar.createRowHelper(1);
-		
+
 		secondaryToolbarRow.addChild(Button.builder(LOAD, b -> {
 			this.loadCloudType();
 		}).size(100, 20).build());
-		
+
 		this.exportButton = secondaryToolbarRow.addChild(Button.builder(EXPORT, b -> {
 			this.attemptToExportCloudType();
 		}).size(100, 20).build());
 		this.exportButton.active = !this.layers.isEmpty();
-		
+
 		secondaryToolbar.arrangeElements();
-		FrameLayout.alignInRectangle(secondaryToolbar, PADDING, PADDING, this.width - PADDING * 2, this.height - PADDING * 2, 1.0F, 1.0F);
+		FrameLayout.alignInRectangle(secondaryToolbar, PADDING, PADDING, this.width - PADDING * 2,
+				this.height - PADDING * 2, 1.0F, 1.0F);
 		secondaryToolbar.visitWidgets(this::addRenderableWidget);
-		
+
 		GridLayout cloudTypeOptions = new GridLayout().rowSpacing(this.font.lineHeight + 5);
 		GridLayout.RowHelper cloudTypeOptionsRow = cloudTypeOptions.createRowHelper(1);
-		this.weatherTypeButton = cloudTypeOptionsRow.addChild(new CyclableButton<>(0, 0, 100, Lists.newArrayList(WeatherType.values()), this.weatherType));
+		this.weatherTypeButton = cloudTypeOptionsRow
+				.addChild(new CyclableButton<>(0, 0, 100, Lists.newArrayList(WeatherType.values()), this.weatherType));
 		this.weatherTypeButton.setResponder(type -> this.weatherType = type);
-		this.storminessBox = this.valueEditor(this.storminess, cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)), f -> this.storminess = f, 0.0F, CloudInfo.STORMINESS_MAX);
-		this.stormStartBox = this.valueEditor(this.stormStart, cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)), f -> this.stormStart = f, 0.0F, CloudInfo.STORM_START_MAX);
-		this.stormFadeDistanceBox = this.valueEditor(this.stormFadeDistance, cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)), f -> this.stormFadeDistance = f, 0.0F, CloudInfo.STORM_FADE_DISTANCE_MAX);
-		this.transparencyFadeBox = this.valueEditor(this.transparencyFade, cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)), f -> this.transparencyFade = f, 0.0F, CloudInfo.TRANSPARENCY_FADE_MAX);
+		this.storminessBox = this.valueEditor(this.storminess,
+				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
+				f -> this.storminess = f, 0.0F, CloudInfo.STORMINESS_MAX);
+		this.stormStartBox = this.valueEditor(this.stormStart,
+				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
+				f -> this.stormStart = f, 0.0F, CloudInfo.STORM_START_MAX);
+		this.stormFadeDistanceBox = this.valueEditor(this.stormFadeDistance,
+				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
+				f -> this.stormFadeDistance = f, 0.0F, CloudInfo.STORM_FADE_DISTANCE_MAX);
+		this.transparencyFadeBox = this.valueEditor(this.transparencyFade,
+				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
+				f -> this.transparencyFade = f, 0.0F, CloudInfo.TRANSPARENCY_FADE_MAX);
 		cloudTypeOptions.arrangeElements();
-		FrameLayout.alignInRectangle(cloudTypeOptions, 10, 10 + this.font.lineHeight, this.width - 20, this.height - 20 - this.font.lineHeight * 2, 1.0F, 0.0F);
+		FrameLayout.alignInRectangle(cloudTypeOptions, 10, 10 + this.font.lineHeight, this.width - 20,
+				this.height - 20 - this.font.lineHeight * 2, 1.0F, 0.0F);
 		cloudTypeOptions.visitWidgets(this::addRenderableWidget);
-		
+
 		this.layerEditors.clear();
-		for (int i = 0; i < this.layers.size(); i++)
-		{
+		for (int i = 0; i < this.layers.size(); i++) {
 			ModifiableNoiseSettings layer = this.layers.get(i);
-			LayerEditor list = new LayerEditor(layer, this.minecraft, Math.max(200, this.width / 4), this.height - PADDING * 2 - height - this.font.lineHeight, 0, () -> {
-				this.needsMeshRegen = true;
-			});
+			LayerEditor list = new LayerEditor(layer, this.minecraft, Math.max(200, this.width / 4),
+					this.height - PADDING * 2 - height - this.font.lineHeight, 0, () -> {
+						this.needsMeshRegen = true;
+					});
 			list.setX(PADDING);
 			list.setY(PADDING + this.font.lineHeight);
 			if (i == this.currentLayer)
@@ -468,70 +451,79 @@ public class CloudPreviewerScreen extends Screen3D
 			this.layerEditors.add(list);
 		}
 	}
-	
+
 	@Override
-	public void tick()
-	{
+	public void tick() {
 		generator.worldTick();
 	}
-	
+
 	@Override
-	public void render(GuiGraphics stack, int pMouseX, int pMouseY, float pPartialTick)
-	{
-		if (SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup.get())
-		{
+	public void render(GuiGraphics stack, int pMouseX, int pMouseY, float pPartialTick) {
+		if (SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup.get()) {
 			Popup.createInfoPopup(this, 200, INFO);
 			SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup.set(false);
 			SimpleCloudsConfig.CLIENT_SPEC.save();
 		}
-		
+
 		super.render(stack, pMouseX, pMouseY, pPartialTick);
-		stack.drawString(this.font, Component.translatable("gui.simpleclouds.cloud_previewer.current_layer", Component.literal(this.layers.isEmpty() ? "NONE" : String.valueOf(this.currentLayer + 1)).withStyle(Style.EMPTY.withBold(true))), 10, 5, 0xFFFFFFFF);
-		
+		stack.drawString(this.font,
+				Component.translatable("gui.simpleclouds.cloud_previewer.current_layer",
+						Component.literal(this.layers.isEmpty() ? "NONE" : String.valueOf(this.currentLayer + 1))
+								.withStyle(Style.EMPTY.withBold(true))),
+				10, 5, 0xFFFFFFFF);
+
 		Pair<CloudMeshGenerator.MeshGenStatus, CloudMeshGenerator.MeshGenStatus> status = generator.getMeshGenStatus();
-		if (Stream.of(status.getLeft(), status.getRight()).anyMatch(s -> s == CloudMeshGenerator.MeshGenStatus.MESH_POOL_OVERFLOW || s == CloudMeshGenerator.MeshGenStatus.CHUNK_OVERFLOW))
-			stack.drawString(this.font, WARNING_TOO_MANY_CUBES, this.width - this.font.width(WARNING_TOO_MANY_CUBES) - 5, this.height - this.font.lineHeight - 5, 0xFFFFFFFF);
-		
-		stack.drawString(this.font, WEATHER_TYPE_TITLE, this.weatherTypeButton.getX(), this.weatherTypeButton.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
-		stack.drawString(this.font, STORMINESS_TITLE, this.storminessBox.getX(), this.storminessBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
-		stack.drawString(this.font, STORM_START_TITLE, this.stormStartBox.getX(), this.stormStartBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
-		stack.drawString(this.font, STORM_FADE_DISTANCE_TITLE, this.stormFadeDistanceBox.getX(), this.stormFadeDistanceBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
-		stack.drawString(this.font, TRANSPARENCY_FADE_TITLE, this.transparencyFadeBox.getX(), this.transparencyFadeBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
+		if (Stream.of(status.getLeft(), status.getRight())
+				.anyMatch(s -> s == CloudMeshGenerator.MeshGenStatus.MESH_POOL_OVERFLOW
+						|| s == CloudMeshGenerator.MeshGenStatus.CHUNK_OVERFLOW))
+			stack.drawString(this.font, WARNING_TOO_MANY_CUBES,
+					this.width - this.font.width(WARNING_TOO_MANY_CUBES) - 5, this.height - this.font.lineHeight - 5,
+					0xFFFFFFFF);
+
+		stack.drawString(this.font, WEATHER_TYPE_TITLE, this.weatherTypeButton.getX(),
+				this.weatherTypeButton.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
+		stack.drawString(this.font, STORMINESS_TITLE, this.storminessBox.getX(),
+				this.storminessBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
+		stack.drawString(this.font, STORM_START_TITLE, this.stormStartBox.getX(),
+				this.stormStartBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
+		stack.drawString(this.font, STORM_FADE_DISTANCE_TITLE, this.stormFadeDistanceBox.getX(),
+				this.stormFadeDistanceBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
+		stack.drawString(this.font, TRANSPARENCY_FADE_TITLE, this.transparencyFadeBox.getX(),
+				this.transparencyFadeBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
 	}
-	
+
 	@Override
-	protected void render3D(PoseStack stack, MultiBufferSource buffers, int mouseX, int mouseY, float partialTick)
-	{
+	protected void render3D(PoseStack stack, MultiBufferSource buffers, int mouseX, int mouseY, float partialTick) {
 		if (this.needsMeshRegen)
 			this.generateMesh();
-		
+
 		SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
-		
+
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
 		cloudTarget.bindWrite(false);
-		
-		SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, RenderSystem.getProjectionMatrix(), Float.MAX_VALUE, Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
+
+		SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, RenderSystem.getProjectionMatrix(), Float.MAX_VALUE,
+				Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
 
 		WeightedBlendingTarget target = renderer.getCloudTransparencyTarget();
 		target.clear(Minecraft.ON_OSX);
-		
-		if (generator.transparencyEnabled())
-		{
+
+		if (generator.transparencyEnabled()) {
 			renderer.copyDepthFromCloudsToTransparency();
 			target.bindWrite(false);
-			
-			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, RenderSystem.getProjectionMatrix(), Float.MAX_VALUE, Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
+
+			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, RenderSystem.getProjectionMatrix(),
+					Float.MAX_VALUE, Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
 		}
-		
+
 		renderer.doFinalCompositePass(stack.last().pose(), partialTick, RenderSystem.getProjectionMatrix());
-		
+
 		this.minecraft.getMainRenderTarget().bindWrite(false);
 	}
-	
+
 	@Override
-	public void onClose()
-	{
+	public void onClose() {
 		if (this.prev != null)
 			this.minecraft.setScreen(this.prev);
 		else

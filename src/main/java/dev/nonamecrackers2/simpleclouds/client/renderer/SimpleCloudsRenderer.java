@@ -157,6 +157,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private boolean failedToCopyDepthBuffer;
 	private boolean needsReload;
 	private @Nullable RendererInitializeResult initialInitializationResult;
+	private final Matrix4f inverseProjMatrix = new Matrix4f();
+	private final Matrix4f inverseModelViewMatrix = new Matrix4f();
 
 	private SimpleCloudsRenderer(CloudsRendererSettings settings, Minecraft mc) {
 		this.settings = settings;
@@ -271,6 +273,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	public void requestReload() {
 		LOGGER.debug("Requesting reload...");
 		this.needsReload = true;
+	}
+
+	private void updateInverseMatrices(Matrix4f projMat, Matrix4f modelViewMat) {
+		this.inverseProjMatrix.set(projMat).invert();
+		this.inverseModelViewMatrix.set(modelViewMat).invert();
 	}
 
 	@Override
@@ -1098,12 +1105,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			RenderSystem.resetTextureMatrix();
 			RenderSystem.depthMask(false);
 
-			Matrix4f invertedProjMat = new Matrix4f(projMat).invert();
-			Matrix4f invertedModelViewMat = new Matrix4f(camMat).invert();
+			this.updateInverseMatrices(projMat, camMat);
 			for (PostPass pass : ((MixinPostChain) this.screenSpaceWorldFog).simpleclouds$getPostPasses()) {
 				EffectInstance effect = pass.getEffect();
-				effect.safeGetUniform("InverseWorldProjMat").set(invertedProjMat);
-				effect.safeGetUniform("InverseModelViewMat").set(invertedModelViewMat);
+				effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
+				effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
 				effect.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
 				effect.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
 				float[] fogCol = RenderSystem.getShaderFogColor();
@@ -1163,12 +1169,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			}
 		}
 
-		Matrix4f invertedProjMat = new Matrix4f(projMat).invert();
-		Matrix4f invertedModelViewMat = new Matrix4f(camMat).invert();
+		this.updateInverseMatrices(projMat, camMat);
 		for (PostPass pass : ((MixinPostChain) this.stormPostProcessing).simpleclouds$getPostPasses()) {
 			EffectInstance effect = pass.getEffect();
-			effect.safeGetUniform("InverseWorldProjMat").set(invertedProjMat);
-			effect.safeGetUniform("InverseModelViewMat").set(invertedModelViewMat);
+			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
+			effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
 			effect.safeGetUniform("ShadowProjMat").set(this.stormFogShadowMap.getProjMatrix());
 			effect.safeGetUniform("ShadowModelViewMat").set(this.stormFogShadowMapMatrix);
 			effect.safeGetUniform("CameraPos").set((float) camX, (float) camY, (float) camZ);
@@ -1195,14 +1200,13 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		RenderSystem.resetTextureMatrix();
 		RenderSystem.depthMask(false);
 
-		Matrix4f invertedProjMat = new Matrix4f(projMat).invert();
-		Matrix4f invertedModelViewMat = new Matrix4f(stack.last().pose()).invert();
+		this.updateInverseMatrices(projMat, stack.last().pose());
 		float minimumRadius = this.mc.gameRenderer.getRenderDistance();
 		for (PostPass pass : ((MixinPostChain) this.cloudShadows).simpleclouds$getPostPasses()) {
 			EffectInstance effect = pass.getEffect();
 			effect.setSampler("DepthSampler", () -> depthBufferId);
-			effect.safeGetUniform("InverseWorldProjMat").set(invertedProjMat);
-			effect.safeGetUniform("InverseModelViewMat").set(invertedModelViewMat);
+			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
+			effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
 			effect.safeGetUniform("ShadowProjMat").set(this.shadowMap.get().getProjMatrix());
 			effect.safeGetUniform("ShadowModelViewMat").set(this.shadowMapMatrix);
 			effect.safeGetUniform("CameraPos").set((float) camX, (float) camY, (float) camZ);
