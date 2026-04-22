@@ -19,20 +19,19 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 
-public class ServerCloudGenerator extends CloudGenerator
-{
+public class ServerCloudGenerator extends CloudGenerator {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final int AUTO_SYNC_INTERVAL = 240;
+	private static final int VISIBILITY_SYNC_INTERVAL = 40;
 	private int syncTimer = AUTO_SYNC_INTERVAL;
+	private int visibilitySyncCooldown;
 	private boolean requiresSync;
-	
-	public ServerCloudGenerator(CloudGetter getter, Supplier<CloudSpawningConfig> config)
-	{
+
+	public ServerCloudGenerator(CloudGetter getter, Supplier<CloudSpawningConfig> config) {
 		super(getter, config);
 	}
-	
-	public CompoundTag toTag()
-	{
+
+	public CompoundTag toTag() {
 		CompoundTag tag = new CompoundTag();
 		ListTag regions = new ListTag();
 		for (CloudRegion region : this.getClouds())
@@ -41,13 +40,11 @@ public class ServerCloudGenerator extends CloudGenerator
 		tag.putInt("ticks_till_next_gen", this.ticksTillNextGen);
 		return tag;
 	}
-	
-	public void readTag(CompoundTag tag)
-	{
+
+	public void readTag(CompoundTag tag) {
 		ListTag regionsTag = tag.getList("regions", 10);
 		List<CloudRegion> regions = Lists.newArrayList();
-		for (int i = 0; i < regionsTag.size(); i++)
-		{
+		for (int i = 0; i < regionsTag.size(); i++) {
 			CompoundTag regionTag = regionsTag.getCompound(i);
 			try {
 				regions.add(new CloudRegion(regionTag));
@@ -55,68 +52,67 @@ public class ServerCloudGenerator extends CloudGenerator
 				LOGGER.error("Failed to read cloud region: ", e);
 			}
 		}
-//		System.out.println("what is up, reading");
-//		System.out.println(regions);
+		// System.out.println("what is up, reading");
+		// System.out.println(regions);
 		this.setClouds(regions);
 		this.ticksTillNextGen = tag.getInt("ticks_till_next_gen");
 	}
-	
-	public boolean checkAndResetSync()
-	{
+
+	public boolean checkAndResetSync() {
 		boolean flag = this.requiresSync;
 		this.requiresSync = false;
 		return flag;
 	}
-	
+
 	@Override
-	public boolean addCloud(CloudRegion region, CloudGenerator.Order order)
-	{
-//		System.out.println("total clouds: " + (this.getTotalCloudRegions()));
+	public boolean addCloud(CloudRegion region, CloudGenerator.Order order) {
+		// System.out.println("total clouds: " + (this.getTotalCloudRegions()));
 		if (!super.addCloud(region, order))
 			return false;
-//		System.out.println("success! total clouds: " + (this.getTotalCloudRegions()));
+		// System.out.println("success! total clouds: " +
+		// (this.getTotalCloudRegions()));
 		this.requiresSync = true;
 		return true;
 	}
-	
+
 	@Override
-	public boolean removeClouds(Predicate<CloudRegion> predicate)
-	{
+	public boolean removeClouds(Predicate<CloudRegion> predicate) {
 		if (!super.removeClouds(predicate))
 			return false;
 		this.requiresSync = true;
 		return true;
 	}
-	
+
 	@Override
-	public void tick(Level level, float speed)
-	{
+	public void tick(Level level, float speed) {
 		super.tick(level, speed);
-		
-		if (this.syncTimer > 0)
-		{
+
+		if (this.visibilitySyncCooldown > 0)
+			this.visibilitySyncCooldown--;
+
+		if (this.syncTimer > 0) {
 			this.syncTimer--;
-			if (this.syncTimer == 0)
-			{
+			if (this.syncTimer == 0) {
 				this.requiresSync = true;
 				this.syncTimer = AUTO_SYNC_INTERVAL;
 			}
 		}
-		
-		//if (level.dimension() == Level.OVERWORLD)
-		//	System.out.println(this.ticksTillNextGen);
+
+		// if (level.dimension() == Level.OVERWORLD)
+		// System.out.println(this.ticksTillNextGen);
 	}
-	
+
 	@Override
-	protected void onRegionVisibilityChange(CloudRegion region, boolean nowVisible)
-	{
-//		System.out.println("visibility changed: visible? " + nowVisible);
-		this.requiresSync = true;
+	protected void onRegionVisibilityChange(CloudRegion region, boolean nowVisible) {
+		// System.out.println("visibility changed: visible? " + nowVisible);
+		if (this.visibilitySyncCooldown <= 0) {
+			this.requiresSync = true;
+			this.visibilitySyncCooldown = VISIBILITY_SYNC_INTERVAL;
+		}
 	}
-	
+
 	@Override
-	protected List<SpawnRegion> determineValidSpawnRegions(RandomSource random, Level level)
-	{
+	protected List<SpawnRegion> determineValidSpawnRegions(RandomSource random, Level level) {
 		return ServerCloudManager.regionsFromEntities(level.players(), SimpleCloudsConstants.SPAWN_RADIUS);
 	}
 }

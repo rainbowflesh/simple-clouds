@@ -14,6 +14,7 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPaylo
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
@@ -22,91 +23,92 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPacketHandler
-{
+public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPacketHandler {
 	private static final Logger LOGGER = LogManager.getLogger();
 	public static final SimpleCloudsClientPacketHandlerImpl INSTANCE = new SimpleCloudsClientPacketHandlerImpl();
-	
-	private SimpleCloudsClientPacketHandlerImpl() {}
-	
+
+	private SimpleCloudsClientPacketHandlerImpl() {
+	}
+
 	@Override
-	public void handleUpdateCloudManagerPayload(UpdateCloudManagerPayload packet, IPayloadContext context)
-	{
+	public void handleUpdateCloudManagerPayload(UpdateCloudManagerPayload packet, IPayloadContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
 		handleUpdateCloudManagerPayload(packet, manager);
 	}
-	
-	private static void handleUpdateCloudManagerPayload(CloudManagerInfoPayload payload, CloudManager<ClientLevel> manager)
-	{
+
+	private static void handleUpdateCloudManagerPayload(CloudManagerInfoPayload payload,
+			CloudManager<ClientLevel> manager) {
 		manager.setScrollAngle(payload.scrollAngle());
 		manager.setCloudSpeed(payload.speed());
 		manager.setCloudHeight(payload.cloudHeight());
 		if (manager instanceof ClientCloudManager clientManager)
 			clientManager.setReceivedSync();
 	}
-	
+
 	@Override
-	public void handleSendCloudManagerPayload(SendCloudManagerPayload packet, IPayloadContext context)
-	{
+	public void handleSendCloudManagerPayload(SendCloudManagerPayload packet, IPayloadContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
 		handleUpdateCloudManagerPayload(packet, manager);
 		manager.setSeed(packet.seed());
-		manager.getCloudGenerator().setClouds(packet.cloudRegions());
 		SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
-		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded())
-		{
-			if (renderer.needsReinitialization())
-			{
-				LOGGER.debug("Looks like the server cloud mode or region generator does not match with the client. Requesting a reload...");
+		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded()) {
+			if (renderer.needsReinitialization()) {
+				LOGGER.debug(
+						"Looks like the server cloud mode or region generator does not match with the client. Requesting a reload...");
 				renderer.requestReload();
 			}
-		}
-		else
-		{
+		} else {
 			LOGGER.warn("Server spec is not loaded");
 		}
 		LOGGER.debug("Received cloud manager info");
 	}
-	
+
 	@Override
-	public void handleSendCloudRegionsPacket(SendCloudRegionsPayload packet, IPayloadContext context)
-	{
+	public void handleSendCloudRegionsPacket(SendCloudRegionsPayload packet, IPayloadContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
 		manager.getCloudGenerator().setClouds(packet.cloudRegions());
 	}
-	
+
 	@Override
-	public void handleSendCloudTypesPayload(SendCloudTypesPayload packet, IPayloadContext context)
-	{
+	public void handleUpdateCloudRegionsPayload(UpdateCloudRegionsPayload packet, IPayloadContext context) {
+		Minecraft mc = Minecraft.getInstance();
+		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
+		manager.getCloudGenerator().applyCloudRegionDelta(packet.addedCloudRegions(), packet.removedCloudRegionIds());
+	}
+
+	@Override
+	public void handleSendCloudTypesPayload(SendCloudTypesPayload packet, IPayloadContext context) {
 		LOGGER.debug("Received {} synced cloud types", packet.types().size());
 		ClientSideCloudTypeManager.getInstance().receiveSynced(packet.types(), packet.indexed());
-		if (SimpleCloudsRenderer.getInstance().getMeshGenerator() instanceof MultiRegionCloudMeshGenerator meshGenerator)
-		{
+		if (SimpleCloudsRenderer.getInstance()
+				.getMeshGenerator() instanceof MultiRegionCloudMeshGenerator meshGenerator) {
 			if (packet.types().size() > MultiRegionCloudMeshGenerator.MAX_CLOUD_TYPES)
-				LOGGER.warn("The amount of loaded cloud types exceeds the maximum of {}. Please be aware that not all cloud types loaded will be used.", MultiRegionCloudMeshGenerator.MAX_CLOUD_TYPES);
+				LOGGER.warn(
+						"The amount of loaded cloud types exceeds the maximum of {}. Please be aware that not all cloud types loaded will be used.",
+						MultiRegionCloudMeshGenerator.MAX_CLOUD_TYPES);
 			else
 				meshGenerator.updateCloudTypes();
 		}
 	}
-	
+
 	@Override
-	public void handleSpawnLightningPayload(SpawnLightningPayload packet, IPayloadContext context)
-	{
-		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(packet.pos(), packet.onlySound(), packet.seed(), packet.maxDepth(), packet.branchCount(), packet.maxBranchLength(), packet.maxWidth(), packet.minimumPitch(), packet.maximumPitch());
+	public void handleSpawnLightningPayload(SpawnLightningPayload packet, IPayloadContext context) {
+		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(packet.pos(), packet.onlySound(),
+				packet.seed(), packet.maxDepth(), packet.branchCount(), packet.maxBranchLength(), packet.maxWidth(),
+				packet.minimumPitch(), packet.maximumPitch());
 	}
-	
+
 	@Override
-	public void handleNotifyCloudModeUpdatedPayload(NotifyCloudModeUpdatedPayload packet, IPayloadContext context)
-	{
+	public void handleNotifyCloudModeUpdatedPayload(NotifyCloudModeUpdatedPayload packet, IPayloadContext context) {
 		SimpleCloudsClientConfigListeners.onCloudModeUpdatedFromServer(packet.newMode());
 	}
-	
+
 	@Override
-	public void handleNotifySingleModeCloudTypeUpdatedPayload(NotifySingleModeCloudTypeUpdatedPayload packet, IPayloadContext context)
-	{
+	public void handleNotifySingleModeCloudTypeUpdatedPayload(NotifySingleModeCloudTypeUpdatedPayload packet,
+			IPayloadContext context) {
 		SimpleCloudsClientConfigListeners.onSingleModeCloudTypeUpdatedFromServer(packet.newType());
 	}
 }

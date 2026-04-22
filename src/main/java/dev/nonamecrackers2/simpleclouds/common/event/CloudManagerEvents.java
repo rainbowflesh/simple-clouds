@@ -1,12 +1,17 @@
 package dev.nonamecrackers2.simpleclouds.common.event;
 
-
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import dev.nonamecrackers2.simpleclouds.common.world.ServerCloudManager;
@@ -20,83 +25,109 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class CloudManagerEvents
-{
+public class CloudManagerEvents {
+	private static final Map<UUID, Set<Integer>> SYNCHED_CLOUDS_BY_PLAYER = new HashMap<>();
+
 	@SubscribeEvent
-	public static void onWorldTick(LevelTickEvent.Pre event)
-	{
+	public static void onWorldTick(LevelTickEvent.Pre event) {
 		Level level = event.getLevel();
 		CloudManager<?> manager = CloudManager.get(level);
 		manager.tick();
-		if (!level.isClientSide() && manager instanceof ServerCloudManager serverManager)
-		{
+		if (!level.isClientSide() && manager instanceof ServerCloudManager serverManager) {
 			SyncType syncType = serverManager.fetchNextSyncOperation();
-			if (syncType != null)
-			{
-				switch (syncType)
-				{
-				case BASE_PROPERTIES:
-				{
-					PacketDistributor.sendToPlayersInDimension((ServerLevel)level, new SendCloudManagerPayload(serverManager));
-					break;
+			if (syncType != null) {
+				switch (syncType) {
+					case BASE_PROPERTIES: {
+						PacketDistributor.sendToPlayersInDimension((ServerLevel) level,
+								new SendCloudManagerPayload(serverManager));
+						break;
+					}
+					case MOVEMENT: {
+						PacketDistributor.sendToPlayersInDimension((ServerLevel) level,
+								new UpdateCloudManagerPayload(serverManager));
+						break;
+					}
+					case CLOUD_FORMATIONS: {
+						for (ServerPlayer player : ((ServerLevel) level).players())
+							sendCloudRegionDeltaToPlayer(player);
+						break;
+					}
+					default:
+						throw new IllegalArgumentException("Unexpected value: " + syncType);
 				}
-				case MOVEMENT:
-				{
-					PacketDistributor.sendToPlayersInDimension((ServerLevel)level, new UpdateCloudManagerPayload(serverManager));
-					break;
-				}
-				case CLOUD_FORMATIONS:
-				{
-					for (ServerPlayer player : ((ServerLevel)level).players())
-						sendCloudRegionsToPlayer(player);
-					break;
-				}
-				default:
-					throw new IllegalArgumentException("Unexpected value: " + syncType);
-				}
-			}
-			else if (manager.getTickCount() % CloudManager.UPDATE_INTERVAL == 0)
-			{
-				PacketDistributor.sendToPlayersInDimension((ServerLevel)level, new UpdateCloudManagerPayload(serverManager));
+			} else if (manager.getTickCount() % CloudManager.UPDATE_INTERVAL == 0) {
+				PacketDistributor.sendToPlayersInDimension((ServerLevel) level,
+						new UpdateCloudManagerPayload(serverManager));
 			}
 		}
 	}
-	
+
 	@SubscribeEvent
-	public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event)
-	{
+	public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
 		CloudManager.get(event.getEntity().level()).onPlayerJoin(event.getEntity());
 		if (event.getEntity() instanceof ServerPlayer player)
 			update(player);
 	}
-	
+
 	@SubscribeEvent
-	public static void onPlayerSwapDimensions(PlayerEvent.PlayerChangedDimensionEvent event)
-	{
+	public static void onPlayerSwapDimensions(PlayerEvent.PlayerChangedDimensionEvent event) {
 		CloudManager.get(event.getEntity().level()).onPlayerJoin(event.getEntity());
 		if (event.getEntity() instanceof ServerPlayer player)
 			update(player);
 	}
-	
+
 	@SubscribeEvent
-	public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event)
-	{
+	public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
 		CloudManager.get(event.getEntity().level()).onPlayerJoin(event.getEntity());
 		if (event.getEntity() instanceof ServerPlayer player)
 			update(player);
 	}
-	
-	private static void update(ServerPlayer player)
-	{
+
+	@SubscribeEvent
+	public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
+		SYNCHED_CLOUDS_BY_PLAYER.remove(event.getEntity().getUUID());
+	}
+
+	private static void update(ServerPlayer player) {
 		PacketDistributor.sendToPlayer(player, new SendCloudManagerPayload(CloudManager.get(player.level())));
-		sendCloudRegionsToPlayer(player);
+		sendFullCloudRegionsToPlayer(player);
 	}
-	
-	private static void sendCloudRegionsToPlayer(ServerPlayer player)
-	{
-		CloudManager<ServerLevel> manager = CloudManager.get(player.serverLevel());
-		SpawnRegion region = new SpawnRegion(player.getBlockX(), player.getBlockZ(), SimpleCloudsConstants.SPAWN_RADIUS);
-		List<CloudRegion> formationsForPlayer = manager.getCloudGenerator().getCloudsInRegion(region);
+
+	private static void sendFullCloudRegionsToPlayer(ServerPlayer player) {
+		List<CloudRegion> formationsForPlayer = getCloudsForPlayer(player);
+		SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), collectCloudIds(formationsForPlayer));
 		PacketDistributor.sendToPlayer(player, new SendCloudRegionsPayload(formationsForPlayer));
+	}
+
+	private static void sendCloudRegionDeltaToPlayer(ServerPlayer player) {
+		List<CloudRegion> formationsForPlayer = getCloudsForPlayer(player);
+		Set<Integer> currentCloudIds = collectCloudIds(formationsForPlayer);
+		Set<Integer> previousCloudIds = SYNCHED_CLOUDS_BY_PLAYER.get(player.getUUID());
+		if (previousCloudIds == null) {
+			sendFullCloudRegionsToPlayer(player);
+			return;
+		}
+
+		List<CloudRegion> addedClouds = formationsForPlayer.stream()
+				.filter(region -> !previousCloudIds.contains(region.getSyncId())).toList();
+		List<Integer> removedCloudIds = previousCloudIds.stream().filter(id -> !currentCloudIds.contains(id)).toList();
+		if (!addedClouds.isEmpty() || !removedCloudIds.isEmpty())
+			PacketDistributor.sendToPlayer(player, new UpdateCloudRegionsPayload(addedClouds, removedCloudIds));
+
+		SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), currentCloudIds);
+	}
+
+	private static List<CloudRegion> getCloudsForPlayer(ServerPlayer player) {
+		CloudManager<ServerLevel> manager = CloudManager.get(player.serverLevel());
+		SpawnRegion region = new SpawnRegion(player.getBlockX(), player.getBlockZ(),
+				SimpleCloudsConstants.SPAWN_RADIUS);
+		return manager.getCloudGenerator().getCloudsInRegion(region);
+	}
+
+	private static Set<Integer> collectCloudIds(List<CloudRegion> clouds) {
+		Set<Integer> cloudIds = new HashSet<>();
+		for (CloudRegion region : clouds)
+			cloudIds.add(region.getSyncId());
+		return cloudIds;
 	}
 }

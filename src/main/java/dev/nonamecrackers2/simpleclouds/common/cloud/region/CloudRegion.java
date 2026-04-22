@@ -6,7 +6,6 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.joml.Matrix2f;
-import org.joml.Vector2f;
 
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.region.ScAPICloudRegion;
 import dev.nonamecrackers2.simpleclouds.api.common.event.CloudRegionTickEvent;
@@ -22,8 +21,8 @@ import net.minecraft.world.phys.Vec2;
 import net.neoforged.neoforge.common.NeoForge;
 import nonamecrackers2.crackerslib.common.util.primitives.PrimitiveHelper;
 
-public class CloudRegion implements ScAPICloudRegion
-{
+public class CloudRegion implements ScAPICloudRegion {
+	private int syncId = -1;
 	private final ResourceLocation cloudTypeId;
 	private final float initialRadius;
 	private final int orderWeight;
@@ -46,9 +45,10 @@ public class CloudRegion implements ScAPICloudRegion
 	private int existsForTicks;
 	private int growTicks;
 	private boolean priorVisible;
-	
-	public CloudRegion(ResourceLocation cloudTypeId, Vec2 movementDirection, float maxSpeed, float accelerationFactor, float posX, float posZ, float radius, float rotation, float stretchFactor, int existsForTicks, int growTicks, int orderWeight)
-	{
+
+	public CloudRegion(ResourceLocation cloudTypeId, Vec2 movementDirection, float maxSpeed, float accelerationFactor,
+			float posX, float posZ, float radius, float rotation, float stretchFactor, int existsForTicks,
+			int growTicks, int orderWeight) {
 		this.cloudTypeId = cloudTypeId;
 		this.movementDirection = movementDirection;
 		this.maxSpeed = maxSpeed;
@@ -63,9 +63,9 @@ public class CloudRegion implements ScAPICloudRegion
 		this.growTicks = Mth.clamp(growTicks, 0, existsForTicks);
 		this.orderWeight = orderWeight;
 	}
-	
-	public CloudRegion(FriendlyByteBuf buffer)
-	{
+
+	public CloudRegion(FriendlyByteBuf buffer) {
+		this.syncId = buffer.readVarInt();
 		this.cloudTypeId = buffer.readResourceLocation();
 		this.initialRadius = buffer.readFloat();
 		this.movementDirection = new Vec2(buffer.readFloat(), buffer.readFloat());
@@ -88,9 +88,9 @@ public class CloudRegion implements ScAPICloudRegion
 		this.growTicks = buffer.readVarInt();
 		this.orderWeight = buffer.readVarInt();
 	}
-	
-	public CloudRegion(CompoundTag tag) throws IllegalArgumentException
-	{
+
+	public CloudRegion(CompoundTag tag) throws IllegalArgumentException {
+		this.syncId = tag.contains("sync_id") ? tag.getInt("sync_id") : -1;
 		this.cloudTypeId = ResourceLocation.read(tag.getString("id")).resultOrPartial(e -> {
 			throw new IllegalArgumentException(e);
 		}).get();
@@ -117,9 +117,9 @@ public class CloudRegion implements ScAPICloudRegion
 		this.existsForTicks = tag.getInt("exists_for_ticks");
 		this.growTicks = tag.getInt("grow_ticks");
 	}
-	
-	public void toPacket(FriendlyByteBuf buffer)
-	{
+
+	public void toPacket(FriendlyByteBuf buffer) {
+		buffer.writeVarInt(this.syncId);
 		buffer.writeResourceLocation(this.cloudTypeId);
 		buffer.writeFloat(this.initialRadius);
 		buffer.writeFloat(this.movementDirection.x);
@@ -138,10 +138,10 @@ public class CloudRegion implements ScAPICloudRegion
 		buffer.writeVarInt(this.growTicks);
 		buffer.writeVarInt(this.orderWeight);
 	}
-	
-	public CompoundTag toTag()
-	{
+
+	public CompoundTag toTag() {
 		CompoundTag tag = new CompoundTag();
+		tag.putInt("sync_id", this.syncId);
 		tag.putString("id", this.cloudTypeId.toString());
 		tag.putFloat("initial_radius", this.initialRadius);
 		tag.put("movement_direction", PrimitiveHelper.vec2ToTag(this.movementDirection));
@@ -165,25 +165,23 @@ public class CloudRegion implements ScAPICloudRegion
 		return tag;
 	}
 
-	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed)
-	{
-//		if (this.cloudTypeId.toString().equals("simpleclouds:nimbostratus"))
-//		{
-//			System.out.println("------ " + this.cloudTypeId + " -------");
-//			System.out.println("Exist ticks: " + this.existsForTicks);
-//			System.out.println("Grow ticks: " + this.growTicks);
-//			System.out.println("Max speed: " + this.maxSpeed);
-//			System.out.println("Stretch factor: " + this.stretchFactor);
-//			System.out.println("Initial radius: " + this.initialRadius * 8);
-//			System.out.println("Current radius: " + this.radius * 8);
-//		}
-		
+	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed) {
+		// if (this.cloudTypeId.toString().equals("simpleclouds:nimbostratus"))
+		// {
+		// System.out.println("------ " + this.cloudTypeId + " -------");
+		// System.out.println("Exist ticks: " + this.existsForTicks);
+		// System.out.println("Grow ticks: " + this.growTicks);
+		// System.out.println("Max speed: " + this.maxSpeed);
+		// System.out.println("Stretch factor: " + this.stretchFactor);
+		// System.out.println("Initial radius: " + this.initialRadius * 8);
+		// System.out.println("Current radius: " + this.radius * 8);
+		// }
+
 		Vec2 movementDirection = this.movementDirection;
 		float maxSpeed = this.maxSpeed * speed;
 		float accelerationFactor = this.accelerationFactor * speed;
-		
-		if (level != null)
-		{
+
+		if (level != null) {
 			CloudRegionTickEvent event = new CloudRegionTickEvent(level, this);
 			NeoForge.EVENT_BUS.post(event);
 			if (event.getModifiedMovementDirection() != null)
@@ -193,24 +191,23 @@ public class CloudRegion implements ScAPICloudRegion
 			if (event.getModifiedAccelerationFactor() >= 0.0F)
 				accelerationFactor = event.getModifiedAccelerationFactor();
 		}
-		
+
 		this.radiusO = this.radius;
 		this.stretchFactorO = this.stretchFactor;
 		this.rotationO = this.rotation;
 		float scale;
 		if (this.tickCount < this.growTicks)
-			scale = (float)this.tickCount / (float)this.growTicks;
+			scale = (float) this.tickCount / (float) this.growTicks;
 		else
-			scale = 1.0F - (float)(this.tickCount - this.growTicks) / (float)(this.existsForTicks - this.growTicks);
+			scale = 1.0F - (float) (this.tickCount - this.growTicks) / (float) (this.existsForTicks - this.growTicks);
 		this.radius = this.initialRadius * scale;
-		
+
 		this.tickCount += Math.max(1, Mth.ceil((isVisible ? 1.0F : 20.0F) * speed));
-		
+
 		this.posXO = this.posX;
 		this.posZO = this.posZ;
 
-		if (isVisible)
-		{
+		if (isVisible) {
 			float targetVelX = Math.abs(movementDirection.x * maxSpeed);
 			float targetVelZ = Math.abs(movementDirection.y * maxSpeed);
 			this.velX = Mth.clamp(this.velX + movementDirection.x * accelerationFactor, -targetVelX, targetVelX);
@@ -218,273 +215,232 @@ public class CloudRegion implements ScAPICloudRegion
 			this.posX += this.velX;
 			this.posZ += this.velZ;
 		}
-		
+
 		this.priorVisible = isVisible;
 	}
-	
+
+	public int getSyncId() {
+		return this.syncId;
+	}
+
+	public void setSyncId(int syncId) {
+		this.syncId = syncId;
+	}
+
 	@Override
-	public ResourceLocation getCloudTypeId()
-	{
+	public ResourceLocation getCloudTypeId() {
 		return this.cloudTypeId;
 	}
-	
+
 	@Override
-	public int getOrderWeight()
-	{
+	public int getOrderWeight() {
 		return this.orderWeight;
 	}
-	
-	public boolean intersects(SpawnRegion region)
-	{
-		return region.intersectsCircle(this.getWorldX(), this.getWorldZ(), this.getWorldRadius() / this.getStretch() + (float)SimpleCloudsConstants.CLOUD_SCALE / SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR);
+
+	public boolean intersects(SpawnRegion region) {
+		return region.intersectsCircle(this.getWorldX(), this.getWorldZ(), this.getWorldRadius() / this.getStretch()
+				+ (float) SimpleCloudsConstants.CLOUD_SCALE / SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR);
 	}
-	
+
 	@Override
-	public boolean isDead()
-	{
+	public boolean isDead() {
 		return this.tickCount > this.existsForTicks;
 	}
-	
+
 	@Override
-	public Vec2 getMovementDirection()
-	{
+	public Vec2 getMovementDirection() {
 		return this.movementDirection;
 	}
-	
+
 	@Override
-	public void setMovementDirection(Vec2 direction)
-	{
+	public void setMovementDirection(Vec2 direction) {
 		this.movementDirection = direction;
 	}
-	
+
 	@Override
-	public float getMaxSpeed()
-	{
+	public float getMaxSpeed() {
 		return this.maxSpeed;
 	}
-	
+
 	@Override
-	public void setMaxSpeed(float speed)
-	{
+	public void setMaxSpeed(float speed) {
 		this.maxSpeed = speed;
 	}
-	
+
 	@Override
-	public float getAccelerationFactor()
-	{
+	public float getAccelerationFactor() {
 		return this.accelerationFactor;
 	}
-	
+
 	@Override
-	public void setAccelerationFactor(float factor)
-	{
+	public void setAccelerationFactor(float factor) {
 		this.accelerationFactor = factor;
 	}
-	
+
 	@Override
-	public float getPosX(float partialTick)
-	{
+	public float getPosX(float partialTick) {
 		return Mth.lerp(partialTick, this.posXO, this.posX);
 	}
-	
+
 	@Override
-	public float getPosX()
-	{
+	public float getPosX() {
 		return this.posX;
 	}
-	
+
 	@Override
-	public float getWorldX()
-	{
-		return this.posX * (float)SimpleCloudsConstants.CLOUD_SCALE;
+	public float getWorldX() {
+		return this.posX * (float) SimpleCloudsConstants.CLOUD_SCALE;
 	}
-	
+
 	@Override
-	public float getPosZ(float partialTick)
-	{
+	public float getPosZ(float partialTick) {
 		return Mth.lerp(partialTick, this.posZO, this.posZ);
 	}
-	
+
 	@Override
-	public float getPosZ()
-	{
+	public float getPosZ() {
 		return this.posZ;
 	}
-	
+
 	@Override
-	public float getWorldZ()
-	{
-		return this.posZ * (float)SimpleCloudsConstants.CLOUD_SCALE;
+	public float getWorldZ() {
+		return this.posZ * (float) SimpleCloudsConstants.CLOUD_SCALE;
 	}
-	
+
 	@Override
-	public void moveTo(float x, float z)
-	{
+	public void moveTo(float x, float z) {
 		this.posX = x;
 		this.posXO = x;
 		this.posZ = z;
 		this.posZO = z;
 	}
-	
+
 	@Override
-	public void moveToWorldPos(float x, float z)
-	{
-		this.moveTo(x / (float)SimpleCloudsConstants.CLOUD_SCALE, z / (float)SimpleCloudsConstants.CLOUD_SCALE);
+	public void moveToWorldPos(float x, float z) {
+		this.moveTo(x / (float) SimpleCloudsConstants.CLOUD_SCALE, z / (float) SimpleCloudsConstants.CLOUD_SCALE);
 	}
 
 	@Override
-	public float getInitialRadius()
-	{
+	public float getInitialRadius() {
 		return this.initialRadius;
 	}
-	
+
 	@Override
-	public float getInitialWorldRadius()
-	{
-		return this.initialRadius * (float)SimpleCloudsConstants.CLOUD_SCALE;
+	public float getInitialWorldRadius() {
+		return this.initialRadius * (float) SimpleCloudsConstants.CLOUD_SCALE;
 	}
-	
+
 	@Override
-	public float getRadius(float partialTick)
-	{
+	public float getRadius(float partialTick) {
 		return Mth.lerp(partialTick, this.radiusO, this.radius);
 	}
-	
+
 	@Override
-	public float getRadius()
-	{
+	public float getRadius() {
 		return this.radius;
 	}
-	
+
 	@Override
-	public float getWorldRadius()
-	{
-		return this.radius * (float)SimpleCloudsConstants.CLOUD_SCALE;
+	public float getWorldRadius() {
+		return this.radius * (float) SimpleCloudsConstants.CLOUD_SCALE;
 	}
-	
+
 	@Override
-	public void setRadius(float radius)
-	{
+	public void setRadius(float radius) {
 		this.radius = radius;
 		this.radiusO = radius;
 	}
-	
+
 	@Override
-	public void setWorldRadius(float radius)
-	{
-		this.setRadius(radius / (float)SimpleCloudsConstants.CLOUD_SCALE);
+	public void setWorldRadius(float radius) {
+		this.setRadius(radius / (float) SimpleCloudsConstants.CLOUD_SCALE);
 	}
-	
+
 	@Override
-	public float getStretch(float partialTick)
-	{
+	public float getStretch(float partialTick) {
 		return Mth.lerp(partialTick, this.stretchFactorO, this.stretchFactor);
 	}
-	
+
 	@Override
-	public float getStretch()
-	{
+	public float getStretch() {
 		return this.stretchFactor;
 	}
-	
+
 	@Override
-	public void setStretchFactor(float factor)
-	{
+	public void setStretchFactor(float factor) {
 		this.stretchFactor = factor;
 		this.stretchFactorO = factor;
 	}
-	
+
 	@Override
-	public float getRotation(float partialTick)
-	{
+	public float getRotation(float partialTick) {
 		return Mth.lerp(partialTick, this.rotationO, this.rotation);
 	}
-	
+
 	@Override
-	public float getRotation()
-	{
+	public float getRotation() {
 		return this.rotation;
 	}
-	
+
 	@Override
-	public void setRotation(float rotation)
-	{
+	public void setRotation(float rotation) {
 		this.rotation = rotation;
 		this.rotationO = rotation;
 	}
-	
+
 	@Override
-	public boolean wasPriorVisible()
-	{
+	public boolean wasPriorVisible() {
 		return this.priorVisible;
 	}
-	
-	public int getExistForTicks()
-	{
+
+	public int getExistForTicks() {
 		return this.existsForTicks;
 	}
-	
-	public int getGrowTicks()
-	{
+
+	public int getGrowTicks() {
 		return this.growTicks;
 	}
-	
+
 	@Override
-	public Matrix2f createTransform(float partialTick)
-	{
+	public Matrix2f createTransform(float partialTick) {
 		Matrix2f transform = new Matrix2f().identity();
 		transform.scale(this.getStretch(partialTick), 1.0F);
 		transform.rotate(this.getRotation(partialTick));
 		return transform;
 	}
-	
-	private static CompositeResult circle(CloudRegion region, float x, float z)
-	{
-		Matrix2f transform = region.createTransform(1.0F);
-		Vector2f pos = new Vector2f(x, z).sub(region.posX, region.posZ).mul(transform).add(region.posX, region.posZ);
-		float d = pos.distance(region.posX, region.posZ);
-		float eff = SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR;
-		if (d > region.radius + 1.0F / eff)
-			return new CompositeResult(-1.0F, -1.0F, null);
-		else if (d < region.radius)
-			return new CompositeResult(Math.min((region.radius - d) * eff, 1.0F), 0.0F, region);
-		else
-			return new CompositeResult(0.0F, Math.min((d - region.radius) * eff, 1.0F), region);
-	}
-	
-	private static void composite(Result old, CompositeResult toComposite)
-	{
-		if (toComposite.innerFactor > 0.0F)
-		{
-			if (old.region != null && old.region.cloudTypeId.equals(toComposite.regionAt.cloudTypeId))
-			{
-				old.fade = Mth.lerp(toComposite.innerFactor, old.fade, 1.0F);
-			}
-			else
-			{
-				old.region = toComposite.regionAt;
-				old.fade = toComposite.innerFactor;
-			}
-		}
-		else if (toComposite.outerFactor >= 0.0F)
-		{
-			if (old.region == null || !old.region.cloudTypeId.equals(toComposite.regionAt.cloudTypeId))
-				old.fade *= toComposite.outerFactor;
-		}
-	}
-	
-	public static Pair<CloudRegion, Float> calculateAt(List<CloudRegion> regions, float x, float z)
-	{
+
+	public static Pair<CloudRegion, Float> calculateAt(List<CloudRegion> regions, float x, float z) {
 		Result result = new Result();
-		for (CloudRegion region : regions)
-			composite(result, circle(region, x, z));
+		float eff = SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR;
+		for (CloudRegion region : regions) {
+			float dx = x - region.posX;
+			float dz = z - region.posZ;
+			float cos = Mth.cos(region.rotation);
+			float sin = Mth.sin(region.rotation);
+			float rotatedX = dx * cos - dz * sin;
+			float rotatedZ = dx * sin + dz * cos;
+			float scaledX = rotatedX * region.stretchFactor;
+			float d = Mth.sqrt(scaledX * scaledX + rotatedZ * rotatedZ);
+			if (d > region.radius + 1.0F / eff)
+				continue;
+
+			if (d < region.radius) {
+				float innerFactor = Math.min((region.radius - d) * eff, 1.0F);
+				if (result.region != null && result.region.cloudTypeId.equals(region.cloudTypeId))
+					result.fade = Mth.lerp(innerFactor, result.fade, 1.0F);
+				else {
+					result.region = region;
+					result.fade = innerFactor;
+				}
+			} else if (result.region == null || !result.region.cloudTypeId.equals(region.cloudTypeId)) {
+				float outerFactor = Math.min((d - region.radius) * eff, 1.0F);
+				result.fade *= outerFactor;
+			}
+		}
 		return Pair.of(result.region, result.fade);
 	}
-	
-	private static record CompositeResult(float innerFactor, float outerFactor, CloudRegion regionAt) {}
-	
-	private static class Result
-	{
+
+	private static class Result {
 		private @Nullable CloudRegion region;
 		private float fade;
 	}

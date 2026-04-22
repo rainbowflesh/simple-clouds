@@ -5,51 +5,47 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPaylo
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-public class SimpleCloudsPayloadRegistrar
-{
-	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler)
-	{
-		PayloadRegistrar registrar = event.registrar("1.1").optional();
+public class SimpleCloudsPayloadRegistrar {
+	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler) {
+		PayloadRegistrar registrar = event.registrar("1.3").optional();
 		registrar.playToClient(
-				NotifyCloudModeUpdatedPayload.TYPE, 
-				NotifyCloudModeUpdatedPayload.CODEC, 
-				clientHandler::handleNotifyCloudModeUpdatedPayload
-		);
+				NotifyCloudModeUpdatedPayload.TYPE,
+				NotifyCloudModeUpdatedPayload.CODEC,
+				clientHandler::handleNotifyCloudModeUpdatedPayload);
 		registrar.playToClient(
-				NotifySingleModeCloudTypeUpdatedPayload.TYPE, 
-				NotifySingleModeCloudTypeUpdatedPayload.CODEC, 
-				clientHandler::handleNotifySingleModeCloudTypeUpdatedPayload
-		);
+				NotifySingleModeCloudTypeUpdatedPayload.TYPE,
+				NotifySingleModeCloudTypeUpdatedPayload.CODEC,
+				clientHandler::handleNotifySingleModeCloudTypeUpdatedPayload);
 		registrar.playToClient(
-				SendCloudManagerPayload.TYPE, 
-				SendCloudManagerPayload.CODEC, 
-				clientHandler::handleSendCloudManagerPayload
-		);
+				SendCloudManagerPayload.TYPE,
+				SendCloudManagerPayload.CODEC,
+				clientHandler::handleSendCloudManagerPayload);
 		registrar.playToClient(
-				SendCloudRegionsPayload.TYPE, 
-				SendCloudRegionsPayload.CODEC, 
-				clientHandler::handleSendCloudRegionsPacket
-		);
+				SendCloudRegionsPayload.TYPE,
+				SendCloudRegionsPayload.CODEC,
+				clientHandler::handleSendCloudRegionsPacket);
 		registrar.playToClient(
-				SendCloudTypesPayload.TYPE, 
-				SendCloudTypesPayload.CODEC, 
-				clientHandler::handleSendCloudTypesPayload
-		);
+				UpdateCloudRegionsPayload.TYPE,
+				UpdateCloudRegionsPayload.CODEC,
+				clientHandler::handleUpdateCloudRegionsPayload);
 		registrar.playToClient(
-				SpawnLightningPayload.TYPE, 
-				SpawnLightningPayload.CODEC, 
-				clientHandler::handleSpawnLightningPayload
-		);
+				SendCloudTypesPayload.TYPE,
+				SendCloudTypesPayload.CODEC,
+				clientHandler::handleSendCloudTypesPayload);
 		registrar.playToClient(
-				UpdateCloudManagerPayload.TYPE, 
-				UpdateCloudManagerPayload.CODEC, 
-				clientHandler::handleUpdateCloudManagerPayload
-		);
+				SpawnLightningPayload.TYPE,
+				SpawnLightningPayload.CODEC,
+				clientHandler::handleSpawnLightningPayload);
+		registrar.playToClient(
+				UpdateCloudManagerPayload.TYPE,
+				UpdateCloudManagerPayload.CODEC,
+				clientHandler::handleUpdateCloudManagerPayload);
 	}
 }
