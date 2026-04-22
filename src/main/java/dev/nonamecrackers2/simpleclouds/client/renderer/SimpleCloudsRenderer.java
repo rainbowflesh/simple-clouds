@@ -430,6 +430,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 				this.settings.useTransparency() ? FINAL_COMPOSITE_LOC : FINAL_COMPOSITE_NO_TRANSPARENCY_LOC, main,
 				pass -> {
 					EffectInstance effect = pass.getEffect();
+					effect.setSampler("MainDepthSampler", () -> main.getDepthTextureId());
+					effect.setSampler("CloudsDepthTexture", () -> this.cloudTarget.getDepthTextureId());
 					if (this.settings.useTransparency()) {
 						effect.setSampler("AccumTexture", () -> this.cloudTransparencyTarget.getColorTextureId());
 						effect.setSampler("RevealageTexture",

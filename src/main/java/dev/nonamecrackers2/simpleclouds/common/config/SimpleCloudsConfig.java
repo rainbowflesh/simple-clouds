@@ -132,7 +132,7 @@ public class SimpleCloudsConfig {
 					"Specifies the angle of the rain, perpendicular to the ground. Higher values makes it more horizontal");
 
 			this.stormFogAngle = this.createRangedDoubleValue(80.0D, 50.0D, 90.0D, "stormFogAngle", RestartType.NONE,
-					"Specifies the angle parellel to the horizon that the storm fog should be directed to");
+					"Specifies the angle parallel to the horizon that the storm fog should be directed to");
 
 			this.lightningColorVariation = this.createValue(true, "lightningColorVariation", RestartType.NONE,
 					"Specifies if lightning should have slight random color variation");
@@ -180,7 +180,7 @@ public class SimpleCloudsConfig {
 
 			builder.comment("Mesh Generation").push("mesh_generation");
 
-			this.generationInterval = this.createEnumValue(GenerationInterval.DYNAMIC, "generationInterval",
+			this.generationInterval = this.createEnumValue(GenerationInterval.TARGET_FPS, "generationInterval",
 					RestartType.NONE,
 					"How the amount of frames used to generate the entire mesh is calculated. Static will use the 'Frames To Generate Mesh' option. Dynamic will calculate it automatically depending on your FPS. Target FPS will target a certain perceived framerate for mesh generation");
 

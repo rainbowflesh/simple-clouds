@@ -4,6 +4,7 @@
     "attributes": [ "Position" ],
     "samplers": [
     	{ "name": "DiffuseSampler" },
+        { "name": "MainDepthSampler" },
         { "name": "CloudsTexture" },
         { "name": "CloudsDepthTexture" }
     ],
