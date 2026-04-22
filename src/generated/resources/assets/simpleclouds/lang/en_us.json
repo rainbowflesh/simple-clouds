@@ -106,8 +106,6 @@
   "gui.simpleclouds.config.rainAngle.title": "Rain Angle",
   "gui.simpleclouds.config.renderClouds.description": "Toggles rendering of the clouds.",
   "gui.simpleclouds.config.renderClouds.title": "Render Clouds",
-  "gui.simpleclouds.config.renderCustomRain.description": "Specifies if custom rain rendering should be used. Automatically disabled when using Pretty/Particle Rain.",
-  "gui.simpleclouds.config.renderCustomRain.title": "Render Custom Rain",
   "gui.simpleclouds.config.renderStormFog.description": "Specifies if 'rain' beneath storm clouds should appear or not. Disabling can improve performance, especially when in VR.",
   "gui.simpleclouds.config.renderStormFog.title": "Render Storm Fog",
   "gui.simpleclouds.config.shadedClouds.description": "Specifies if minimal shading should be applied to clouds. May cause performance drops.",

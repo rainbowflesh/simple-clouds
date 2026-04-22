@@ -18,28 +18,31 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.sounds.SoundEvents;
 
-public class SimpleCloudsSoundReplacements
-{
+public class SimpleCloudsSoundReplacements {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsSoundReplacements");
-	private static final Map<ResourceLocation, SimpleCloudsSoundReplacements.Replacements> REPLACEMENT_SOUNDS = ImmutableMap.of(
-			SoundEvents.WEATHER_RAIN.getLocation(), new SimpleCloudsSoundReplacements.Replacements(IntStream.range(1, 9).mapToObj(i -> "ambient/weather/rain" + i).toList(), SimpleCloudsCompatHelper::useCustomRainSounds),
-			SoundEvents.WEATHER_RAIN_ABOVE.getLocation(), new SimpleCloudsSoundReplacements.Replacements(IntStream.range(1, 5).mapToObj(i -> "ambient/weather/rain" + i).toList(), SimpleCloudsCompatHelper::useCustomRainSounds)
-	);
-	
-	public static Weighted<Sound> applyReplacement(Weighted<Sound> currentSound, ResourceLocation soundLoc, SoundEventRegistration soundReg, Map<ResourceLocation, Resource> soundCache)
-	{
-		if (currentSound instanceof Sound sound)
-		{
+	private static final List<String> RAIN_REPLACEMENTS = IntStream.range(1, 9)
+			.mapToObj(i -> "ambient/weather/rain" + i).toList();
+	private static final Map<ResourceLocation, SimpleCloudsSoundReplacements.Replacements> REPLACEMENT_SOUNDS = ImmutableMap
+			.of(
+					SoundEvents.WEATHER_RAIN.getLocation(),
+					new SimpleCloudsSoundReplacements.Replacements(RAIN_REPLACEMENTS,
+							SimpleCloudsCompatHelper::useCustomRainSounds),
+					SoundEvents.WEATHER_RAIN_ABOVE.getLocation(), new SimpleCloudsSoundReplacements.Replacements(
+							RAIN_REPLACEMENTS, SimpleCloudsCompatHelper::useCustomRainSounds));
+
+	public static Weighted<Sound> applyReplacement(Weighted<Sound> currentSound, ResourceLocation soundLoc,
+			SoundEventRegistration soundReg, Map<ResourceLocation, Resource> soundCache) {
+		if (currentSound instanceof Sound sound) {
 			if (!REPLACEMENT_SOUNDS.containsKey(soundLoc))
 				return currentSound;
 			SimpleCloudsSoundReplacements.Replacements replacements = REPLACEMENT_SOUNDS.get(soundLoc);
 			if (!replacements.condition().get() || !replacements.replacements().contains(sound.getLocation().getPath()))
 				return currentSound;
-			
+
 			ResourceLocation newLoc = SimpleCloudsMod.id(sound.getLocation().getPath());
-			Sound newSound = new Sound(newLoc, sound.getVolume(), sound.getPitch(), sound.getWeight(), Sound.Type.FILE, false, sound.shouldPreload(), sound.getAttenuationDistance());
-			if (!soundCache.containsKey(newSound.getPath()))
-			{
+			Sound newSound = new Sound(newLoc, sound.getVolume(), sound.getPitch(), sound.getWeight(), Sound.Type.FILE,
+					false, sound.shouldPreload(), sound.getAttenuationDistance());
+			if (!soundCache.containsKey(newSound.getPath())) {
 				LOGGER.error("Could not find replacement sound '{}'", newLoc);
 				return currentSound;
 			}
@@ -47,6 +50,7 @@ public class SimpleCloudsSoundReplacements
 		}
 		return currentSound;
 	}
-	
-	private static record Replacements(List<String> replacements, Supplier<Boolean> condition) {}
+
+	private static record Replacements(List<String> replacements, Supplier<Boolean> condition) {
+	}
 }

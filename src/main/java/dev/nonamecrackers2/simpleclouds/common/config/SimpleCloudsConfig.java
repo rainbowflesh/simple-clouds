@@ -69,7 +69,6 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<GenerationInterval> generationInterval;
 		public final ModConfigSpec.ConfigValue<Integer> targetMeshGenFps;
 		public final ModConfigSpec.ConfigValue<Boolean> customRainSounds;
-		public final ModConfigSpec.ConfigValue<Boolean> renderCustomRain;
 		// Cloud Visuals
 		public final ModConfigSpec.ConfigValue<Boolean> cubeNormals;
 		public final ModConfigSpec.ConfigValue<Boolean> shadedClouds;
@@ -143,9 +142,6 @@ public class SimpleCloudsConfig {
 
 			this.customRainSounds = this.createValue(true, "customRainSounds", RestartType.NONE,
 					"Specifies if new rain sounds should replace the vanilla ones");
-
-			this.renderCustomRain = this.createValue(true, "renderCustomRain", RestartType.NONE,
-					"Specifies if custom rain rendering should be used. Automatically disabled when using Pretty/Particle Rain");
 
 			builder.pop();
 

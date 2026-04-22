@@ -17,105 +17,122 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
 import nonamecrackers2.crackerslib.common.compat.CompatHelper;
 
-public class ShaderSupportPipeline implements CloudsRenderPipeline
-{
-	protected ShaderSupportPipeline() {}
-	
-	@Override
-	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum) {}
+public class ShaderSupportPipeline implements CloudsRenderPipeline {
+	protected ShaderSupportPipeline() {
+	}
 
 	@Override
-	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum) {}
-	
-	@Override
-	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum) {}
+	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
+	}
 
 	@Override
-	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum)
-	{
+	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
+	}
+
+	@Override
+	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 		ProfilerFiller p = mc.getProfiler();
-		
+
 		float[] cloudCol = renderer.getCloudColor(partialTick);
-		float cloudR = (float)cloudCol[0];
-		float cloudG = (float)cloudCol[1];
-		float cloudB = (float)cloudCol[2];
-		
+		float cloudR = (float) cloudCol[0];
+		float cloudG = (float) cloudCol[1];
+		float cloudB = (float) cloudCol[2];
+
 		if (CompatHelper.areShadersRunning())
 			GlStateManager._depthMask(true);
-		
+
 		// Render opaque cloud geometry
 		p.push("clouds_opaque");
-		
+
 		PoseStack stack = new PoseStack();
 		stack.mulPose(camMat);
-		
+
 		stack.pushPose();
-		
+
 		renderer.translateClouds(stack, camX, camY, camZ);
-		
+
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
-        renderer.copyDepthFromMainToClouds(); // Copy depth from main framebuffer
-        cloudTarget.bindWrite(false);
+		renderer.copyDepthFromMainToClouds(); // Copy depth from main framebuffer
+		cloudTarget.bindWrite(false);
 
-        // Renders the clouds on to the cloud frame buffer
-     	CloudMeshGenerator generator = renderer.getMeshGenerator();
-        SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), stack, projMat, renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB, SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
-		
-        // Render transparent cloud geometry
-        p.popPush("clouds_transparent");
-        
-        WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
+		// Renders the clouds on to the cloud frame buffer
+		CloudMeshGenerator generator = renderer.getMeshGenerator();
+		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), stack, projMat, renderer.getFogStart(),
+				renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
+				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+
+		// Render transparent cloud geometry
+		p.popPush("clouds_transparent");
+
+		WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
 		transparencyTarget.clear(Minecraft.ON_OSX);
-		
-		if (generator.transparencyEnabled())
-		{
-			// We use weighted order independent transparency as we cannot easily sort the cloud mesh
-			// More info here https://jcgt.org/published/0002/02/09/paper.pdf and http://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
-			renderer.copyDepthFromCloudsToTransparency(); // Copy the depth data from the cloud framebuffer so we don't get weird depth issues
+
+		if (generator.transparencyEnabled()) {
+			// We use weighted order independent transparency as we cannot easily sort the
+			// cloud mesh
+			// More info here https://jcgt.org/published/0002/02/09/paper.pdf and
+			// http://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
+			renderer.copyDepthFromCloudsToTransparency(); // Copy the depth data from the cloud framebuffer so we don't
+															// get weird depth issues
 			transparencyTarget.bindWrite(false);
-			
+
 			// Render the transparent geometry to the transparency framebuffer
-			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, projMat, renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB, SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, projMat, renderer.getFogStart(),
+					renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
+					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
 		}
-		
+
 		p.pop();
-        
+
 		stack.popPose();
 
 		// Render everything on to the main screen using a final composite shader
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(camMat, partialTick, projMat);
 		p.pop();
-		
+
 		mc.getMainRenderTarget().bindWrite(false);
-		
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get())
-		{
+
+		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
 			p.push("storm_fog");
-			
+
 			// Renders the storm fog at a lower resolution
 			renderer.doStormPostProcessing(camMat, partialTick, projMat, camX, camY, camZ, cloudR, cloudG, cloudB);
-			
-			// Next we blit the storm fog to a higher resolution texture and apply a box blur
+
+			// Next we blit the storm fog to a higher resolution texture and apply a box
+			// blur
 			RenderTarget target = renderer.getBlurTarget();
 			target.clear(Minecraft.ON_OSX); // Clear old contents on the blur framebuffer
 			target.bindWrite(true); // Bind write and resize viewport
-			// Here we blit the contents of the storm fog framebuffer on to the blur framebuffer. A special function is used here
+			// Here we blit the contents of the storm fog framebuffer on to the blur
+			// framebuffer. A special function is used here
 			// to preserve the alpha channel when rendering
-			FrameBufferUtils.blitTargetPreservingAlpha(renderer.getStormFogTarget(), mc.getWindow().getWidth(), mc.getWindow().getHeight());
+			FrameBufferUtils.blitTargetPreservingAlpha(renderer.getStormFogTarget(), mc.getWindow().getWidth(),
+					mc.getWindow().getHeight());
 			// Blurs the storm fog
 			renderer.doBlurPostProcessing(partialTick);
 			// Renders the storm fog to the screen
 			mc.getMainRenderTarget().bindWrite(false);
 			RenderSystem.enableBlend();
-			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE);
+			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
+					GlStateManager.DestFactor.ONE);
 			renderer.getBlurTarget().blitToScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight(), false);
 			RenderSystem.disableBlend();
 			RenderSystem.defaultBlendFunc();
-			// Need to do this here because blitToScreen messes up the projection matrix and doesn't set it back
-			
+			// Need to do this here because blitToScreen messes up the projection matrix and
+			// doesn't set it back
+
 			p.pop();
 		}
+	}
+
+	@Override
+	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 	}
 }

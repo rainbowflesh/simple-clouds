@@ -52,8 +52,9 @@ public class AtmosphericCloudsRenderHandler {
 		builder.add(new AtmosphericCloudsRenderHandler.Formation(b -> b.is(Tags.Biomes.IS_COLD_OVERWORLD)
 				|| b.is(Tags.Biomes.IS_DRY_OVERWORLD) || b.is(BiomeTags.IS_SAVANNA), 0.3F, 1.0F, 30.0F)); // Cirrostratus-like
 																											// clouds
-		builder.add(new AtmosphericCloudsRenderHandler.Formation(b -> b.is(Tags.Biomes.IS_HOT_OVERWORLD), 0.8F, 10.0F,
-				10.0F)); // Cirrocumulus-like clouds
+		// builder.add(new AtmosphericCloudsRenderHandler.Formation(b ->
+		// b.is(Tags.Biomes.IS_HOT_OVERWORLD), 0.8F, 10.0F,
+		// 10.0F)); // Cirrocumulus-like clouds
 		builder.add(new AtmosphericCloudsRenderHandler.Formation(
 				b -> b.is(Tags.Biomes.IS_PLAINS) || b.is(BiomeTags.IS_FOREST), 1.0F, 2.0F, 10.0F)); // Cirrus-like
 																									// clouds

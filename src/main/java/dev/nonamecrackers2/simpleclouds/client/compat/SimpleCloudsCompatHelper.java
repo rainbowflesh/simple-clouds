@@ -14,7 +14,6 @@ import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.neoforged.fml.ModList;
 import nonamecrackers2.crackerslib.common.compat.CompatHelper;
 
 public class SimpleCloudsCompatHelper {
@@ -23,10 +22,6 @@ public class SimpleCloudsCompatHelper {
 			return new SimpleCloudsReloadVivecraftCompatWrapper(renderer);
 		else
 			return renderer;
-	}
-
-	public static boolean renderCustomRain() {
-		return SimpleCloudsConfig.CLIENT.renderCustomRain.get() && !ModList.get().isLoaded("particlerain");
 	}
 
 	public static boolean useCustomRainSounds() {

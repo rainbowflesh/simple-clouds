@@ -4,6 +4,7 @@ uniform sampler2D DiffuseSampler;
 uniform sampler2D MainDepthSampler;
 uniform sampler2D CloudsTexture;
 uniform sampler2D CloudsDepthTexture;
+uniform int UseSceneDepthOcclusion;
 
 in vec2 texCoord;
 in vec2 oneTexel;
@@ -13,7 +14,7 @@ void main()
 {
 	float sceneDepth = texture(MainDepthSampler, texCoord).r;
 	float cloudDepth = texture(CloudsDepthTexture, texCoord).r;
-	if (sceneDepth < cloudDepth)
+	if (UseSceneDepthOcclusion != 0 && sceneDepth < cloudDepth)
 	{
 		fragColor = vec4(texture(DiffuseSampler, texCoord).rgb, 1.0);
 		return;

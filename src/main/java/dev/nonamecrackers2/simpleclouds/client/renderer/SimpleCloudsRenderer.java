@@ -964,8 +964,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void renderWeather(LightTexture texture, float partialTick, double camX, double camY, double camZ) {
-		if (SimpleCloudsCompatHelper.renderCustomRain())
-			this.worldEffectsManager.renderRain(texture, partialTick, camX, camY, camZ);
 		if (!SimpleCloudsMod.dhLoaded())
 			this.worldEffectsManager.renderLightning(partialTick, camX, camY, camZ);
 	}
@@ -1067,6 +1065,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		if (!SimpleCloudsCompatHelper.renderThisPass())
 			return;
 
+		this.worldEffectsManager.updateCameraWeatherStatus(camX, camY, camZ);
+
 		this.mc.getProfiler().push("simple_clouds_before_weather");
 		this.getRenderPipeline().beforeWeather(this.mc, this, camMat, projMat, partialTick, camX, camY, camZ,
 				this.cullFrustum);
@@ -1130,6 +1130,9 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			RenderSystem.disableDepthTest();
 			RenderSystem.resetTextureMatrix();
 			RenderSystem.depthMask(false);
+			for (PostPass pass : ((MixinPostChain) this.finalComposite).simpleclouds$getPostPasses()) {
+				pass.getEffect().safeGetUniform("UseSceneDepthOcclusion").set(1);
+			}
 
 			this.finalComposite.process(partialTick);
 

@@ -70,11 +70,6 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 		SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, projMat, renderer.getFogStart(), renderer.getFogEnd(),
 				partialTick, cloudR, cloudG, cloudB, SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
 
-		// Here we copy the depth from the cloud frame buffer to the main one, so we can
-		// have correct depth information with the
-		// rest of the Minecraft world
-		renderer.copyDepthFromCloudsToMain();
-
 		// Render transparent cloud geometry
 		p.popPush("clouds_transparent");
 
@@ -148,15 +143,16 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
 			mc.getMainRenderTarget().bindWrite(false);
 		}
+
+		mc.getProfiler().push("clouds_composite");
+		renderer.doFinalCompositePass(camMat, partialTick, projMat);
+		mc.getProfiler().pop();
+		mc.getMainRenderTarget().bindWrite(CompatHelper.isVrActive());
 	}
 
 	@Override
 	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		mc.getProfiler().push("clouds_composite");
-		renderer.doFinalCompositePass(camMat, partialTick, projMat);
-		mc.getProfiler().pop();
-
 		// mc.getProfiler().push("clouds_debug");
 		// PoseStack stack = new PoseStack();
 		// stack.mulPose(camMat);
