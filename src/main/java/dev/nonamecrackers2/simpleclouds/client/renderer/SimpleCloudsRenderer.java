@@ -1,7 +1,6 @@
 package dev.nonamecrackers2.simpleclouds.client.renderer;
 
 import java.awt.Color;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -26,10 +25,7 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GL40;
 import org.lwjgl.opengl.GL43;
 
-import com.google.common.collect.Lists;
-import com.google.gson.JsonSyntaxException;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -49,8 +45,6 @@ import dev.nonamecrackers2.simpleclouds.api.common.cloud.CloudMode;
 import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
 import dev.nonamecrackers2.simpleclouds.client.event.impl.DetermineCloudRenderPipelineEvent;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.CloudRenderTarget;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.ShadowMapBuffer;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.mesh.RendererInitializeResult;
@@ -73,19 +67,14 @@ import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudGetter;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
-import dev.nonamecrackers2.simpleclouds.mixin.MixinPostChain;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.EffectInstance;
-import net.minecraft.world.level.material.FogType;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.PostChain;
-import net.minecraft.client.renderer.PostPass;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -111,13 +100,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsRenderer");
 	private static final Vector3f DIFFUSE_LIGHT_0 = (new Vector3f(0.2F, 1.0F, -0.7F)).normalize();
 	private static final Vector3f DIFFUSE_LIGHT_1 = (new Vector3f(-0.2F, 1.0F, 0.7F)).normalize();
-	private static final ResourceLocation STORM_POST_PROCESSING_LOC = SimpleCloudsMod
-			.id("shaders/post/storm_post.json");
-	private static final ResourceLocation BLUR_POST_PROCESSING_LOC = ResourceLocation
-			.withDefaultNamespace("shaders/post/blur.json");// SimpleCloudsMod.id("shaders/post/blur_post.json");
-	private static final ResourceLocation SCREEN_SPACE_WORLD_FOG_LOC = SimpleCloudsMod
-			.id("shaders/post/screen_space_world_fog.json");
-	private static final ResourceLocation CLOUD_SHADOWS_LOC = SimpleCloudsMod.id("shaders/post/cloud_shadows.json");
 	public static final ResourceLocation FINAL_COMPOSITE_LOC = SimpleCloudsMod.id("shaders/post/final_composite.json");
 	public static final ResourceLocation FINAL_COMPOSITE_NO_TRANSPARENCY_LOC = SimpleCloudsMod
 			.id("shaders/post/final_composite_no_transparency.json");
@@ -134,21 +116,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private final Minecraft mc;
 	private final WorldEffects worldEffectsManager;
 	private final AtmosphericCloudsRenderHandler atmoshpericClouds;
+	private final CloudPostProcessing postProcessing;
 	private @Nullable ClientCloudManager cloudManager;
 	private ArtifactVersion openGlVersion;
 	private CloudMeshGenerator meshGenerator;
 	private @Nullable CloudsRenderPipeline renderPipelineThisPass;
-	private @Nullable RenderTarget cloudTarget;
-	private @Nullable WeightedBlendingTarget cloudTransparencyTarget;
-	private @Nullable RenderTarget stormFogTarget;
-	private int stormFogResolutionDivisor = 4;
-	private @Nullable RenderTarget blurTarget;
-	private final List<PostChain> postChains = Lists.newArrayList();
-	private @Nullable PostChain finalComposite;
-	private @Nullable PostChain stormPostProcessing;
-	private @Nullable PostChain blurPostProcessing;
-	private @Nullable PostChain screenSpaceWorldFog;
-	private @Nullable PostChain cloudShadows;
 	private @Nullable ShaderStorageBufferObject lightningBoltPositions;
 	private @Nullable ShadowMapBuffer stormFogShadowMap;
 	private Optional<ShadowMapBuffer> shadowMap = Optional.empty();
@@ -168,6 +140,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		this.mc = mc;
 		this.worldEffectsManager = new WorldEffects(mc, this);
 		this.atmoshpericClouds = new AtmosphericCloudsRenderHandler(mc);
+		this.postProcessing = new CloudPostProcessing(mc, settings);
 	}
 
 	public String getClientCloudManagerString() {
@@ -215,19 +188,19 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public RenderTarget getBlurTarget() {
-		return this.blurTarget;
+		return this.postProcessing.getBlurTarget();
 	}
 
 	public RenderTarget getStormFogTarget() {
-		return this.stormFogTarget;
+		return this.postProcessing.getStormFogTarget();
 	}
 
 	public RenderTarget getCloudTarget() {
-		return this.cloudTarget;
+		return this.postProcessing.getCloudTarget();
 	}
 
 	public WeightedBlendingTarget getCloudTransparencyTarget() {
-		return this.cloudTransparencyTarget;
+		return this.postProcessing.getCloudTransparencyTarget();
 	}
 
 	public float getFogStart() {
@@ -342,29 +315,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			return;
 		}
 
-		if (this.cloudTarget != null)
-			this.cloudTarget.destroyBuffers();
-		this.cloudTarget = new CloudRenderTarget(main.width, main.height, Minecraft.ON_OSX, highPrecisionDepth);
-		this.cloudTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-
-		if (this.cloudTransparencyTarget != null)
-			this.cloudTransparencyTarget.destroyBuffers();
-		this.cloudTransparencyTarget = new WeightedBlendingTarget(main.width, main.height, Minecraft.ON_OSX,
-				highPrecisionDepth);
-
-		this.stormFogResolutionDivisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
-		if (this.stormFogTarget != null)
-			this.stormFogTarget.destroyBuffers();
-		this.stormFogTarget = new TextureTarget(main.width / this.stormFogResolutionDivisor,
-				main.height / this.stormFogResolutionDivisor, false, Minecraft.ON_OSX);
-		this.stormFogTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-		this.stormFogTarget.setFilterMode(GL11.GL_LINEAR);
-
-		if (this.blurTarget != null)
-			this.blurTarget.destroyBuffers();
-		this.blurTarget = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
-		this.blurTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
-		this.blurTarget.setFilterMode(GL11.GL_LINEAR);
+		int stormFogResolutionDivisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
 
 		// --- Mesh Generator ---
 
@@ -402,8 +353,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 		// --- Post Processing Shaders ---
 
-		this.destroyPostChains();
-
 		if (this.lightningBoltPositions != null) {
 			BindingManager.freeSSBO(this.lightningBoltPositions);
 			this.lightningBoltPositions = null;
@@ -412,45 +361,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		this.lightningBoltPositions = BindingManager.createSSBO(GL15.GL_DYNAMIC_DRAW);
 		this.lightningBoltPositions.allocateBuffer(MAX_LIGHTNING_BOLTS * BYTES_PER_LIGHTNING_BOLT);
 
-		this.stormPostProcessing = this.createPostChain(manager, STORM_POST_PROCESSING_LOC, this.stormFogTarget,
-				pass -> {
-					EffectInstance effect = pass.getEffect();
-					effect.setSampler("ShadowMap", () -> this.stormFogShadowMap.getDepthTexId());
-					effect.setSampler("ShadowMapColor", () -> this.stormFogShadowMap.getColorTexId());
-					effect.setSampler("DepthSampler", () -> this.cloudTarget.getDepthTextureId());
-					this.lightningBoltPositions.optionalBindToProgram("LightningBolts", effect.getId());
-				});
-
-		this.blurPostProcessing = this.createPostChain(manager, BLUR_POST_PROCESSING_LOC, this.blurTarget);
-
-		this.screenSpaceWorldFog = this.createPostChain(manager, SCREEN_SPACE_WORLD_FOG_LOC, main, pass -> {
-			EffectInstance effect = pass.getEffect();
-			effect.setSampler("StormFogSampler", () -> this.blurTarget.getColorTextureId());
-			effect.setSampler("CloudDepthSampler", () -> this.cloudTarget.getDepthTextureId());
-		});
-
-		this.finalComposite = this.createPostChain(manager,
-				this.settings.useTransparency() ? FINAL_COMPOSITE_LOC : FINAL_COMPOSITE_NO_TRANSPARENCY_LOC, main,
-				pass -> {
-					EffectInstance effect = pass.getEffect();
-					effect.setSampler("MainDepthSampler", () -> main.getDepthTextureId());
-					effect.setSampler("CloudsDepthTexture", () -> this.cloudTarget.getDepthTextureId());
-					if (this.settings.useTransparency()) {
-						effect.setSampler("AccumTexture", () -> this.cloudTransparencyTarget.getColorTextureId());
-						effect.setSampler("RevealageTexture",
-								() -> this.cloudTransparencyTarget.getRevealageTextureId());
-					}
-					effect.setSampler("CloudsTexture", () -> this.cloudTarget.getColorTextureId());
-				});
-
-		if (this.shadowMap.isPresent()) {
-			ShadowMapBuffer map = this.shadowMap.get();
-			this.cloudShadows = this.createPostChain(manager, CLOUD_SHADOWS_LOC, main, pass -> {
-				EffectInstance effect = pass.getEffect();
-				effect.setSampler("ShadowMap", () -> this.shadowMap.get().getDepthTexId());
-				effect.safeGetUniform("ShadowSpan").set((float) Math.min(map.getViewWidth(), map.getViewHeight()));
-			});
-		}
+		this.postProcessing.initialize(manager, main, highPrecisionDepth, stormFogResolutionDivisor,
+				this.stormFogShadowMap, this.shadowMap.orElse(null), this.lightningBoltPositions);
 
 		this.atmoshpericClouds.init(manager);
 
@@ -546,34 +458,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		}
 	}
 
-	private void destroyPostChains() {
-		this.postChains.forEach(PostChain::close);
-		this.postChains.clear();
-	}
-
-	private @Nullable PostChain createPostChain(ResourceManager manager, ResourceLocation loc, RenderTarget target) {
-		return this.createPostChain(manager, loc, target, effect -> {
-		});
-	}
-
-	private @Nullable PostChain createPostChain(ResourceManager manager, ResourceLocation loc, RenderTarget target,
-			Consumer<PostPass> passConsumer) {
-		try {
-			PostChain chain = new PostChain(this.mc.getTextureManager(), manager, target, loc);
-			chain.resize(target.width, target.height);
-			for (PostPass pass : ((MixinPostChain) chain).simpleclouds$getPostPasses())
-				passConsumer.accept(pass);
-			this.postChains.add(chain);
-			return chain;
-		} catch (JsonSyntaxException e) {
-			LOGGER.warn("Failed to parse post shader: {}", loc, e);
-		} catch (IOException e) {
-			LOGGER.warn("Failed to load post shader: {}", loc, e);
-		}
-
-		return null;
-	}
-
 	public void onMainWindowResize(int width, int height) {
 		this.atmoshpericClouds.onResize(width, height);
 
@@ -581,51 +465,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		if (main == null)
 			return;
 
-		width = main.width;
-		height = main.height;
-
-		if (this.cloudTarget != null)
-			this.cloudTarget.resize(width, height, Minecraft.ON_OSX);
-
-		if (this.cloudTransparencyTarget != null)
-			this.cloudTransparencyTarget.resize(width, height, Minecraft.ON_OSX);
-
-		this.stormFogResolutionDivisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
-
-		if (this.stormFogTarget != null) {
-			this.stormFogTarget.resize(width / this.stormFogResolutionDivisor, height / this.stormFogResolutionDivisor,
-					Minecraft.ON_OSX);
-			this.stormFogTarget.setFilterMode(GL11.GL_LINEAR);
-		}
-
-		if (this.blurTarget != null) {
-			this.blurTarget.resize(width, height, Minecraft.ON_OSX);
-			this.blurTarget.setFilterMode(GL11.GL_LINEAR);
-		}
-
-		for (PostChain chain : this.postChains) {
-			RenderTarget chainTarget = ((MixinPostChain) chain).simpleclouds$getScreenTarget();
-			chain.resize(chainTarget.width, chainTarget.height);
-		}
+		this.postProcessing.resizeTargets(main, SimpleCloudsCompatHelper.getStormFogResolutionDivisor());
 	}
 
 	public void shutdown() {
-		if (this.cloudTarget != null)
-			this.cloudTarget.destroyBuffers();
-		if (this.cloudTransparencyTarget != null)
-			this.cloudTransparencyTarget.destroyBuffers();
-		if (this.stormFogTarget != null)
-			this.stormFogTarget.destroyBuffers();
-		;
-		if (this.blurTarget != null)
-			this.blurTarget.destroyBuffers();
-
-		this.cloudTarget = null;
-		this.cloudTransparencyTarget = null;
-		this.stormFogTarget = null;
-		this.blurTarget = null;
-
-		this.destroyPostChains();
+		this.postProcessing.close();
 
 		if (this.meshGenerator != null)
 			this.meshGenerator.close();
@@ -1093,25 +937,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void doBlurPostProcessing(float partialTick) {
-		if (this.blurPostProcessing != null) {
-			RenderSystem.disableDepthTest();
-			RenderSystem.resetTextureMatrix();
-			RenderSystem.disableBlend();
-			RenderSystem.depthMask(false);
-			this.blurPostProcessing.process(partialTick);
-			RenderSystem.depthMask(true);
-		}
+		this.postProcessing.doBlurPostProcessing(partialTick);
 	}
 
 	public void prepareStormFogBlur(float partialTick) {
-		if (this.blurTarget == null || this.stormFogTarget == null)
-			return;
-
-		Window window = this.mc.getWindow();
-		this.blurTarget.clear(Minecraft.ON_OSX);
-		this.blurTarget.bindWrite(true);
-		FrameBufferUtils.blitTargetPreservingAlpha(this.stormFogTarget, window.getWidth(), window.getHeight());
-		this.doBlurPostProcessing(partialTick);
+		this.postProcessing.prepareStormFogBlur(partialTick);
 	}
 
 	public boolean shouldUseScreenSpaceStormFog() {
@@ -1120,73 +950,32 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void renderPreparedStormFogOverlay() {
-		if (this.blurTarget == null)
-			return;
-
-		Window window = this.mc.getWindow();
-		this.mc.getMainRenderTarget().bindWrite(false);
-		RenderSystem.enableBlend();
-		RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
-				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
-				GlStateManager.DestFactor.ONE);
-		this.blurTarget.blitToScreen(window.getWidth(), window.getHeight(), false);
-		RenderSystem.disableBlend();
-		RenderSystem.defaultBlendFunc();
+		this.postProcessing.renderPreparedStormFogOverlay();
 	}
 
 	public void doScreenSpaceWorldFog(Matrix4f camMat, Matrix4f projMat, float partialTick) {
-		if (this.screenSpaceWorldFog != null) {
-			RenderSystem.disableBlend();
-			RenderSystem.disableDepthTest();
-			RenderSystem.resetTextureMatrix();
-			RenderSystem.depthMask(false);
-
-			this.updateInverseMatrices(projMat, camMat);
-			for (PostPass pass : ((MixinPostChain) this.screenSpaceWorldFog).simpleclouds$getPostPasses()) {
-				EffectInstance effect = pass.getEffect();
-				effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
-				effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
-				effect.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
-				effect.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
-				float[] fogCol = RenderSystem.getShaderFogColor();
-				effect.safeGetUniform("FogColor").set(fogCol[0], fogCol[1], fogCol[2]);
-				effect.safeGetUniform("FogShape").set(RenderSystem.getShaderFogShape().getIndex());
-			}
-
-			this.screenSpaceWorldFog.process(partialTick);
-
-			RenderSystem.depthMask(true);
-		}
+		this.updateInverseMatrices(projMat, camMat);
+		this.postProcessing.doScreenSpaceWorldFog(partialTick, effect -> {
+			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
+			effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
+			effect.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
+			effect.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
+			float[] fogCol = RenderSystem.getShaderFogColor();
+			effect.safeGetUniform("FogColor").set(fogCol[0], fogCol[1], fogCol[2]);
+			effect.safeGetUniform("FogShape").set(RenderSystem.getShaderFogShape().getIndex());
+		});
 	}
 
 	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat) {
-		if (this.finalComposite != null) {
-			RenderSystem.disableDepthTest();
-			RenderSystem.resetTextureMatrix();
-			RenderSystem.depthMask(false);
-			for (PostPass pass : ((MixinPostChain) this.finalComposite).simpleclouds$getPostPasses()) {
-				pass.getEffect().safeGetUniform("UseSceneDepthOcclusion").set(1);
-			}
-
-			this.finalComposite.process(partialTick);
-
-			RenderSystem.depthMask(true);
-		}
+		this.postProcessing.doFinalCompositePass(partialTick,
+				effect -> effect.safeGetUniform("UseSceneDepthOcclusion").set(1));
 	}
 
 	public void doStormPostProcessing(Matrix4f camMat, float partialTick, Matrix4f projMat, double camX, double camY,
 			double camZ, float r, float g, float b) {
-		if (this.stormPostProcessing == null || this.stormFogShadowMapMatrix == null
+		if (this.stormFogShadowMapMatrix == null
 				|| this.stormFogShadowMapMatrix == null)
 			return;
-
-		RenderSystem.disableBlend();
-		RenderSystem.disableDepthTest();
-		RenderSystem.resetTextureMatrix();
-		RenderSystem.depthMask(false);
-
-		this.stormFogTarget.clear(Minecraft.ON_OSX);
-		this.stormFogTarget.bindWrite(true);
 
 		MutableInt size = new MutableInt();
 		boolean flag = SimpleCloudsConfig.CLIENT.stormFogLightningFlashes.get();
@@ -1209,8 +998,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		}
 
 		this.updateInverseMatrices(projMat, camMat);
-		for (PostPass pass : ((MixinPostChain) this.stormPostProcessing).simpleclouds$getPostPasses()) {
-			EffectInstance effect = pass.getEffect();
+		this.postProcessing.doStormPostProcessing(partialTick, effect -> {
 			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
 			effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
 			effect.safeGetUniform("ShadowProjMat").set(this.stormFogShadowMap.getProjMatrix());
@@ -1222,27 +1010,17 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			float factor = this.worldEffectsManager.getDarkenFactor(partialTick);
 			effect.safeGetUniform("CutoffDistance").set(1000.0F * factor);
 			effect.safeGetUniform("TotalLightningBolts").set(size.getValue());
-		}
-
-		this.stormPostProcessing.process(partialTick);
-
-		RenderSystem.depthMask(true);
+		});
 	}
 
 	public void doCloudShadowProcessing(PoseStack stack, float partialTick, Matrix4f projMat, double camX, double camY,
 			double camZ, int depthBufferId) {
-		if (this.cloudShadows == null || this.shadowMap.isEmpty() || this.shadowMapMatrix == null)
+		if (this.shadowMap.isEmpty() || this.shadowMapMatrix == null)
 			return;
-
-		RenderSystem.disableBlend();
-		RenderSystem.disableDepthTest();
-		RenderSystem.resetTextureMatrix();
-		RenderSystem.depthMask(false);
 
 		this.updateInverseMatrices(projMat, stack.last().pose());
 		float minimumRadius = this.mc.gameRenderer.getRenderDistance();
-		for (PostPass pass : ((MixinPostChain) this.cloudShadows).simpleclouds$getPostPasses()) {
-			EffectInstance effect = pass.getEffect();
+		this.postProcessing.doCloudShadowProcessing(partialTick, effect -> {
 			effect.setSampler("DepthSampler", () -> depthBufferId);
 			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);
 			effect.safeGetUniform("InverseModelViewMat").set(this.inverseModelViewMatrix);
@@ -1250,11 +1028,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			effect.safeGetUniform("ShadowModelViewMat").set(this.shadowMapMatrix);
 			effect.safeGetUniform("CameraPos").set((float) camX, (float) camY, (float) camZ);
 			effect.safeGetUniform("MinimumRadius").set(minimumRadius);
-		}
-
-		this.cloudShadows.process(partialTick);
-
-		RenderSystem.depthMask(true);
+		});
 	}
 
 	public static void prepareShader(ShaderInstance shader, Matrix4f modelView, Matrix4f projMat, float fogStart,
@@ -1306,15 +1080,15 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void copyDepthFromCloudsToMain() {
-		this._copyDepthSafe(this.mc.getMainRenderTarget(), this.cloudTarget);
+		this._copyDepthSafe(this.mc.getMainRenderTarget(), this.getCloudTarget());
 	}
 
 	public void copyDepthFromMainToClouds() {
-		this._copyDepthSafe(this.cloudTarget, this.mc.getMainRenderTarget());
+		this._copyDepthSafe(this.getCloudTarget(), this.mc.getMainRenderTarget());
 	}
 
 	public void copyDepthFromCloudsToTransparency() {
-		this._copyDepthSafe(this.cloudTransparencyTarget, this.cloudTarget);
+		this._copyDepthSafe(this.getCloudTransparencyTarget(), this.getCloudTarget());
 	}
 
 	private void _copyDepthSafe(RenderTarget to, RenderTarget from) {
@@ -1354,11 +1128,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	public void fillReport(CrashReport report) {
 		CrashReportCategory category = report.addCategory("Simple Clouds Renderer");
 		category.setDetail("Cloud Mode", this.settings.getCurrentCloudMode());
-		category.setDetail("Cloud Target Available", this.cloudTarget != null);
-		category.setDetail("Storm Fog Target Active", this.stormFogTarget != null);
-		category.setDetail("Blur Target Active", this.blurTarget != null);
-		category.setDetail("Transparency Target Active", this.cloudTransparencyTarget != null);
-		category.setDetail("Post Chains", this.postChains.toString());
+		category.setDetail("Cloud Target Available", this.postProcessing.hasCloudTarget());
+		category.setDetail("Storm Fog Target Active", this.postProcessing.hasStormFogTarget());
+		category.setDetail("Blur Target Active", this.postProcessing.hasBlurTarget());
+		category.setDetail("Transparency Target Active", this.postProcessing.hasTransparencyTarget());
+		category.setDetail("Post Chains", this.postProcessing.describePostChains());
 		category.setDetail("Lightning Bolt SSBO", this.lightningBoltPositions);
 		category.setDetail("Clouds Shadow Map", this.stormFogShadowMap);
 		category.setDetail("Storm Fog Shadow Map", this.stormFogShadowMap);

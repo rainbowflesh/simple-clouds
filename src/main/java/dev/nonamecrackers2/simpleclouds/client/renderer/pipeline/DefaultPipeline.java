@@ -2,21 +2,13 @@ package dev.nonamecrackers2.simpleclouds.client.renderer.pipeline;
 
 import org.joml.Matrix4f;
 
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
-import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
+import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps.CloudColor;
 import dev.nonamecrackers2.simpleclouds.client.world.FogRenderMode;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.level.material.FogType;
 import nonamecrackers2.crackerslib.common.compat.CompatHelper;
 
 public class DefaultPipeline implements CloudsRenderPipeline {
@@ -32,79 +24,22 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 		ProfilerFiller p = mc.getProfiler();
-
-		float[] cloudCol = renderer.getCloudColor(partialTick);
-		float cloudR = (float) cloudCol[0];
-		float cloudG = (float) cloudCol[1];
-		float cloudB = (float) cloudCol[2];
-
-		PoseStack stack = new PoseStack();
-		stack.mulPose(camMat);
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
 
 		if (SimpleCloudsConfig.CLIENT.atmosphericClouds.get()) {
-			p.push("atmospheric_clouds");
-			renderer.getAtmosphericCloudRenderer().render(stack, projMat, partialTick, camX, camY, camZ, cloudR, cloudG,
-					cloudB);
-			mc.getMainRenderTarget().bindWrite(false);
-			p.pop();
+			CloudPipelineRenderSteps.renderAtmosphericClouds(mc, renderer, camMat, projMat, partialTick, camX, camY,
+					camZ, cloudColor, p);
 		}
-
-		// Clouds
 
 		p.push("clouds");
-
-		stack.pushPose();
-
-		renderer.translateClouds(stack, camX, camY, camZ); // Prepare render for origin of camera
-
-		// Render opaque cloud geometry
-		p.push("clouds_opaque");
-
-		// Clears the cloud framebuffer and sets it as the current one
-		RenderTarget cloudTarget = renderer.getCloudTarget();
-		cloudTarget.clear(Minecraft.ON_OSX);
-		cloudTarget.bindWrite(false);
-
-		// Renders the clouds on to the cloud frame buffer
-		CloudMeshGenerator generator = renderer.getMeshGenerator();
-		SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, projMat, renderer.getFogStart(), renderer.getFogEnd(),
-				partialTick, cloudR, cloudG, cloudB, SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
-
-		// Render transparent cloud geometry
-		p.popPush("clouds_transparent");
-
-		WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
-		transparencyTarget.clear(Minecraft.ON_OSX);
-
-		if (generator.transparencyEnabled()) {
-			// We use weighted order independent transparency as we cannot easily sort the
-			// cloud mesh
-			// More info here https://jcgt.org/published/0002/02/09/paper.pdf and
-			// http://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
-			renderer.copyDepthFromCloudsToTransparency(); // Copy the depth data from the cloud framebuffer so we don't
-															// get weird depth issues
-			transparencyTarget.bindWrite(false);
-
-			// Render the transparent geometry to the transparency framebuffer
-			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, projMat, renderer.getFogStart(),
-					renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
-					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
-		}
-
+		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ,
+				frustum, cloudColor, p, true, false);
 		p.pop();
-
-		stack.popPose();
-
-		p.pop();
-
-		// Storm Fog
 
 		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
 			p.push("storm_fog");
-
-			// Renders the storm fog at a lower resolution
-			renderer.doStormPostProcessing(camMat, partialTick, projMat, camX, camY, camZ, cloudR, cloudG, cloudB);
-			renderer.prepareStormFogBlur(partialTick);
+			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
+					cloudColor);
 			if (!renderer.shouldUseScreenSpaceStormFog())
 				renderer.renderPreparedStormFogOverlay();
 

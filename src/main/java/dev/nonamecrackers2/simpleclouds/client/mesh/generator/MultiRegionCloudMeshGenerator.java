@@ -290,7 +290,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 					if (written >= count)
 						break;
 
-					Integer typeIndex = this.cloudTypeIndices.get(this.cloudGetter.getCloudTypeForId(region.getCloudTypeId()));
+					Integer typeIndex = this.cloudTypeIndices
+							.get(this.cloudGetter.getCloudTypeForId(region.getCloudTypeId()));
 					if (typeIndex == null)
 						continue;
 
