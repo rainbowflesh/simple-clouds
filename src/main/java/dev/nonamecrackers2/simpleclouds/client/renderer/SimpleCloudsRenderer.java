@@ -50,6 +50,7 @@ import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
 import dev.nonamecrackers2.simpleclouds.client.event.impl.DetermineCloudRenderPipelineEvent;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.CloudRenderTarget;
+import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.ShadowMapBuffer;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.mesh.RendererInitializeResult;
@@ -67,6 +68,7 @@ import dev.nonamecrackers2.simpleclouds.client.shader.SingleSSBOShaderInstance;
 import dev.nonamecrackers2.simpleclouds.client.shader.buffer.BindingManager;
 import dev.nonamecrackers2.simpleclouds.client.shader.buffer.ShaderStorageBufferObject;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
+import dev.nonamecrackers2.simpleclouds.client.world.FogRenderMode;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudGetter;
@@ -78,6 +80,7 @@ import net.minecraft.ReportType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.EffectInstance;
+import net.minecraft.world.level.material.FogType;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
@@ -1098,6 +1101,37 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			this.blurPostProcessing.process(partialTick);
 			RenderSystem.depthMask(true);
 		}
+	}
+
+	public void prepareStormFogBlur(float partialTick) {
+		if (this.blurTarget == null || this.stormFogTarget == null)
+			return;
+
+		Window window = this.mc.getWindow();
+		this.blurTarget.clear(Minecraft.ON_OSX);
+		this.blurTarget.bindWrite(true);
+		FrameBufferUtils.blitTargetPreservingAlpha(this.stormFogTarget, window.getWidth(), window.getHeight());
+		this.doBlurPostProcessing(partialTick);
+	}
+
+	public boolean shouldUseScreenSpaceStormFog() {
+		return SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.SCREEN_SPACE
+				&& this.mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE;
+	}
+
+	public void renderPreparedStormFogOverlay() {
+		if (this.blurTarget == null)
+			return;
+
+		Window window = this.mc.getWindow();
+		this.mc.getMainRenderTarget().bindWrite(false);
+		RenderSystem.enableBlend();
+		RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
+				GlStateManager.DestFactor.ONE);
+		this.blurTarget.blitToScreen(window.getWidth(), window.getHeight(), false);
+		RenderSystem.disableBlend();
+		RenderSystem.defaultBlendFunc();
 	}
 
 	public void doScreenSpaceWorldFog(Matrix4f camMat, Matrix4f projMat, float partialTick) {

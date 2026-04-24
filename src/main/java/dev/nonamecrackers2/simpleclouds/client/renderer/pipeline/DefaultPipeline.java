@@ -104,28 +104,9 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 
 			// Renders the storm fog at a lower resolution
 			renderer.doStormPostProcessing(camMat, partialTick, projMat, camX, camY, camZ, cloudR, cloudG, cloudB);
-
-			// Next we blit the storm fog to a higher resolution texture and apply a box
-			// blur
-			RenderTarget target = renderer.getBlurTarget();
-			target.clear(Minecraft.ON_OSX); // Clear old contents on the blur framebuffer
-			target.bindWrite(true); // Bind write and resize viewport
-			// Here we blit the contents of the storm fog framebuffer on to the blur
-			// framebuffer. A special function is used here
-			// to preserve the alpha channel when rendering
-			FrameBufferUtils.blitTargetPreservingAlpha(renderer.getStormFogTarget(), mc.getWindow().getWidth(),
-					mc.getWindow().getHeight());
-			// Blurs the storm fog
-			renderer.doBlurPostProcessing(partialTick);
-			// Renders the storm fog to the screen
-			mc.getMainRenderTarget().bindWrite(false);
-			RenderSystem.enableBlend();
-			RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
-					GlStateManager.DestFactor.ONE);
-			renderer.getBlurTarget().blitToScreen(mc.getWindow().getWidth(), mc.getWindow().getHeight(), false);
-			RenderSystem.disableBlend();
-			RenderSystem.defaultBlendFunc();
+			renderer.prepareStormFogBlur(partialTick);
+			if (!renderer.shouldUseScreenSpaceStormFog())
+				renderer.renderPreparedStormFogOverlay();
 
 			p.pop();
 		}
@@ -138,8 +119,7 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 	@Override
 	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.SCREEN_SPACE
-				&& mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
+		if (SimpleCloudsConfig.CLIENT.renderStormFog.get() && renderer.shouldUseScreenSpaceStormFog()) {
 			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
 			mc.getMainRenderTarget().bindWrite(false);
 		}
