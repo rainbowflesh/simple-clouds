@@ -147,12 +147,21 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	// For API calls, use Level#isRainingAt
 	public boolean isRainingAt(BlockPos pos) {
 		Pair<Boolean, Biome.Precipitation> val = this.getPrecipitationAt(pos);
-		return val.getLeft() && val.getRight() != Biome.Precipitation.RAIN;
+		return val.getLeft() && val.getRight() == Biome.Precipitation.RAIN;
 	}
 
 	public boolean isSnowingAt(BlockPos pos) {
 		Pair<Boolean, Biome.Precipitation> val = this.getPrecipitationAt(pos);
 		return val.getLeft() && val.getRight() == Biome.Precipitation.SNOW;
+	}
+
+	public boolean isThunderingAt(BlockPos pos) {
+		if (!this.hasPrecipitationAt(pos))
+			return false;
+
+		var info = this.getCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F);
+		return info.getLeft().weatherType().includesThunder()
+				&& info.getRight() < SimpleCloudsConstants.RAIN_THRESHOLD - 0.01F;
 	}
 
 	public boolean hasPrecipitationAt(BlockPos pos) {
@@ -174,6 +183,20 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		return Math.min(1.0F,
 				Math.max(0.0F, SimpleCloudsConstants.RAIN_THRESHOLD - fade) / SimpleCloudsConstants.RAIN_FADE)
 				* verticalFade;
+	}
+
+	public float getThunderLevel(float x, float y, float z) {
+		var info = this.getCloudTypeAtWorldPos(x, z);
+		CloudType type = info.getLeft();
+
+		if (!type.weatherType().includesThunder())
+			return 0.0F;
+
+		float rainLevel = this.getRainLevel(x, y, z);
+		if (rainLevel <= 0.0F)
+			return 0.0F;
+
+		return Mth.clamp(type.storminess() * rainLevel, 0.0F, 1.0F);
 	}
 
 	public void init(long seed) {

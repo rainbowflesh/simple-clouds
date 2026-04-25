@@ -8,16 +8,13 @@ import dev.nonamecrackers2.simpleclouds.common.noise.ModifiableLayeredNoise;
 import dev.nonamecrackers2.simpleclouds.common.noise.ModifiableNoiseSettings;
 import net.minecraft.data.PackOutput;
 
-public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
-{
-	public SimpleCloudsCloudTypeProvider(PackOutput output)
-	{
+public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider {
+	public SimpleCloudsCloudTypeProvider(PackOutput output) {
 		super(SimpleCloudsMod.MODID, output);
 	}
-	
+
 	@Override
-	protected void addTypes()
-	{
+	protected void addTypes() {
 		this.addType(cumulonimbus());
 		this.addType(cumulus());
 		this.addType(ittyBitty());
@@ -26,9 +23,8 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		this.addType(stratocumulus());
 		this.addType(stratus());
 	}
-	
-	private static CloudType cumulonimbus()
-	{
+
+	private static CloudType cumulonimbus() {
 		var noise = new ModifiableLayeredNoise();
 		var layer1 = new ModifiableNoiseSettings();
 		layer1.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 10.0F);
@@ -60,11 +56,11 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		layer3.setParam(AbstractNoiseSettings.Param.VALUE_OFFSET, 0.0F);
 		layer3.setParam(AbstractNoiseSettings.Param.VALUE_SCALE, 0.1F);
 		noise.addNoiseLayer(layer3);
-		return new CloudType(SimpleCloudsMod.id("cumulonimbus"), WeatherType.THUNDERSTORM, 0.6F, 16.0F, 128.0F, 0.0F, noise);
+		return new CloudType(SimpleCloudsMod.id("cumulonimbus"), WeatherType.THUNDERSTORM, 0.6F, 16.0F, 128.0F, 0.0F,
+				noise);
 	}
-	
-	private static CloudType cumulus()
-	{
+
+	private static CloudType cumulus() {
 		var noise = new ModifiableLayeredNoise();
 		var layer1 = new ModifiableNoiseSettings();
 		layer1.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 8.0F);
@@ -88,9 +84,8 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		noise.addNoiseLayer(layer2);
 		return new CloudType(SimpleCloudsMod.id("cumulus"), WeatherType.NONE, 0.2F, 16.0F, 16.0F, 0.2F, noise);
 	}
-	
-	private static CloudType ittyBitty()
-	{
+
+	private static CloudType ittyBitty() {
 		var noise = new ModifiableNoiseSettings();
 		noise.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 10.0F);
 		noise.setParam(AbstractNoiseSettings.Param.HEIGHT, 32.0F);
@@ -102,9 +97,8 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		noise.setParam(AbstractNoiseSettings.Param.VALUE_SCALE, 1.0F);
 		return new CloudType(SimpleCloudsMod.id("itty_bitty"), WeatherType.NONE, 0.0F, 16.0F, 32.0F, 0.2F, noise);
 	}
-	
-	private static CloudType nimbostratus()
-	{
+
+	private static CloudType nimbostratus() {
 		var noise = new ModifiableLayeredNoise();
 		var layer1 = new ModifiableNoiseSettings();
 		layer1.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 16.0F);
@@ -136,11 +130,10 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		layer3.setParam(AbstractNoiseSettings.Param.VALUE_OFFSET, 0.0F);
 		layer3.setParam(AbstractNoiseSettings.Param.VALUE_SCALE, 0.3F);
 		noise.addNoiseLayer(layer3);
-		return new CloudType(SimpleCloudsMod.id("nimbostratus"), WeatherType.THUNDERSTORM, 0.5F, 16.0F, 128.0F, 0.0F, noise);
+		return new CloudType(SimpleCloudsMod.id("nimbostratus"), WeatherType.RAIN, 0.5F, 16.0F, 128.0F, 0.0F, noise);
 	}
-	
-	private static CloudType smallCumulus()
-	{
+
+	private static CloudType smallCumulus() {
 		var noise = new ModifiableNoiseSettings();
 		noise.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 10.0F);
 		noise.setParam(AbstractNoiseSettings.Param.HEIGHT, 32.0F);
@@ -152,9 +145,8 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		noise.setParam(AbstractNoiseSettings.Param.VALUE_SCALE, 1.0F);
 		return new CloudType(SimpleCloudsMod.id("small_cumulus"), WeatherType.NONE, 0.1F, 10.0F, 16.0F, 0.1F, noise);
 	}
-	
-	private static CloudType stratocumulus()
-	{
+
+	private static CloudType stratocumulus() {
 		var noise = new ModifiableLayeredNoise();
 		var layer1 = new ModifiableNoiseSettings();
 		layer1.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 10.0F);
@@ -178,9 +170,8 @@ public class SimpleCloudsCloudTypeProvider extends CloudTypeProvider
 		noise.addNoiseLayer(layer2);
 		return new CloudType(SimpleCloudsMod.id("stratocumulus"), WeatherType.NONE, 0.6F, 64.0F, 48.0F, 0.02F, noise);
 	}
-	
-	private static CloudType stratus()
-	{
+
+	private static CloudType stratus() {
 		var noise = new ModifiableLayeredNoise();
 		var layer1 = new ModifiableNoiseSettings();
 		layer1.setParam(AbstractNoiseSettings.Param.FADE_DISTANCE, 10.0F);

@@ -122,7 +122,7 @@
   "gui.simpleclouds.config.singleModeFadeEndPercentage.title": "Single Mode Fade End Percentage",
   "gui.simpleclouds.config.singleModeFadeStartPercentage.description": "Specifies the percentage of the cloud render distance that the clouds should begin to fade away, when using the single cloud type mode (e.x. 50 would start to make the clouds fade away at half of the cloud render distance).",
   "gui.simpleclouds.config.singleModeFadeStartPercentage.title": "Single Mode Fade Start Percentage",
-  "gui.simpleclouds.config.stormFogAngle.description": "Specifies the angle parellel to the horizon that the storm fog should be directed to.",
+  "gui.simpleclouds.config.stormFogAngle.description": "Specifies the angle parallel to the horizon that the storm fog should be directed to.",
   "gui.simpleclouds.config.stormFogAngle.title": "Storm Fog Angle",
   "gui.simpleclouds.config.stormFogLightningFlashes.description": "Toggles lightning flashes that can be seen in storm fog. Disabling can lead to potential performance gains when lightning spawns.",
   "gui.simpleclouds.config.stormFogLightningFlashes.title": "Storm Fog Lightning Flashes",

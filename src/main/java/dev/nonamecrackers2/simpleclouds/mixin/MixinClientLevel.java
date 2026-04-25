@@ -14,6 +14,7 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManagerHolder;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -26,66 +27,65 @@ import net.minecraft.world.level.storage.WritableLevelData;
 import net.minecraft.world.phys.Vec3;
 
 @Mixin(ClientLevel.class)
-public abstract class MixinClientLevel extends Level implements CloudManagerHolder<ClientLevel>
-{
-	protected MixinClientLevel(WritableLevelData data, ResourceKey<Level> dimension, RegistryAccess registry, Holder<DimensionType> dimensionType, Supplier<ProfilerFiller> profiler, boolean isClientSide, boolean isDebug, long seed, int maxChainedNeighbourUpdates)
-	{
-		super(data, dimension, registry, dimensionType, profiler, isClientSide, isDebug, seed, maxChainedNeighbourUpdates);
+public abstract class MixinClientLevel extends Level implements CloudManagerHolder<ClientLevel> {
+	protected MixinClientLevel(WritableLevelData data, ResourceKey<Level> dimension, RegistryAccess registry,
+			Holder<DimensionType> dimensionType, Supplier<ProfilerFiller> profiler, boolean isClientSide,
+			boolean isDebug, long seed, int maxChainedNeighbourUpdates) {
+		super(data, dimension, registry, dimensionType, profiler, isClientSide, isDebug, seed,
+				maxChainedNeighbourUpdates);
 		throw new UnsupportedOperationException();
 	}
 
 	@Unique
 	private ClientCloudManager cloudManager;
-	
+
 	@Inject(method = "<init>", at = @At("TAIL"))
-	public void simpleclouds$createCloudManager_init(CallbackInfo ci)
-	{
-		this.cloudManager = new ClientCloudManager((ClientLevel)(Object)this);
-		this.cloudManager.init(SimpleCloudsConfig.CLIENT.useSpecificSeed.get() ? SimpleCloudsConfig.CLIENT.cloudSeed.get() : RandomSource.create().nextLong());
+	public void simpleclouds$createCloudManager_init(CallbackInfo ci) {
+		this.cloudManager = new ClientCloudManager((ClientLevel) (Object) this);
+		this.cloudManager
+				.init(SimpleCloudsConfig.CLIENT.useSpecificSeed.get() ? SimpleCloudsConfig.CLIENT.cloudSeed.get()
+						: RandomSource.create().nextLong());
 	}
-	
+
 	@Inject(method = "getSkyDarken", at = @At("RETURN"), cancellable = true)
-	public void simpleclouds$modifySkyDarken_getSkyDarken(float partialTick, CallbackInfoReturnable<Float> ci)
-	{
-		ci.setReturnValue(ci.getReturnValue() * SimpleCloudsRenderer.getInstance().getWorldEffectsManager().getDarkenFactor(partialTick));
+	public void simpleclouds$modifySkyDarken_getSkyDarken(float partialTick, CallbackInfoReturnable<Float> ci) {
+		ci.setReturnValue(ci.getReturnValue()
+				* SimpleCloudsRenderer.getInstance().getWorldEffectsManager().getDarkenFactor(partialTick));
 	}
-	
+
 	@Override
-	public ClientCloudManager getCloudManager()
-	{
+	public ClientCloudManager getCloudManager() {
 		return this.cloudManager;
 	}
-	
+
 	@Inject(method = "getSkyColor", at = @At("RETURN"), cancellable = true)
-	public void simpleclouds$modifySkyColor_getSkyColor(Vec3 col, float partialTick, CallbackInfoReturnable<Vec3> ci)
-	{
+	public void simpleclouds$modifySkyColor_getSkyColor(Vec3 col, float partialTick, CallbackInfoReturnable<Vec3> ci) {
 		Vec3 defaultCol = ci.getReturnValue();
-		Color finalCol = SimpleCloudsRenderer.getInstance().getWorldEffectsManager().calculateSkyColor((float)defaultCol.x, (float)defaultCol.y, (float)defaultCol.z, partialTick);
-		ci.setReturnValue(new Vec3(finalCol.getRed() / 255.0F, finalCol.getGreen() / 255.0F, finalCol.getBlue() / 255.0F));
+		Color finalCol = SimpleCloudsRenderer.getInstance().getWorldEffectsManager()
+				.calculateSkyColor((float) defaultCol.x, (float) defaultCol.y, (float) defaultCol.z, partialTick);
+		ci.setReturnValue(
+				new Vec3(finalCol.getRed() / 255.0F, finalCol.getGreen() / 255.0F, finalCol.getBlue() / 255.0F));
 	}
-//	
-//	@Override
-//	public boolean isRaining()
-//	{
-//		if (CompatHelper.areShadersRunning())
-//		{
-//			ClientCloudManager manager = this.getCloudManager();
-//			if (manager.hasReceivedSync() && manager.isRainingAt(Minecraft.getInstance().player.blockPosition()))
-//				return true;
-//		}
-//		return super.isRaining();
-//	}
-//	
-//	@Override
-//	public boolean isThundering()
-//	{
-//		if (CompatHelper.areShadersRunning())
-//		{
-//			ClientCloudManager manager = this.getCloudManager();
-//			Vec3 playerPos = Minecraft.getInstance().player.position();
-//			if (manager.hasReceivedSync() && manager.getCloudTypeAtWorldPos((float)playerPos.x, (float)playerPos.z).getLeft().weatherType().includesThunder())
-//				return true;
-//		}
-//		return super.isRaining();
-//	}
+
+	@Inject(method = "isRaining", at = @At("HEAD"), cancellable = true)
+	public void simpleclouds$localizedWeather_isRaining(CallbackInfoReturnable<Boolean> ci) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null)
+			return;
+
+		ClientCloudManager manager = this.getCloudManager();
+		if (!manager.shouldUseVanillaWeather())
+			ci.setReturnValue(manager.hasPrecipitationAt(mc.player.blockPosition()));
+	}
+
+	@Inject(method = "isThundering", at = @At("HEAD"), cancellable = true)
+	public void simpleclouds$localizedWeather_isThundering(CallbackInfoReturnable<Boolean> ci) {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.player == null)
+			return;
+
+		ClientCloudManager manager = this.getCloudManager();
+		if (!manager.shouldUseVanillaWeather())
+			ci.setReturnValue(manager.isThunderingAt(mc.player.blockPosition()));
+	}
 }

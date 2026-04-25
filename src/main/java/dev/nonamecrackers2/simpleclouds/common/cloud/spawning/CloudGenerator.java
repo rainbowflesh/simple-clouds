@@ -271,8 +271,60 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 	}
 
 	public Optional<CloudRegion> spawnCloud(CloudSpawningConfig config, Level level) {
-		return this.spawnCloud(() -> config.getRandom(this.random).orElse(null),
+		return this.spawnCloud(() -> this.selectSpawnInfo(config),
 				config.getSpawnInterval().sample(this.random), config.getMaxRegions(), level);
+	}
+
+	private @Nullable CloudSpawningConfig.Info selectSpawnInfo(CloudSpawningConfig config) {
+		CloudSpawningConfig.Info info = config.getRandom(this.random).orElse(null);
+		if (info == null)
+			return null;
+
+		CloudType type = this.cloudGetter.getCloudTypeForId(info.cloudType());
+		if (type == null || !type.weatherType().includesRain())
+			return info;
+
+		return this.resolveStormSpawnInfo(config, info);
+	}
+
+	private CloudSpawningConfig.Info resolveStormSpawnInfo(CloudSpawningConfig config,
+			CloudSpawningConfig.Info fallback) {
+		List<CloudSpawningConfig.Info> stormCandidates = Lists.newArrayList();
+		float minStorminess = Float.MAX_VALUE;
+		float maxStorminess = -Float.MAX_VALUE;
+
+		for (CloudSpawningConfig.Info info : config.getWeightInfos()) {
+			CloudType type = this.cloudGetter.getCloudTypeForId(info.cloudType());
+			if (type == null || !type.weatherType().includesRain())
+				continue;
+
+			stormCandidates.add(info);
+			minStorminess = Math.min(minStorminess, type.storminess());
+			maxStorminess = Math.max(maxStorminess, type.storminess());
+		}
+
+		if (stormCandidates.isEmpty() || minStorminess >= maxStorminess)
+			return fallback;
+
+		float normalizedIntensity = this.random.nextFloat();
+		normalizedIntensity *= normalizedIntensity;
+		float targetStorminess = Mth.lerp(normalizedIntensity, minStorminess, maxStorminess);
+
+		CloudSpawningConfig.Info bestMatch = fallback;
+		float bestDistance = Float.MAX_VALUE;
+		for (CloudSpawningConfig.Info info : stormCandidates) {
+			CloudType type = this.cloudGetter.getCloudTypeForId(info.cloudType());
+			if (type == null)
+				continue;
+
+			float distance = Math.abs(type.storminess() - targetStorminess);
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				bestMatch = info;
+			}
+		}
+
+		return bestMatch;
 	}
 
 	@Override
@@ -308,7 +360,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 						return false;
 					}
 
-					return regionFunc.create(infoGetter.get(), (float) r.x() + 0.5F, (float) r.z() + 0.5F, x, z,
+					return regionFunc.create(info, (float) r.x() + 0.5F, (float) r.z() + 0.5F, x, z,
 							this.random, true).map(apiRegion -> {
 								CloudRegion region = (CloudRegion) apiRegion;
 								if (this.addCloud(region, CloudGenerator.Order.USE_WEIGHT)) {
@@ -371,8 +423,9 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 					continue;
 				if (!ignoreOtherRegions && this.spawnRegions.stream().anyMatch(r -> r.includesPoint(pos.x, pos.y)))
 					continue;
+				CloudSpawningConfig.Info info = this.selectSpawnInfo(config);
 				CloudRegion cloudFormation = this
-						.createRegion(config.getRandom(this.random).orElse(null), (float) x + 0.5F, (float) z + 0.5F,
+						.createRegion(info, (float) x + 0.5F, (float) z + 0.5F,
 								(float) pos.x + 0.5F, (float) pos.y + 0.5F, this.random, false)
 						.orElse(null);
 				if (cloudFormation == null)

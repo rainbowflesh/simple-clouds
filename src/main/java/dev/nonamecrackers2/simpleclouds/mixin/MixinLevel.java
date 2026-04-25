@@ -11,16 +11,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 @Mixin(Level.class)
-public class MixinLevel
-{
+public class MixinLevel {
 	@Inject(method = "isRainingAt", at = @At("HEAD"), cancellable = true)
-	public void simpleclouds$localizedWeather_isRainingAt(BlockPos pos, CallbackInfoReturnable<Boolean> ci)
-	{
-		if (this instanceof CloudManagerHolder)
-		{
-			CloudManager<?> manager = CloudManager.get((Level)(Object)this);
+	public void simpleclouds$localizedWeather_isRainingAt(BlockPos pos, CallbackInfoReturnable<Boolean> ci) {
+		if (this instanceof CloudManagerHolder) {
+			CloudManager<?> manager = CloudManager.get((Level) (Object) this);
 			if (!manager.shouldUseVanillaWeather())
-				ci.setReturnValue(manager.hasPrecipitationAt(pos));
+				ci.setReturnValue(manager.isRainingAt(pos));
 		}
 	}
 }

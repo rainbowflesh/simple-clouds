@@ -93,7 +93,9 @@ public class WorldEffects {
 
 		if (!manager.shouldUseVanillaWeather()) {
 			float rainLevel = manager.getRainLevel((float) camX, (float) camY, (float) camZ);
+			float thunderLevel = manager.getThunderLevel((float) camX, (float) camY, (float) camZ);
 			this.mc.level.setRainLevel(rainLevel);
+			this.mc.level.setThunderLevel(thunderLevel);
 		}
 	}
 

@@ -16,7 +16,6 @@ import dev.nonamecrackers2.simpleclouds.common.cloud.spawning.CloudSpawningDataM
 import dev.nonamecrackers2.simpleclouds.common.cloud.spawning.ServerCloudGenerator;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
-import dev.nonamecrackers2.simpleclouds.mixin.MixinServerLevelAccessor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -51,8 +50,9 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 	public void tick() {
 		super.tick();
 
-		if (!this.useVanillaWeather && !SimpleCloudsAPI.getApi().getHooks().isExternalWeatherControlEnabled())
-			this.level.setRainLevel(0.0F);
+		if (!this.useVanillaWeather && !SimpleCloudsAPI.getApi().getHooks().isExternalWeatherControlEnabled()) {
+			this.clearVanillaWeatherState();
+		}
 
 		if (this.isCloudGeneratorActive() && ((ServerCloudGenerator) this.getCloudGenerator()).checkAndResetSync())
 			this.queueSync(SyncType.CLOUD_FORMATIONS);
@@ -60,12 +60,28 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 
 	@Override
 	protected void resetVanillaWeather() {
-		((MixinServerLevelAccessor) this.level).simpleclouds$invokeResetWeatherCycle();
+		this.clearVanillaWeatherState();
+	}
+
+	private void clearVanillaWeatherState() {
+		boolean wasRaining = this.level.isRaining();
+		float rainLevel = this.level.getRainLevel(1.0F);
+		float thunderLevel = this.level.getThunderLevel(1.0F);
+
+		this.level.setWeatherParameters(0, 0, false, false);
+		this.level.setRainLevel(0.0F);
+		this.level.setThunderLevel(0.0F);
+
 		PlayerList list = this.level.getServer().getPlayerList();
-		list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, 0.0F),
-				this.level.dimension());
-		list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, 0.0F),
-				this.level.dimension());
+		if (wasRaining)
+			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.STOP_RAINING, 0.0F),
+					this.level.dimension());
+		if (rainLevel > 0.0F)
+			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, 0.0F),
+					this.level.dimension());
+		if (thunderLevel > 0.0F)
+			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, 0.0F),
+					this.level.dimension());
 	}
 
 	@Override
