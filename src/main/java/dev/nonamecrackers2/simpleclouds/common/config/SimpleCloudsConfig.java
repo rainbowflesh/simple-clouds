@@ -37,7 +37,6 @@ public class SimpleCloudsConfig {
 
 	public static class ClientConfig extends ConfigHelper {
 		public final ModConfigSpec.ConfigValue<Boolean> showCloudPreviewerInfoPopup;
-		public final ModConfigSpec.ConfigValue<Double> speedModifier;
 		public final ModConfigSpec.ConfigValue<Integer> framesToGenerateMesh;
 		public final ModConfigSpec.ConfigValue<Boolean> testSidesThatAreOccluded;
 		public final ModConfigSpec.ConfigValue<Boolean> renderStormFog;
@@ -89,9 +88,6 @@ public class SimpleCloudsConfig {
 
 			this.showCloudPreviewerInfoPopup = this.createValue(true, "showCloudPreviewerInfoPopup", RestartType.NONE,
 					"Specifies if the info pop-up should appear when opening the cloud previewer menu");
-
-			this.speedModifier = this.createRangedDoubleValue(1.0D, 0.1D, 32.0D, "clientSideSpeedModifier",
-					RestartType.NONE, "Specifies the movement speed of the clouds");
 
 			this.dimensionWhitelist = this.createListValue(String.class, () -> {
 				return Lists.newArrayList("minecraft:overworld");
@@ -285,6 +281,7 @@ public class SimpleCloudsConfig {
 
 	public static class ServerConfig extends ConfigHelper {
 		public final ModConfigSpec.ConfigValue<CloudMode> cloudMode;
+		public final ModConfigSpec.ConfigValue<Double> cloudSpeed;
 		public final ModConfigSpec.ConfigValue<String> singleModeCloudType;
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dimensionWhitelist;
 		public final ModConfigSpec.ConfigValue<Boolean> whitelistAsBlacklist;
@@ -304,6 +301,10 @@ public class SimpleCloudsConfig {
 
 			this.cloudMode = this.createEnumValue(CloudMode.DEFAULT, "cloudMode", RestartType.NONE,
 					"Specifies how the clouds should behave. DEFAULT uses all cloud types with the default weather in Simple Clouds. SINGLE uses only a single cloud type and its associated weather. AMBIENT disables localized weather and carves clouds around the player, keeping them at a distance");
+
+			this.cloudSpeed = this.createRangedDoubleValue(0.675D, 0.0D, 1.0D,
+					"cloudSpeed", RestartType.NONE,
+					"Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower");
 
 			builder.comment("Single Mode").push("single_mode");
 

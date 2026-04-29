@@ -22,8 +22,6 @@ public class CloudData extends SavedData {
 			manager.setSeed(tag.getLong("Seed"));
 		if (tag.contains("ScrollAngle"))
 			manager.setScrollAngle(tag.getFloat("ScrollAngle"));
-		if (tag.contains("Speed"))
-			manager.setCloudSpeed(tag.getFloat("Speed"));
 		manager.getCloudGenerator().readTag(tag.getCompound("cloud_generator"));
 		return data;
 	}
@@ -32,7 +30,6 @@ public class CloudData extends SavedData {
 	public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider) {
 		tag.putLong("Seed", this.manager.getSeed());
 		tag.putFloat("ScrollAngle", this.manager.getScrollAngle());
-		tag.putFloat("Speed", this.manager.getCloudSpeed());
 		tag.put("cloud_generator", this.manager.getCloudGenerator().toTag());
 		return tag;
 	}

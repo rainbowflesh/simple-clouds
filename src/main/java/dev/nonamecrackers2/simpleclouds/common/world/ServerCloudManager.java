@@ -47,6 +47,13 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 	}
 
 	@Override
+	public void init(long seed) {
+		super.init(seed);
+		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded())
+			this.setCloudSpeed(SimpleCloudsConfig.SERVER.cloudSpeed.get().floatValue());
+	}
+
+	@Override
 	public void tick() {
 		super.tick();
 

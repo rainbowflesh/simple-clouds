@@ -18,6 +18,7 @@ public class SimpleCloudsConfigListeners {
 	public static void registerListener() {
 		ConfigListener.builder(ModConfig.Type.SERVER, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.SERVER.cloudMode, (o, n) -> onCloudModeChanged(n))
+				.addListener(SimpleCloudsConfig.SERVER.cloudSpeed, (o, n) -> onCloudSpeedChanged(n.floatValue()))
 				.addListener(SimpleCloudsConfig.SERVER.singleModeCloudType, (o, n) -> onSingleModeCloudTypeChanged(n))
 				.buildAndRegister();
 		ConfigListener.builder(ModConfig.Type.COMMON, SimpleCloudsMod.MODID)
@@ -32,6 +33,19 @@ public class SimpleCloudsConfigListeners {
 	public static void onSingleModeCloudTypeChanged(String newType) {
 		executeOnServerThread(
 				() -> PacketDistributor.sendToAllPlayers(new NotifySingleModeCloudTypeUpdatedPayload(newType)));
+	}
+
+	public static void onCloudSpeedChanged(float newSpeed) {
+		executeOnServerThread(() -> {
+			MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+			if (server == null)
+				return;
+			for (ServerLevel level : server.getAllLevels()) {
+				ServerCloudManager manager = (ServerCloudManager) CloudManager.get(level);
+				manager.setCloudSpeed(newSpeed);
+				manager.queueSync(SyncType.MOVEMENT);
+			}
+		});
 	}
 
 	public static void onCloudHeightChanged(int newHeight) {

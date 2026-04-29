@@ -95,11 +95,6 @@ public class ClientCloudManager extends CloudManager<ClientLevel> {
 	}
 
 	@Override
-	public float getCloudSpeed() {
-		return this.receivedSync ? super.getCloudSpeed() : SimpleCloudsConfig.CLIENT.speedModifier.get().floatValue();
-	}
-
-	@Override
 	public int getCloudHeight() {
 		return this.receivedSync ? super.getCloudHeight() : SimpleCloudsConfig.COMMON.cloudHeight.get();
 	}

@@ -53,7 +53,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	protected float scrollX;
 	protected float scrollY;
 	protected float scrollZ;
-	protected float speed = 1.0F;
+	protected float speed = 1;
 	protected int cloudHeight = 128;
 	protected int tickCount;
 	protected int nextLightningStrike = 60;
@@ -204,7 +204,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		this.random = random;
 		if (SimpleCloudsConfig.COMMON_SPEC.isLoaded())
 			this.cloudHeight = SimpleCloudsConfig.COMMON.cloudHeight.get();
-		this.speed = 1.0F;
+		this.speed = 1;
 		this.cloudGenerator.initialize(random, this.level);
 	}
 

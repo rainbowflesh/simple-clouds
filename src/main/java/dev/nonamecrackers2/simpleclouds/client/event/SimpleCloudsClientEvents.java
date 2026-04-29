@@ -147,8 +147,7 @@ public class SimpleCloudsClientEvents {
 					|| event.isValue(SimpleCloudsConfig.CLIENT.showVivecraftNotice))
 				event.setCanceled(true);
 			if (ClientCloudManager.isRemoteServerAvailable()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.speedModifier)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
+				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)

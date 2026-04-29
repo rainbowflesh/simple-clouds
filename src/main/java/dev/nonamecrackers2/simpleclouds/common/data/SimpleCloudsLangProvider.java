@@ -23,6 +23,9 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
 		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.SERVER_SPEC, this,
 				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
+		this.add("gui.simpleclouds.config.cloudSpeed.title", "Cloud Speed");
+		this.add("gui.simpleclouds.config.cloudSpeed.description",
+				"Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower.");
 		this.add("gui.simpleclouds.cloud_previewer.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.add_layer.title", "Add Layer");

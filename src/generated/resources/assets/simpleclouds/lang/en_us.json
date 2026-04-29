@@ -62,6 +62,8 @@
   "gui.simpleclouds.config.cloudHeight.title": "Cloud Height",
   "gui.simpleclouds.config.cloudMode.description": "Specifies how the clouds should behave. DEFAULT uses all cloud types with the default weather in Simple Clouds. SINGLE uses only a single cloud type and its associated weather. AMBIENT disables localized weather and carves clouds around the player, keeping them at a distance.",
   "gui.simpleclouds.config.cloudMode.title": "Cloud Mode",
+  "gui.simpleclouds.config.cloudSpeed.description": "Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower.",
+  "gui.simpleclouds.config.cloudSpeed.title": "Cloud Speed",
   "gui.simpleclouds.config.cloudSeed.description": "Specifies the seed to use for the clouds. Will apply for all servers that the user connects to with the mod on the client-side only.",
   "gui.simpleclouds.config.cloudSeed.title": "Cloud Seed",
   "gui.simpleclouds.config.concurrentComputeDispatches.description": "EXPERIMENTAL. Uses a slightly modified algorithm that removes sync calls between chunk generator compute dispatches at the cost of higher memory usage. May result in a performance boost.",

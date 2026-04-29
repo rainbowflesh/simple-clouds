@@ -10,15 +10,11 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
-import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
-import dev.nonamecrackers2.simpleclouds.common.world.ServerCloudManager;
-import dev.nonamecrackers2.simpleclouds.common.world.SyncType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.config.ModConfig;
 import nonamecrackers2.crackerslib.client.gui.Popup;
 import nonamecrackers2.crackerslib.common.config.listener.ConfigListener;
@@ -27,7 +23,6 @@ public class SimpleCloudsClientConfigListeners {
 	public static void registerListener() {
 		ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
-				.addListener(SimpleCloudsConfig.CLIENT.speedModifier, (o, n) -> syncSingleplayerSpeed(n.floatValue()))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.levelOfDetail, (o, n) -> requestReload(false))
@@ -43,7 +38,6 @@ public class SimpleCloudsClientConfigListeners {
 		if (!canSyncToSingleplayerServer())
 			return;
 		syncSingleplayerCloudMode(SimpleCloudsConfig.CLIENT.cloudMode.get());
-		syncSingleplayerSpeed(SimpleCloudsConfig.CLIENT.speedModifier.get().floatValue());
 		syncSingleplayerSingleModeCloudType(SimpleCloudsConfig.CLIENT.singleModeCloudType.get());
 	}
 
@@ -137,16 +131,6 @@ public class SimpleCloudsClientConfigListeners {
 
 	private static boolean syncSingleplayerSingleModeCloudType(String type) {
 		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.singleModeCloudType.set(type));
-	}
-
-	private static boolean syncSingleplayerSpeed(float speed) {
-		return executeForSingleplayerServer(server -> {
-			for (ServerLevel level : server.getAllLevels()) {
-				ServerCloudManager manager = (ServerCloudManager) CloudManager.get(level);
-				manager.setCloudSpeed(speed);
-				manager.queueSync(SyncType.MOVEMENT);
-			}
-		});
 	}
 
 	private static boolean executeForSingleplayerServer(java.util.function.Consumer<MinecraftServer> action) {
