@@ -7,7 +7,10 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRainInDryBiomesUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -15,6 +18,18 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public class SimpleCloudsPayloadRegistrar {
 	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler) {
 		PayloadRegistrar registrar = event.registrar("1.3").optional();
+		registrar.playToClient(
+				NotifyAllowRainInDryBiomesUpdatedPayload.TYPE,
+				NotifyAllowRainInDryBiomesUpdatedPayload.CODEC,
+				clientHandler::handleNotifyAllowRainInDryBiomesUpdatedPayload);
+		registrar.playToClient(
+				NotifyDryBiomeRainMinStorminessUpdatedPayload.TYPE,
+				NotifyDryBiomeRainMinStorminessUpdatedPayload.CODEC,
+				clientHandler::handleNotifyDryBiomeRainMinStorminessUpdatedPayload);
+		registrar.playToClient(
+				NotifyDryBiomeRainTagsUpdatedPayload.TYPE,
+				NotifyDryBiomeRainTagsUpdatedPayload.CODEC,
+				clientHandler::handleNotifyDryBiomeRainTagsUpdatedPayload);
 		registrar.playToClient(
 				NotifyCloudModeUpdatedPayload.TYPE,
 				NotifyCloudModeUpdatedPayload.CODEC,

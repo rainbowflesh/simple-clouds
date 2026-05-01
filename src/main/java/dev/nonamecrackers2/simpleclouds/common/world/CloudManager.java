@@ -24,9 +24,12 @@ import dev.nonamecrackers2.simpleclouds.common.cloud.spawning.CloudGenerator;
 import dev.nonamecrackers2.simpleclouds.common.cloud.spawning.CloudSpawningConfig;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.DedicatedServer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
@@ -34,6 +37,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.Tags;
 
 public abstract class CloudManager<T extends Level> implements CloudGetter, ScAPICloudManager {
 	public static final int CLOUD_HEIGHT_MAX = 2048;
@@ -42,6 +46,13 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public static final float RANDOM_SPREAD = 10000.0F;
 	public static final float SCROLL_OFFSET = 100.0F;
 	public static final float DEFAULT_CLOUD_SPEED = 0.675F;
+	public static final double DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS = 0.55D;
+	private static final List<String> DEFAULT_DRY_BIOME_RAIN_TAG_IDS = List.of(
+			Tags.Biomes.IS_DRY_OVERWORLD.location().toString(),
+			net.minecraft.tags.BiomeTags.IS_SAVANNA.location().toString());
+	private static volatile List<String> dryBiomeRainTagIds = DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
+	private static volatile List<TagKey<Biome>> dryBiomeRainTags = createDryBiomeRainTags(
+			DEFAULT_DRY_BIOME_RAIN_TAG_IDS);
 	protected final T level;
 	protected final CloudTypeSource cloudSource;
 	protected final CloudGenerator cloudGenerator;
@@ -131,10 +142,9 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 				|| this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, pos).getY() > pos.getY())
 			return Pair.of(false, Biome.Precipitation.NONE);
 
-		Biome.Precipitation precipitation = this.level.getBiome(pos).value().getPrecipitationAt(pos);
-
 		var info = this.getCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F);
 		CloudType type = info.getLeft();
+		Biome.Precipitation precipitation = resolveBiomePrecipitation(this.level, this.level.getBiome(pos), pos, type);
 		if ((float) pos.getY() + 0.5F > this.getStormStartHeight(type))
 			return Pair.of(false, Biome.Precipitation.NONE);
 
@@ -143,6 +153,81 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 			return Pair.of(true, precipitation);
 		else
 			return Pair.of(false, Biome.Precipitation.NONE);
+	}
+
+	public Biome.Precipitation getBiomePrecipitationAt(BlockPos pos) {
+		return resolveBiomePrecipitation(this.level, this.level.getBiome(pos), pos);
+	}
+
+	public static List<String> getDefaultDryBiomeRainTagIds() {
+		return DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
+	}
+
+	public static Biome.Precipitation resolveBiomePrecipitation(Level level, Holder<Biome> biome, BlockPos pos) {
+		CloudType type = CloudManager.get(level)
+				.getCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F)
+				.getLeft();
+		return resolveBiomePrecipitation(level, biome, pos, type);
+	}
+
+	public static Biome.Precipitation resolveBiomePrecipitation(Level level, Holder<Biome> biome, BlockPos pos,
+			CloudType type) {
+		if (shouldOverrideDryBiomePrecipitation(biome, type))
+			return biome.value().shouldSnow(level, pos) ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN;
+		return biome.value().getPrecipitationAt(pos);
+	}
+
+	public static boolean biomeHasConfiguredPrecipitation(Holder<Biome> biome) {
+		return biome.value().hasPrecipitation() || shouldOverrideDryBiomePrecipitation(biome);
+	}
+
+	public static boolean shouldOverrideDryBiomePrecipitation(Holder<Biome> biome) {
+		return shouldAllowRainInDryBiomes() && isDryBiomeForRainOverride(biome);
+	}
+
+	public static boolean shouldOverrideDryBiomePrecipitation(Holder<Biome> biome, CloudType type) {
+		return shouldOverrideDryBiomePrecipitation(biome) && type.storminess() >= getDryBiomeRainMinStorminess();
+	}
+
+	public static float getDryBiomeRainMinStorminess() {
+		if (!SimpleCloudsConfig.SERVER_SPEC.isLoaded())
+			return (float) DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS;
+		return SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess.get().floatValue();
+	}
+
+	private static boolean isDryBiomeForRainOverride(Holder<Biome> biome) {
+		for (TagKey<Biome> tag : getDryBiomeRainTags()) {
+			if (biome.is(tag))
+				return true;
+		}
+		return false;
+	}
+
+	public static void updateDryBiomeRainTags(List<? extends String> tagIds) {
+		List<String> normalizedTagIds = List.copyOf(tagIds);
+		dryBiomeRainTagIds = normalizedTagIds;
+		dryBiomeRainTags = createDryBiomeRainTags(normalizedTagIds);
+	}
+
+	private static List<TagKey<Biome>> getDryBiomeRainTags() {
+		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded()) {
+			List<String> configuredTagIds = List.copyOf(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get());
+			if (!configuredTagIds.equals(dryBiomeRainTagIds))
+				updateDryBiomeRainTags(configuredTagIds);
+		}
+		return dryBiomeRainTags;
+	}
+
+	private static List<TagKey<Biome>> createDryBiomeRainTags(List<? extends String> tagIds) {
+		return tagIds.stream()
+				.map(ResourceLocation::tryParse)
+				.filter(Objects::nonNull)
+				.map(loc -> TagKey.create(Registries.BIOME, loc))
+				.toList();
+	}
+
+	protected static boolean shouldAllowRainInDryBiomes() {
+		return SimpleCloudsConfig.SERVER_SPEC.isLoaded() && SimpleCloudsConfig.SERVER.allowRainInDryBiomes.get();
 	}
 
 	// For API calls, use Level#isRainingAt

@@ -5,23 +5,31 @@ import javax.annotation.Nullable;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
+import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.TickRateManager;
+import net.minecraft.world.level.biome.Biome;
 
 @Mixin(value = LevelRenderer.class, priority = 1001)
 public class MixinLevelRenderer {
@@ -107,6 +115,21 @@ public class MixinLevelRenderer {
 			SimpleCloudsRenderer.getInstance().tick();
 	}
 
+	@Redirect(method = "renderSnowAndRain", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;hasPrecipitation()Z"))
+	public boolean simpleclouds$allowConfiguredDryBiomeRain_renderSnowAndRain(Biome biome) {
+		if (this.level == null)
+			return biome.hasPrecipitation();
+		return CloudManager.biomeHasConfiguredPrecipitation(this.simpleclouds$wrapBiome(biome));
+	}
+
+	@Redirect(method = { "renderSnowAndRain",
+			"tickRain" }, at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/biome/Biome;getPrecipitationAt(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/biome/Biome$Precipitation;"))
+	public Biome.Precipitation simpleclouds$resolveConfiguredDryBiomePrecipitation(Biome biome, BlockPos pos) {
+		if (this.level == null)
+			return biome.getPrecipitationAt(pos);
+		return CloudManager.resolveBiomePrecipitation(this.level, this.simpleclouds$wrapBiome(biome), pos);
+	}
+
 	@ModifyConstant(method = "tickRain", constant = @Constant(floatValue = 0.2F, ordinal = 0))
 	public float simpleclouds$modifyRainSoundVolume_tickRain(float value) {
 		return value * this.level.getRainLevel(0.0F);
@@ -115,6 +138,12 @@ public class MixinLevelRenderer {
 	@ModifyConstant(method = "tickRain", constant = @Constant(floatValue = 0.1F, ordinal = 0))
 	public float simpleclouds$modifyAboveRainSoundVolume_tickRain(float value) {
 		return value * this.level.getRainLevel(0.0F);
+	}
+
+	@Unique
+	private Holder<Biome> simpleclouds$wrapBiome(Biome biome) {
+		Registry<Biome> registry = this.level.registryAccess().registryOrThrow(Registries.BIOME);
+		return registry.wrapAsHolder(biome);
 	}
 
 	//

@@ -30,7 +30,7 @@ public final class SingleRegionCloudMeshGenerator extends CloudMeshGenerator {
 	protected CloudMeshGenerator.ChunkGenSettings determineChunkGenSettings(float minX, float minZ, float maxX,
 			float maxZ) {
 		NoiseSettings config = this.type.noiseConfig();
-		int endHeight = config.getHeightRange();
+		int endHeight = config.getEndHeight();
 		if (endHeight == 0)
 			return skip();
 		return heights(0, endHeight);
@@ -63,7 +63,7 @@ public final class SingleRegionCloudMeshGenerator extends CloudMeshGenerator {
 			return;
 
 		this.shader.getShaderStorageBuffer(NOISE_LAYERS_NAME).writeData(b -> {
-			float[] packed = this.type.noiseConfig().packForShaderRelativeToStart();
+			float[] packed = this.type.noiseConfig().packForShader();
 			for (int i = 0; i < packed.length
 					&& i < AbstractNoiseSettings.Param.values().length * MAX_NOISE_LAYERS; i++)
 				b.putFloat(i * 4, packed[i]);

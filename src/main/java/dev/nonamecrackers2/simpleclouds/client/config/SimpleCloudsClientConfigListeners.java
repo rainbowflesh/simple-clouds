@@ -1,5 +1,7 @@
 package dev.nonamecrackers2.simpleclouds.client.config;
 
+import java.util.List;
+
 import com.google.common.base.Joiner;
 
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
@@ -10,6 +12,7 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
+import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -78,6 +81,19 @@ public class SimpleCloudsClientConfigListeners {
 				generator.setCloudType(SimpleCloudsConstants.EMPTY);
 			});
 		}
+	}
+
+	public static void onAllowRainInDryBiomesUpdatedFromServer(boolean allowRainInDryBiomes) {
+		SimpleCloudsConfig.SERVER.allowRainInDryBiomes.set(allowRainInDryBiomes);
+	}
+
+	public static void onDryBiomeRainMinStorminessUpdatedFromServer(double dryBiomeRainMinStorminess) {
+		SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess.set(dryBiomeRainMinStorminess);
+	}
+
+	public static void onDryBiomeRainTagsUpdatedFromServer(List<String> dryBiomeRainTags) {
+		SimpleCloudsConfig.SERVER.dryBiomeRainTags.set(dryBiomeRainTags);
+		CloudManager.updateDryBiomeRainTags(dryBiomeRainTags);
 	}
 
 	public static void onSingleModeCloudTypeUpdated(String type) {

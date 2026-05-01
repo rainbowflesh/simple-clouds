@@ -16,7 +16,10 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRainInDryBiomesUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.client.Minecraft;
@@ -99,6 +102,25 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(packet.pos(), packet.onlySound(),
 				packet.seed(), packet.maxDepth(), packet.branchCount(), packet.maxBranchLength(), packet.maxWidth(),
 				packet.minimumPitch(), packet.maximumPitch());
+	}
+
+	@Override
+	public void handleNotifyAllowRainInDryBiomesUpdatedPayload(NotifyAllowRainInDryBiomesUpdatedPayload packet,
+			IPayloadContext context) {
+		SimpleCloudsClientConfigListeners.onAllowRainInDryBiomesUpdatedFromServer(packet.allowRainInDryBiomes());
+	}
+
+	@Override
+	public void handleNotifyDryBiomeRainMinStorminessUpdatedPayload(
+			NotifyDryBiomeRainMinStorminessUpdatedPayload packet, IPayloadContext context) {
+		SimpleCloudsClientConfigListeners.onDryBiomeRainMinStorminessUpdatedFromServer(
+				packet.dryBiomeRainMinStorminess());
+	}
+
+	@Override
+	public void handleNotifyDryBiomeRainTagsUpdatedPayload(NotifyDryBiomeRainTagsUpdatedPayload packet,
+			IPayloadContext context) {
+		SimpleCloudsClientConfigListeners.onDryBiomeRainTagsUpdatedFromServer(packet.dryBiomeRainTags());
 	}
 
 	@Override

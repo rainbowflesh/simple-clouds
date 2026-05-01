@@ -7,13 +7,14 @@ import net.minecraft.data.DataGenerator;
 import net.minecraft.data.DataProvider;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
-public class SimpleCloudsDataEvents
-{
-	public static void gatherData(GatherDataEvent event)
-	{
+public class SimpleCloudsDataEvents {
+	public static void gatherData(GatherDataEvent event) {
 		DataGenerator generator = event.getGenerator();
-		generator.addProvider(event.includeClient(), (DataProvider.Factory<SimpleCloudsLangProvider>)SimpleCloudsLangProvider::new);
-		generator.addProvider(true, (DataProvider.Factory<SimpleCloudsCloudTypeProvider>)SimpleCloudsCloudTypeProvider::new);
-		generator.addProvider(true, (DataProvider.Factory<SimpleCloudsCloudSpawningConfigProvider>)SimpleCloudsCloudSpawningConfigProvider::new);
+		generator.addProvider(event.includeClient(),
+				(DataProvider.Factory<SimpleCloudsLangProvider>) SimpleCloudsLangProvider::new);
+		generator.addProvider(true,
+				(DataProvider.Factory<SimpleCloudsCloudTypeProvider>) SimpleCloudsCloudTypeProvider::new);
+		generator.addProvider(true,
+				(DataProvider.Factory<SimpleCloudsCloudSpawningConfigProvider>) SimpleCloudsCloudSpawningConfigProvider::new);
 	}
 }

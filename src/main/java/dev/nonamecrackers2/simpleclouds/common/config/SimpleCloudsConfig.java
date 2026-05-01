@@ -252,6 +252,9 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<CloudMode> cloudMode;
 		public final ModConfigSpec.ConfigValue<Double> cloudSpeed;
 		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
+		public final ModConfigSpec.ConfigValue<Boolean> allowRainInDryBiomes;
+		public final ModConfigSpec.ConfigValue<Double> dryBiomeRainMinStorminess;
+		public final ModConfigSpec.ConfigValue<List<? extends String>> dryBiomeRainTags;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMin;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMax;
 		public final ModConfigSpec.ConfigValue<String> singleModeCloudType;
@@ -283,6 +286,25 @@ public class SimpleCloudsConfig {
 			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
 					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
 					"Specifies the lowest Y level any cloud may spawn at");
+
+			builder.comment("Biome Precipitation").push("biome_precipitation");
+
+			this.allowRainInDryBiomes = this.createValue(true, "allowRainInDryBiomes", RestartType.NONE,
+					"Allows rain to occur in biomes that would normally be too dry for precipitation. Snow biomes still snow as usual");
+
+			this.dryBiomeRainMinStorminess = this.createRangedDoubleValue(
+					CloudManager.DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS, 0.0D, 1.0D,
+					"dryBiomeRainMinStorminess", RestartType.NONE,
+					"Specifies the minimum storminess required before dry-biome rain overrides can produce precipitation");
+
+			this.dryBiomeRainTags = this.createListValue(String.class,
+					() -> Lists.newArrayList(CloudManager.getDefaultDryBiomeRainTagIds()),
+					val -> ResourceLocation.tryParse(val) != null,
+					"dryBiomeRainTags", RestartType.NONE,
+					"List of biome tags that should be treated as rain-capable dry biomes when dry-biome rain is enabled",
+					"minecraft:tag");
+
+			builder.pop();
 
 			builder.comment("Lightning And Thunder").push("lightning_and_thunder");
 

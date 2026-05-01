@@ -1,8 +1,13 @@
 package dev.nonamecrackers2.simpleclouds.common.config;
 
+import java.util.List;
+
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.CloudMode;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRainInDryBiomesUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import dev.nonamecrackers2.simpleclouds.common.world.ServerCloudManager;
@@ -20,6 +25,10 @@ public class SimpleCloudsConfigListeners {
 				.addListener(SimpleCloudsConfig.SERVER.cloudMode, (o, n) -> onCloudModeChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.cloudSpeed, (o, n) -> onCloudSpeedChanged(n.floatValue()))
 				.addListener(SimpleCloudsConfig.SERVER.cloudHeight, (o, n) -> onCloudHeightChanged(n))
+				.addListener(SimpleCloudsConfig.SERVER.allowRainInDryBiomes, (o, n) -> onAllowRainInDryBiomesChanged(n))
+				.addListener(SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess,
+						(o, n) -> onDryBiomeRainMinStorminessChanged(n.doubleValue()))
+				.addListener(SimpleCloudsConfig.SERVER.dryBiomeRainTags, (o, n) -> onDryBiomeRainTagsChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.singleModeCloudType, (o, n) -> onSingleModeCloudTypeChanged(n))
 				.buildAndRegister();
 	}
@@ -31,6 +40,22 @@ public class SimpleCloudsConfigListeners {
 	public static void onSingleModeCloudTypeChanged(String newType) {
 		executeOnServerThread(
 				() -> PacketDistributor.sendToAllPlayers(new NotifySingleModeCloudTypeUpdatedPayload(newType)));
+	}
+
+	public static void onAllowRainInDryBiomesChanged(boolean allowRainInDryBiomes) {
+		executeOnServerThread(() -> PacketDistributor.sendToAllPlayers(
+				new NotifyAllowRainInDryBiomesUpdatedPayload(allowRainInDryBiomes)));
+	}
+
+	public static void onDryBiomeRainMinStorminessChanged(double dryBiomeRainMinStorminess) {
+		executeOnServerThread(() -> PacketDistributor.sendToAllPlayers(
+				new NotifyDryBiomeRainMinStorminessUpdatedPayload(dryBiomeRainMinStorminess)));
+	}
+
+	public static void onDryBiomeRainTagsChanged(List<? extends String> dryBiomeRainTags) {
+		CloudManager.updateDryBiomeRainTags(dryBiomeRainTags);
+		executeOnServerThread(() -> PacketDistributor.sendToAllPlayers(
+				new NotifyDryBiomeRainTagsUpdatedPayload(List.copyOf(dryBiomeRainTags))));
 	}
 
 	public static void onCloudSpeedChanged(float newSpeed) {

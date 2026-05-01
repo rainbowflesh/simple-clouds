@@ -7,7 +7,10 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRainInDryBiomesUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -39,6 +42,21 @@ public class EmptySimpleCloudsClientPacketHandler implements SimpleCloudsClientP
 
 	@Override
 	public void handleSpawnLightningPayload(SpawnLightningPayload packet, IPayloadContext context) {
+	}
+
+	@Override
+	public void handleNotifyAllowRainInDryBiomesUpdatedPayload(NotifyAllowRainInDryBiomesUpdatedPayload packet,
+			IPayloadContext context) {
+	}
+
+	@Override
+	public void handleNotifyDryBiomeRainMinStorminessUpdatedPayload(
+			NotifyDryBiomeRainMinStorminessUpdatedPayload packet, IPayloadContext context) {
+	}
+
+	@Override
+	public void handleNotifyDryBiomeRainTagsUpdatedPayload(NotifyDryBiomeRainTagsUpdatedPayload packet,
+			IPayloadContext context) {
 	}
 
 	@Override

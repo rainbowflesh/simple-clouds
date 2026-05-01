@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:stratus_nebulosus",
+  "exist_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 68000,
+    "min_inclusive": 42000
+  },
+  "grow_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 9000,
+    "min_inclusive": 5000
+  },
+  "moves_to_player": true,
+  "order_weight": 780,
+  "radius": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 9000,
+    "min_inclusive": 5000
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.09,
+    "min_inclusive": 0.03
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.5,
+    "min_inclusive": 0.3
+  },
+  "weight": 7
+}

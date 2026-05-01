@@ -212,22 +212,22 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		Pair<CloudType, Float> typeAt = this.cloudGetter.getCloudTypeAtPosition(minX, minZ);
 		if (typeAt.getRight() < 1.0F)
 			empty = false;
-		largestEndHeight = typeAt.getLeft().noiseConfig().getHeightRange();
+		largestEndHeight = typeAt.getLeft().noiseConfig().getEndHeight();
 
 		typeAt = this.cloudGetter.getCloudTypeAtPosition(minX, maxZ);
 		if (typeAt.getRight() < 1.0F)
 			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getHeightRange());
+		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
 
 		typeAt = this.cloudGetter.getCloudTypeAtPosition(maxX, minZ);
 		if (typeAt.getRight() < 1.0F)
 			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getHeightRange());
+		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
 
 		typeAt = this.cloudGetter.getCloudTypeAtPosition(maxX, maxZ);
 		if (typeAt.getRight() < 1.0F)
 			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getHeightRange());
+		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
 
 		if (empty || largestEndHeight == 0)
 			return skip();
@@ -341,7 +341,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			this.shader.getShaderStorageBuffer(NOISE_LAYERS_NAME).writeData(b -> {
 				for (CloudInfo type : this.cachedTypes) {
 					NoiseSettings settings = type.noiseConfig();
-					float[] packed = settings.packForShaderRelativeToStart();
+					float[] packed = settings.packForShader();
 					for (int j = 0; j < packed.length
 							&& j < AbstractNoiseSettings.Param.values().length * MAX_NOISE_LAYERS; j++)
 						b.putFloat(packed[j]);

@@ -1,17 +1,23 @@
 package dev.nonamecrackers2.simpleclouds.common.data;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
+import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
+import dev.nonamecrackers2.simpleclouds.common.cloud.CloudTypeSource;
 import dev.nonamecrackers2.simpleclouds.common.cloud.spawning.CloudSpawningConfig;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.GsonHelper;
 import net.minecraft.util.random.Weight;
 import net.minecraft.util.valueproviders.BiasedToBottomInt;
 import net.minecraft.util.valueproviders.ConstantFloat;
@@ -19,115 +25,59 @@ import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.util.valueproviders.UniformFloat;
 import net.minecraft.util.valueproviders.UniformInt;
 
-public class SimpleCloudsCloudSpawningConfigProvider extends CloudSpawningConfigProvider
-{
+public class SimpleCloudsCloudSpawningConfigProvider extends CloudSpawningConfigProvider {
 	private static final IntProvider SPAWN_INTERVAL = BiasedToBottomInt.of(2400, 12000);
 	private static final int MAX_FORMATIONS = 5;
 	private static final int MAX_INITIAL_FORMATIONS = 3;
-	
-	public SimpleCloudsCloudSpawningConfigProvider(PackOutput output)
-	{
+
+	public SimpleCloudsCloudSpawningConfigProvider(PackOutput output) {
 		super(output);
 	}
 
 	@Override
-	protected void addEntries()
-	{
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("cumulonimbus"), 
-				Weight.of(2), 
-				UniformFloat.of(0.03F, 0.07F),
-				UniformInt.of(6000, 10000), 
-				UniformInt.of(48000, 72000), 
-				UniformInt.of(1200, 2400), 
-				UniformFloat.of(0.3F, 0.6F), 
-				true, 
-				1000)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("nimbostratus"), 
-				Weight.of(3), 
-				UniformFloat.of(0.03F, 0.08F),
-				UniformInt.of(5000, 8000), 
-				UniformInt.of(36000, 72000), 
-				UniformInt.of(1200, 2400), 
-				UniformFloat.of(0.25F, 0.5F), 
-				true, 
-				900)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("stratus"), 
-				Weight.of(4), 
-				UniformFloat.of(0.03F, 0.1F),
-				BiasedToBottomInt.of(5000, 8000), 
-				BiasedToBottomInt.of(48000, 72000), 
-				UniformInt.of(1200, 2400), 
-				UniformFloat.of(0.25F, 0.45F), 
-				true, 
-				800)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("stratocumulus"), 
-				Weight.of(10), 
-				UniformFloat.of(0.1F, 0.2F),
-				UniformInt.of(5000, 10000), 
-				BiasedToBottomInt.of(24000, 48000), 
-				UniformInt.of(1200, 2400), 
-				ConstantFloat.of(1.0F), 
-				false, 
-				700)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("cumulus"), 
-				Weight.of(12), 
-				UniformFloat.of(0.1F, 0.2F),
-				UniformInt.of(6000, 10000), 
-				BiasedToBottomInt.of(36000, 48000), 
-				UniformInt.of(1200, 2400), 
-				ConstantFloat.of(1.0F), 
-				false, 
-				600)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("small_cumulus"), 
-				Weight.of(10), 
-				UniformFloat.of(0.1F, 0.2F),
-				UniformInt.of(4000, 10000), 
-				BiasedToBottomInt.of(36000, 48000), 
-				UniformInt.of(1200, 2400), 
-				ConstantFloat.of(1.0F), 
-				false, 
-				500)
-		);
-		this.addEntry(new CloudSpawningConfig.Info(
-				SimpleCloudsMod.id("itty_bitty"), 
-				Weight.of(12), 
-				UniformFloat.of(0.1F, 0.2F),
-				UniformInt.of(4000, 10000), 
-				BiasedToBottomInt.of(36000, 48000), 
-				UniformInt.of(1200, 2400), 
-				ConstantFloat.of(1.0F), 
-				false, 
-				400)
-		);
+	protected void addEntries() {
+		Map<ResourceLocation, CloudType> cloudTypes = SourceCloudTypeImporter.loadCloudTypes().stream()
+				.collect(Collectors.toMap(SourceCloudTypeImporter.SourceCloudTypeDefinition::id,
+						SourceCloudTypeImporter.SourceCloudTypeDefinition::type));
+		CloudTypeSource validator = new CloudTypeSource() {
+			@Override
+			public CloudType getCloudTypeForId(ResourceLocation id) {
+				return cloudTypes.get(id);
+			}
+
+			@Override
+			public CloudType[] getIndexedCloudTypes() {
+				return cloudTypes.values().toArray(CloudType[]::new);
+			}
+		};
+
+		for (var definition : SourceCloudTypeImporter.loadCloudTypes()) {
+			JsonObject root = definition.json();
+			if (!root.has("spawning"))
+				continue;
+
+			JsonObject object = GsonHelper.getAsJsonObject(root, "spawning").deepCopy();
+			object.addProperty("type", definition.id().toString());
+			this.addEntry(CloudSpawningConfig.readInfo(validator, object));
+		}
 	}
-	
+
 	@Override
-	public CompletableFuture<?> run(CachedOutput output)
-	{
+	public CompletableFuture<?> run(CachedOutput output) {
 		JsonObject root = new JsonObject();
-		root.add("spawn_interval", IntProvider.NON_NEGATIVE_CODEC.encodeStart(JsonOps.INSTANCE, SPAWN_INTERVAL).resultOrPartial(e -> {
-			throw new IllegalArgumentException(e);
-		}).get());
+		root.add("spawn_interval",
+				IntProvider.NON_NEGATIVE_CODEC.encodeStart(JsonOps.INSTANCE, SPAWN_INTERVAL).resultOrPartial(e -> {
+					throw new IllegalArgumentException(e);
+				}).get());
 		root.addProperty("max_formations", MAX_FORMATIONS);
 		root.addProperty("max_initial_formations", MAX_INITIAL_FORMATIONS);
-		
+
 		List<CompletableFuture<?>> futures = Lists.newArrayList();
-		
+
 		this.jsonForPaths(SimpleCloudsMod.id("config"), p -> {
 			futures.add(DataProvider.saveStable(output, root, p));
 		});
-		
+
 		futures.add(super.run(output));
 		return CompletableFuture.allOf(futures.toArray(i -> new CompletableFuture[i]));
 	}
