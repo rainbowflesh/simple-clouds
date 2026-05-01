@@ -41,6 +41,7 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Boolean> testSidesThatAreOccluded;
 		public final ModConfigSpec.ConfigValue<Boolean> renderStormFog;
 		public final ModConfigSpec.ConfigValue<LevelOfDetailOptions> levelOfDetail;
+		public final ModConfigSpec.ConfigValue<Boolean> renderLodClouds;
 		public final ModConfigSpec.ConfigValue<Boolean> frustumCulling;
 		public final ModConfigSpec.ConfigValue<Double> stormFogAngle;
 		public final ModConfigSpec.ConfigValue<Boolean> renderClouds;
@@ -195,6 +196,9 @@ public class SimpleCloudsConfig {
 
 			this.levelOfDetail = this.createEnumValue(LevelOfDetailOptions.HIGH, "levelOfDetail", RestartType.NONE,
 					"Specifies the quality of the level of detail. A lower setting makes clouds lower quality faster");
+
+			this.renderLodClouds = this.createValue(true, "renderLodClouds", RestartType.NONE,
+					"Specifies if distant level-of-detail cloud chunks should be rendered. Disabling can improve performance, but removes faraway cloud coverage");
 
 			this.frustumCulling = this.createValue(true, "frustumCulling", RestartType.NONE,
 					"Culls cloud chunks not visible to the player. Generally should not be disabled, but can fix visual issues when looking around fast with higher frames per mesh generation values");

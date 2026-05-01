@@ -26,6 +26,9 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 		this.add("gui.simpleclouds.config.cloudSpeed.title", "Cloud Speed");
 		this.add("gui.simpleclouds.config.cloudSpeed.description",
 				"Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower.");
+		this.add("gui.simpleclouds.config.renderLodClouds.title", "Render LoD Clouds");
+		this.add("gui.simpleclouds.config.renderLodClouds.description",
+				"Specifies if distant level-of-detail cloud chunks should be rendered. Disabling can improve performance, but removes faraway cloud coverage.");
 		this.add("gui.simpleclouds.cloud_previewer.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.add_layer.title", "Add Layer");

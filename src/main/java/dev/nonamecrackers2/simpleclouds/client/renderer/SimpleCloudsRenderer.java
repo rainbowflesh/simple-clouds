@@ -541,6 +541,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		shader.apply();
 
 		generator.forRenderableMeshChunks(frustum, MeshChunk::getOpaqueBuffers, (chunk, opaqueBuffers) -> {
+			if (!SimpleCloudsConfig.CLIENT.renderLodClouds.get() && chunk.getChunkInfo().lodLevel() > 0)
+				return;
 			if (ditherFade) {
 				RenderSystem.setShaderColor(r, g, b, chunk.getAlpha(partialTick));
 				shader.COLOR_MODULATOR.set(RenderSystem.getShaderColor());
@@ -599,6 +601,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 		generator.forRenderableMeshChunks(frustum, c -> c.getTransparentBuffers().get(),
 				(chunk, transparentBuffers) -> {
+					if (!SimpleCloudsConfig.CLIENT.renderLodClouds.get() && chunk.getChunkInfo().lodLevel() > 0)
+						return;
 					if (ditherFade) {
 						RenderSystem.setShaderColor(r, g, b, chunk.getAlpha(partialTick));
 						shader.COLOR_MODULATOR.set(RenderSystem.getShaderColor());
@@ -655,6 +659,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		shadowMap.clear(Minecraft.ON_OSX);
 
 		this.meshGenerator.forRenderableMeshChunks(frustum, MeshChunk::getOpaqueBuffers, (chunk, opaqueBuffers) -> {
+			if (!SimpleCloudsConfig.CLIENT.renderLodClouds.get() && chunk.getChunkInfo().lodLevel() > 0)
+				return;
 			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, shader.getShaderStorageBinding(),
 					opaqueBuffers.getBufferId());
 			this.meshGenerator.getSideMesh().drawInstanced(opaqueBuffers.getElementCount());
@@ -885,7 +891,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			p.pop();
 		}
 
-		if (SimpleCloudsConfig.CLIENT.renderClouds.get() && SimpleCloudsCompatHelper.isPrimaryPass()) {
+		if (this.shouldRenderCloudScenePasses() && SimpleCloudsCompatHelper.isPrimaryPass()) {
 			p.push("shadow_map");
 			this.renderShadowMaps(camX, camY, camZ, partialTick);
 			this.getRenderPipeline().prepare(this.mc, this, camMat, projMat, partialTick, camX, camY, camZ,
@@ -900,6 +906,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			double camZ) {
 		if (!SimpleCloudsCompatHelper.renderThisPass())
 			return;
+		if (!this.shouldRenderCloudScenePasses())
+			return;
 
 		this.mc.getProfiler().push("simple_clouds_after_sky");
 		this.getRenderPipeline().afterSky(this.mc, this, camMat, projMat, partialTick, camX, camY, camZ,
@@ -913,6 +921,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			return;
 
 		this.worldEffectsManager.updateCameraWeatherStatus(camX, camY, camZ);
+		if (!this.shouldRenderCloudScenePasses())
+			return;
 
 		this.mc.getProfiler().push("simple_clouds_before_weather");
 		this.getRenderPipeline().beforeWeather(this.mc, this, camMat, projMat, partialTick, camX, camY, camZ,
@@ -946,6 +956,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 	public boolean shouldUseScreenSpaceStormFog() {
 		return SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.SCREEN_SPACE
+				&& this.mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE;
+	}
+
+	public boolean shouldRenderCloudScenePasses() {
+		return SimpleCloudsConfig.CLIENT.renderClouds.get()
 				&& this.mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE;
 	}
 
