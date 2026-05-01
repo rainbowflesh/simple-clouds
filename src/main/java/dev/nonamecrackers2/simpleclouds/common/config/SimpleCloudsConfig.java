@@ -18,8 +18,6 @@ import nonamecrackers2.crackerslib.common.config.ConfigHelper;
 public class SimpleCloudsConfig {
 	public static final ClientConfig CLIENT;
 	public static final ModConfigSpec CLIENT_SPEC;
-	public static final CommonConfig COMMON;
-	public static final ModConfigSpec COMMON_SPEC;
 	public static final ServerConfig SERVER;
 	public static final ModConfigSpec SERVER_SPEC;
 
@@ -27,9 +25,6 @@ public class SimpleCloudsConfig {
 		var clientPair = new ModConfigSpec.Builder().configure(ClientConfig::new);
 		CLIENT = clientPair.getLeft();
 		CLIENT_SPEC = clientPair.getRight();
-		var commonPair = new ModConfigSpec.Builder().configure(CommonConfig::new);
-		COMMON = commonPair.getLeft();
-		COMMON_SPEC = commonPair.getRight();
 		var serverPair = new ModConfigSpec.Builder().configure(ServerConfig::new);
 		SERVER = serverPair.getLeft();
 		SERVER_SPEC = serverPair.getRight();
@@ -253,39 +248,12 @@ public class SimpleCloudsConfig {
 		}
 	}
 
-	public static class CommonConfig extends ConfigHelper {
-		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
-		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMin;
-		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMax;
-
-		public CommonConfig(ModConfigSpec.Builder builder) {
-			super(builder, SimpleCloudsMod.MODID);
-
-			builder.comment("Weather").push("weather");
-
-			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
-					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
-					"Specifies the lowest Y level any cloud may spawn at");
-
-			builder.comment("Lightning And Thunder").push("lightning_and_thunder");
-
-			this.lightningSpawnIntervalMin = this.createRangedIntValue(10, 1, 72000, "lightningSpawnIntervalMinimum",
-					RestartType.NONE,
-					"Specifies the shortest interval until the next lightning strike will spawn, in ticks");
-
-			this.lightningSpawnIntervalMax = this.createRangedIntValue(160, 1, 72000, "lightningSpawnIntervalMaximum",
-					RestartType.NONE,
-					"Specifies the longest interval until the next lightning strike will spawn, in ticks");
-
-			builder.pop();
-
-			builder.pop();
-		}
-	}
-
 	public static class ServerConfig extends ConfigHelper {
 		public final ModConfigSpec.ConfigValue<CloudMode> cloudMode;
 		public final ModConfigSpec.ConfigValue<Double> cloudSpeed;
+		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
+		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMin;
+		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMax;
 		public final ModConfigSpec.ConfigValue<String> singleModeCloudType;
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dimensionWhitelist;
 		public final ModConfigSpec.ConfigValue<Boolean> whitelistAsBlacklist;
@@ -309,6 +277,26 @@ public class SimpleCloudsConfig {
 			this.cloudSpeed = this.createRangedDoubleValue(0.675D, 0.0D, 1.0D,
 					"cloudSpeed", RestartType.NONE,
 					"Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower");
+
+			builder.comment("Weather").push("weather");
+
+			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
+					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
+					"Specifies the lowest Y level any cloud may spawn at");
+
+			builder.comment("Lightning And Thunder").push("lightning_and_thunder");
+
+			this.lightningSpawnIntervalMin = this.createRangedIntValue(10, 1, 72000, "lightningSpawnIntervalMinimum",
+					RestartType.NONE,
+					"Specifies the shortest interval until the next lightning strike will spawn, in ticks");
+
+			this.lightningSpawnIntervalMax = this.createRangedIntValue(160, 1, 72000, "lightningSpawnIntervalMaximum",
+					RestartType.NONE,
+					"Specifies the longest interval until the next lightning strike will spawn, in ticks");
+
+			builder.pop();
+
+			builder.pop();
 
 			builder.comment("Single Mode").push("single_mode");
 

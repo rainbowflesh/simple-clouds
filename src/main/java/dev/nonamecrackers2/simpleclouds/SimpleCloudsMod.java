@@ -46,7 +46,6 @@ public class SimpleCloudsMod {
 		setupSideOnly(modBus, forgeBus);
 		modBus.addListener(SimpleCloudsDataEvents::gatherData);
 		container.registerConfig(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC);
-		container.registerConfig(ModConfig.Type.COMMON, SimpleCloudsConfig.COMMON_SPEC);
 		container.registerConfig(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC);
 		SimpleCloudsAPIImpl.bootstrap();
 	}

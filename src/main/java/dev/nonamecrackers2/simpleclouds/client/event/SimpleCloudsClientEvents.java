@@ -86,7 +86,6 @@ public class SimpleCloudsClientEvents {
 				.crackersDefault("https://github.com/nonamecrackers2/simple-clouds")
 				.build(SimpleCloudsConfigScreen::new))
 				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC)
-				.addSpec(ModConfig.Type.COMMON, SimpleCloudsConfig.COMMON_SPEC)
 				.addSpec(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC).register();
 	}
 

@@ -19,10 +19,8 @@ public class SimpleCloudsConfigListeners {
 		ConfigListener.builder(ModConfig.Type.SERVER, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.SERVER.cloudMode, (o, n) -> onCloudModeChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.cloudSpeed, (o, n) -> onCloudSpeedChanged(n.floatValue()))
+				.addListener(SimpleCloudsConfig.SERVER.cloudHeight, (o, n) -> onCloudHeightChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.singleModeCloudType, (o, n) -> onSingleModeCloudTypeChanged(n))
-				.buildAndRegister();
-		ConfigListener.builder(ModConfig.Type.COMMON, SimpleCloudsMod.MODID)
-				.addListener(SimpleCloudsConfig.COMMON.cloudHeight, (o, n) -> onCloudHeightChanged(n))
 				.buildAndRegister();
 	}
 

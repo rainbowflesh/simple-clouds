@@ -19,8 +19,6 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 	protected void addTranslations() {
 		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.CLIENT_SPEC, this,
 				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.COMMON_SPEC, this,
-				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
 		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.SERVER_SPEC, this,
 				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
 		this.add("gui.simpleclouds.config.cloudSpeed.title", "Cloud Speed");

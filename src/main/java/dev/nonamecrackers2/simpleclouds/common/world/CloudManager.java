@@ -41,6 +41,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public static final int UPDATE_INTERVAL = 200;
 	public static final float RANDOM_SPREAD = 10000.0F;
 	public static final float SCROLL_OFFSET = 100.0F;
+	public static final float DEFAULT_CLOUD_SPEED = 0.675F;
 	protected final T level;
 	protected final CloudTypeSource cloudSource;
 	protected final CloudGenerator cloudGenerator;
@@ -53,7 +54,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	protected float scrollX;
 	protected float scrollY;
 	protected float scrollZ;
-	protected float speed = 1;
+	protected float speed = DEFAULT_CLOUD_SPEED;
 	protected int cloudHeight = 128;
 	protected int tickCount;
 	protected int nextLightningStrike = 60;
@@ -202,9 +203,12 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public void init(long seed) {
 		RandomSource random = this.setSeed(seed);
 		this.random = random;
-		if (SimpleCloudsConfig.COMMON_SPEC.isLoaded())
-			this.cloudHeight = SimpleCloudsConfig.COMMON.cloudHeight.get();
-		this.speed = 1;
+		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded()) {
+			this.cloudHeight = SimpleCloudsConfig.SERVER.cloudHeight.get();
+			this.speed = SimpleCloudsConfig.SERVER.cloudSpeed.get().floatValue();
+		} else {
+			this.speed = DEFAULT_CLOUD_SPEED;
+		}
 		this.cloudGenerator.initialize(random, this.level);
 	}
 
@@ -263,8 +267,8 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		if (this.nextLightningStrike <= 0 || --this.nextLightningStrike > 0)
 			return;
 		this.attemptToSpawnLightning();
-		int minInterval = SimpleCloudsConfig.COMMON.lightningSpawnIntervalMin.get();
-		int maxInterval = Math.max(minInterval, SimpleCloudsConfig.COMMON.lightningSpawnIntervalMax.get());
+		int minInterval = SimpleCloudsConfig.SERVER.lightningSpawnIntervalMin.get();
+		int maxInterval = Math.max(minInterval, SimpleCloudsConfig.SERVER.lightningSpawnIntervalMax.get());
 		this.nextLightningStrike = Mth.randomBetweenInclusive(this.random, minInterval, maxInterval);
 	}
 
