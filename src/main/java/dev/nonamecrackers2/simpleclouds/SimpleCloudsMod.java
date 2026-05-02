@@ -4,6 +4,7 @@ import org.apache.maven.artifact.versioning.ArtifactVersion;
 
 import dev.nonamecrackers2.simpleclouds.client.SimpleCloudsModClient;
 import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
+import dev.nonamecrackers2.simpleclouds.client.voxy.event.SimpleCloudsVoxyForgeEvents;
 import dev.nonamecrackers2.simpleclouds.client.event.SimpleCloudsClientEvents;
 import dev.nonamecrackers2.simpleclouds.client.keybind.SimpleCloudsKeybinds;
 import dev.nonamecrackers2.simpleclouds.client.shader.SimpleCloudsShaders;
@@ -33,8 +34,10 @@ import net.neoforged.neoforge.common.NeoForge;
 public class SimpleCloudsMod {
 	public static final String MODID = "simpleclouds";
 	private static final String DH_MODID = "distanthorizons";
+	private static final String VOXY_MODID = "voxy";
 	private static ArtifactVersion version;
 	private static boolean dhLoaded;
+	private static boolean voxyLoaded;
 
 	public SimpleCloudsMod(IEventBus modBus, ModContainer container) {
 		version = container.getModInfo().getVersion();
@@ -69,6 +72,7 @@ public class SimpleCloudsMod {
 		forgeBus.register(SimpleCloudsEvents.class);
 		SimpleCloudsConfigListeners.registerListener();
 		dhLoaded = ModList.get().isLoaded(DH_MODID);
+		voxyLoaded = ModList.get().isLoaded(VOXY_MODID);
 	}
 
 	private void clientInit(FMLClientSetupEvent event) {
@@ -86,6 +90,11 @@ public class SimpleCloudsMod {
 				SimpleCloudsDhCompatHandler.initialize();
 			});
 		}
+		if (ModList.get().isLoaded(VOXY_MODID)) {
+			event.enqueueWork(() -> {
+				NeoForge.EVENT_BUS.register(SimpleCloudsVoxyForgeEvents.class);
+			});
+		}
 	}
 
 	public static ResourceLocation id(String path) {
@@ -98,5 +107,9 @@ public class SimpleCloudsMod {
 
 	public static boolean dhLoaded() {
 		return dhLoaded;
+	}
+
+	public static boolean voxyLoaded() {
+		return voxyLoaded;
 	}
 }
