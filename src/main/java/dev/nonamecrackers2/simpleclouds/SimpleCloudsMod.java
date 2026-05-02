@@ -37,6 +37,7 @@ public class SimpleCloudsMod {
 	private static final String DH_MODID = "distanthorizons";
 	private static ArtifactVersion version;
 	private static boolean dhLoaded;
+	private static boolean voxyLoaded;
 
 	public SimpleCloudsMod(IEventBus modBus, ModContainer container) {
 		version = container.getModInfo().getVersion();
