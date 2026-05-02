@@ -17,7 +17,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.MinecraftServer;
 import net.neoforged.fml.config.ModConfig;
 import nonamecrackers2.crackerslib.client.gui.Popup;
 import nonamecrackers2.crackerslib.common.config.listener.ConfigListener;
@@ -37,15 +36,7 @@ public class SimpleCloudsClientConfigListeners {
 				.buildAndRegister();
 	}
 
-	public static void syncSingleplayerConfig() {
-		if (!canSyncToSingleplayerServer())
-			return;
-		syncSingleplayerCloudMode(SimpleCloudsConfig.CLIENT.cloudMode.get());
-		syncSingleplayerSingleModeCloudType(SimpleCloudsConfig.CLIENT.singleModeCloudType.get());
-	}
-
 	public static void onCloudModeUpdated(CloudMode mode) {
-		syncSingleplayerCloudMode(mode);
 		requestReload(true);
 	}
 
@@ -102,9 +93,6 @@ public class SimpleCloudsClientConfigListeners {
 			if (ClientCloudManager.isRemoteServerAvailable())
 				return;
 
-			if (syncSingleplayerSingleModeCloudType(type))
-				return;
-
 			ResourceLocation loc = ResourceLocation.tryParse(type);
 			var types = ClientSideCloudTypeManager.getInstance().getCloudTypes();
 			if (loc != null && types.containsKey(loc)
@@ -140,29 +128,5 @@ public class SimpleCloudsClientConfigListeners {
 				Minecraft.getInstance().reloadResourcePacks();
 			}, 300, Component.translatable("gui.simpleclouds.requires_reload_resource_packs.info"));
 		});
-	}
-
-	private static boolean syncSingleplayerCloudMode(CloudMode mode) {
-		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.cloudMode.set(mode));
-	}
-
-	private static boolean syncSingleplayerSingleModeCloudType(String type) {
-		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.singleModeCloudType.set(type));
-	}
-
-	private static boolean executeForSingleplayerServer(java.util.function.Consumer<MinecraftServer> action) {
-		Minecraft mc = Minecraft.getInstance();
-		if (!canSyncToSingleplayerServer())
-			return false;
-		MinecraftServer server = mc.getSingleplayerServer();
-		if (server == null)
-			return false;
-		server.execute(() -> action.accept(server));
-		return true;
-	}
-
-	private static boolean canSyncToSingleplayerServer() {
-		Minecraft mc = Minecraft.getInstance();
-		return mc.getSingleplayerServer() != null && !ClientCloudManager.isRemoteServerAvailable();
 	}
 }

@@ -11,51 +11,48 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 import net.neoforged.fml.loading.LoadingModList;
 
-public class SimpleCloudsMixinPlugin implements IMixinConfigPlugin
-{
+public class SimpleCloudsMixinPlugin implements IMixinConfigPlugin {
 	private static final Pattern CATEGORY_MATCHER = Pattern.compile("(?<=mixin\\.).*(?=\\.)");
-	
+
 	@Override
-	public void onLoad(String mixinPackage)
-	{
+	public void onLoad(String mixinPackage) {
 	}
 
 	@Override
-	public String getRefMapperConfig()
-	{
+	public String getRefMapperConfig() {
 		return null;
 	}
 
 	@Override
-	public boolean shouldApplyMixin(String targetClassName, String mixinClassName)
-	{
+	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
 		Matcher matcher = CATEGORY_MATCHER.matcher(mixinClassName);
 		if (!matcher.find())
 			return true;
 		String category = matcher.group(0);
-		switch (category)
-		{
-		case "vivecraft":
-			return LoadingModList.get().getModFileById("vivecraft") != null;
-		case "skyaesthetics":
-			return LoadingModList.get().getModFileById("sky_aesthetics") != null;
-		default:
-			return true;
+		switch (category) {
+			case "vivecraft":
+				return LoadingModList.get().getModFileById("vivecraft") != null;
+			case "skyaesthetics":
+				return LoadingModList.get().getModFileById("sky_aesthetics") != null;
+			default:
+				return true;
 		}
 	}
 
 	@Override
-	public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {}
+	public void acceptTargets(Set<String> myTargets, Set<String> otherTargets) {
+	}
 
 	@Override
-	public List<String> getMixins()
-	{
+	public List<String> getMixins() {
 		return null;
 	}
 
 	@Override
-	public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
+	public void preApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+	}
 
 	@Override
-	public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {}
+	public void postApply(String targetClassName, ClassNode targetClass, String mixinClassName, IMixinInfo mixinInfo) {
+	}
 }

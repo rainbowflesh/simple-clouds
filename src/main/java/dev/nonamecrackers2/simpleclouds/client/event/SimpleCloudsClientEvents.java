@@ -157,7 +157,9 @@ public class SimpleCloudsClientEvents {
 					event.setCanceled(true);
 				}
 			} else if (ClientCloudManager.isAvailableServerSide()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
+				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
+						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.whitelistAsBlacklist)
 						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) {
@@ -176,7 +178,6 @@ public class SimpleCloudsClientEvents {
 	@SubscribeEvent
 	public static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
 		CloudManager.get(event.getPlayer().level()).onPlayerJoin(event.getPlayer());
-		SimpleCloudsClientConfigListeners.syncSingleplayerConfig();
 		SimpleCloudsRenderer.getInstance().requestReload();
 	}
 

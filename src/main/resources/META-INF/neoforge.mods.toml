@@ -36,3 +36,11 @@ issueTrackerURL="https://github.com/nonamecrackers2/simple-clouds/issues" #optio
     versionRange="${crackerslib_version_range}"
     ordering="NONE"
     side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="particlerain"
+    type="incompatible"
+    reason="Particle Rain overrides client weather and precipitation behavior in ways that conflict with Simple Clouds. Remove Particle Rain to use Simple Clouds safely."
+    versionRange=""
+    ordering="NONE"
+    side="CLIENT"

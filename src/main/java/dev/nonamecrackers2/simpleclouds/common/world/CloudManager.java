@@ -48,10 +48,9 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public static final float SCROLL_OFFSET = 100.0F;
 	public static final float DEFAULT_CLOUD_SPEED = 0.675F;
 	public static final double DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS = 0.55D;
-	private static final List<String> DEFAULT_DRY_BIOME_RAIN_TAG_IDS = List.of(
-			Tags.Biomes.IS_DRY_OVERWORLD.location().toString(),
-			net.minecraft.tags.BiomeTags.IS_SAVANNA.location().toString(),
-			"#terralith:shrublands");
+	private static final List<String> DEFAULT_DRY_BIOME_RAIN_TAG_IDS = List.of("c:is_dry/overworld",
+			"minecraft:is_savanna",
+			"terralith:shrublands", "terralith:reference/plains");
 	private static volatile List<String> dryBiomeRainTagIds = DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
 	private static volatile Set<ResourceLocation> dryBiomeRainBiomeIds = Set.of();
 	private static volatile List<TagKey<Biome>> dryBiomeRainTags = createDryBiomeRainTags(
