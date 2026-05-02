@@ -28,7 +28,7 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
     }
 
     @Override
-    public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, PoseStack stack,
+    public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
             Matrix4f projMat, float partialTick,
             double camX, double camY, double camZ, Frustum frustum) {
     }
@@ -36,16 +36,24 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
     // -----------------------------------------------------------------------
     // afterSky — renders ONLY the atmospheric clouds
     // -----------------------------------------------------------------------
-    @Override
-    public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, PoseStack stack,
+@Override
+    public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
             Matrix4f projMat, float partialTick,
             double camX, double camY, double camZ, Frustum frustum) {
         if (SimpleCloudsConfig.CLIENT.atmosphericClouds.get()) {
             float[] cloudCol = renderer.getCloudColor(partialTick);
             mc.getProfiler().push("atmospheric_clouds");
+
+            // --- 修复开始 ---
+            // 创建一个临时的 PoseStack 并将当前的 modelViewMat 注入进去
+            PoseStack tempStack = new PoseStack();
+            tempStack.last().pose().set(modelViewMat);
+
             renderer.getAtmosphericCloudRenderer().render(
-                    stack, projMat, partialTick, camX, camY, camZ,
+                    tempStack, projMat, partialTick, camX, camY, camZ,
                     cloudCol[0], cloudCol[1], cloudCol[2]);
+            // --- 修复结束 ---
+
             mc.getMainRenderTarget().bindWrite(false);
             mc.getProfiler().pop();
         }
@@ -55,12 +63,15 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
     // beforeWeather — identical to DefaultPipeline (screen-space fog only).
     // -----------------------------------------------------------------------
     @Override
-    public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, PoseStack stack,
+    public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
             Matrix4f projMat, float partialTick,
             double camX, double camY, double camZ, Frustum frustum) {
         if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.SCREEN_SPACE
                 && mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
-            renderer.doScreenSpaceWorldFog(stack, projMat, partialTick);
+
+            // 修复：1.21.1 这里传入 Matrix4f 即可
+            renderer.doScreenSpaceWorldFog(modelViewMat, projMat, partialTick);
+
             mc.getMainRenderTarget().bindWrite(false);
         }
     }
@@ -69,7 +80,7 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
     // afterLevel — fires at TAIL of renderLevel, after Voxy has rendered.
     // -----------------------------------------------------------------------
     @Override
-    public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, PoseStack stack,
+    public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
             Matrix4f projMat, float partialTick,
             double camX, double camY, double camZ, Frustum frustum) {
         ProfilerFiller p = mc.getProfiler();
@@ -81,6 +92,11 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 
         // -- Volumetric cloud geometry --------------------------------------
         p.push("clouds");
+
+        // 桥接修复：我们利用传入的 Matrix4f 构建一个局部的 PoseStack，
+        // 这样可以继续使用原先的 pushPose/popPose 逻辑而无需大量重构底层渲染器。
+        PoseStack stack = new PoseStack();
+        stack.last().pose().set(modelViewMat);
 
         stack.pushPose();
         renderer.translateClouds(stack, camX, camY, camZ);
@@ -120,10 +136,11 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
         }
 
         p.pop();
-        stack.popPose();
+        stack.popPose(); // 弹出局部的矩阵变换
 
         p.push("clouds_composite");
-        renderer.doFinalCompositePass(stack, partialTick, projMat);
+        // 修复：传入 modelViewMat
+        renderer.doFinalCompositePass(modelViewMat, partialTick, projMat);
         p.pop();
 
         p.pop();
@@ -131,8 +148,10 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
         // -- Storm fog ------------------------------------------------------
         if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
             p.push("storm_fog");
+
+            // 修复：传入 modelViewMat
             renderer.doStormPostProcessing(
-                    stack, partialTick, projMat,
+                    modelViewMat, partialTick, projMat,
                     camX, camY, camZ, cloudR, cloudG, cloudB);
 
             RenderTarget blurTarget = renderer.getBlurTarget();
@@ -156,6 +175,7 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
                     mc.getWindow().getHeight(), false);
             RenderSystem.disableBlend();
             RenderSystem.defaultBlendFunc();
+
             // blitToScreen corrupts the projection matrix
             RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN);
 

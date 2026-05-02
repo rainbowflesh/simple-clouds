@@ -92,7 +92,7 @@ public class SimpleCloudsMod {
 			});
 		}
 		if (ModList.get().isLoaded(VOXY_MODID)) {
-			MinecraftForge.EVENT_BUS.register(SimpleCloudsVoxyForgeEvents.class);
+			NeoForge.EVENT_BUS.register(SimpleCloudsVoxyForgeEvents.class);
 		}
 	}
 
