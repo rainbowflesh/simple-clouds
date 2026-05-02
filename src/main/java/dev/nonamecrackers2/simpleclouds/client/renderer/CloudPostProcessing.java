@@ -139,6 +139,7 @@ final class CloudPostProcessing {
             this.cloudShadows = this.createPostChain(manager, CLOUD_SHADOWS_LOC, mainTarget, pass -> {
                 EffectInstance effect = pass.getEffect();
                 effect.setSampler("ShadowMap", shadowMap::getDepthTexId);
+                effect.setSampler("ShadowMapColor", shadowMap::getColorTexId);
                 effect.safeGetUniform("ShadowSpan")
                         .set((float) Math.min(shadowMap.getViewWidth(), shadowMap.getViewHeight()));
             });

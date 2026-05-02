@@ -120,7 +120,8 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 	@Override
 	public void handleNotifyDryBiomeRainTagsUpdatedPayload(NotifyDryBiomeRainTagsUpdatedPayload packet,
 			IPayloadContext context) {
-		SimpleCloudsClientConfigListeners.onDryBiomeRainTagsUpdatedFromServer(packet.dryBiomeRainTags());
+		SimpleCloudsClientConfigListeners.onDryBiomeRainTagsUpdatedFromServer(packet.dryBiomeRainTags(),
+				packet.dryBiomeRainBiomes());
 	}
 
 	@Override

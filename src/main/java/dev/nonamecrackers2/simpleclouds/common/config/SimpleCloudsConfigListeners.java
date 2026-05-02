@@ -14,6 +14,7 @@ import dev.nonamecrackers2.simpleclouds.common.world.ServerCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.world.SyncType;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -54,8 +55,17 @@ public class SimpleCloudsConfigListeners {
 
 	public static void onDryBiomeRainTagsChanged(List<? extends String> dryBiomeRainTags) {
 		CloudManager.updateDryBiomeRainTags(dryBiomeRainTags);
-		executeOnServerThread(() -> PacketDistributor.sendToAllPlayers(
-				new NotifyDryBiomeRainTagsUpdatedPayload(List.copyOf(dryBiomeRainTags))));
+		executeOnServerThread(
+				() -> PacketDistributor.sendToAllPlayers(createDryBiomeRainTagsUpdatedPayload(dryBiomeRainTags)));
+	}
+
+	public static void syncDryBiomeRainSettings(ServerPlayer player) {
+		PacketDistributor.sendToPlayer(player,
+				new NotifyAllowRainInDryBiomesUpdatedPayload(SimpleCloudsConfig.SERVER.allowRainInDryBiomes.get()));
+		PacketDistributor.sendToPlayer(player, new NotifyDryBiomeRainMinStorminessUpdatedPayload(
+				SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess.get()));
+		PacketDistributor.sendToPlayer(player,
+				createDryBiomeRainTagsUpdatedPayload(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get()));
 	}
 
 	public static void onCloudSpeedChanged(float newSpeed) {
@@ -88,5 +98,11 @@ public class SimpleCloudsConfigListeners {
 		MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
 		if (server != null)
 			server.execute(runnable);
+	}
+
+	private static NotifyDryBiomeRainTagsUpdatedPayload createDryBiomeRainTagsUpdatedPayload(
+			List<? extends String> dryBiomeRainTags) {
+		List<String> tagIds = List.copyOf(dryBiomeRainTags);
+		return new NotifyDryBiomeRainTagsUpdatedPayload(tagIds, CloudManager.resolveDryBiomeRainBiomeIds(tagIds));
 	}
 }

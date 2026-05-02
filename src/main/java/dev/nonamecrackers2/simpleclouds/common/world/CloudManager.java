@@ -2,6 +2,7 @@ package dev.nonamecrackers2.simpleclouds.common.world;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
@@ -52,6 +53,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 			net.minecraft.tags.BiomeTags.IS_SAVANNA.location().toString(),
 			"#terralith:shrublands");
 	private static volatile List<String> dryBiomeRainTagIds = DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
+	private static volatile Set<ResourceLocation> dryBiomeRainBiomeIds = Set.of();
 	private static volatile List<TagKey<Biome>> dryBiomeRainTags = createDryBiomeRainTags(
 			DEFAULT_DRY_BIOME_RAIN_TAG_IDS);
 	protected final T level;
@@ -197,6 +199,9 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	}
 
 	private static boolean isDryBiomeForRainOverride(Holder<Biome> biome) {
+		var biomeKey = biome.unwrapKey();
+		if (biomeKey.isPresent() && dryBiomeRainBiomeIds.contains(biomeKey.get().location()))
+			return true;
 		for (TagKey<Biome> tag : getDryBiomeRainTags()) {
 			if (biome.is(tag))
 				return true;
@@ -205,9 +210,34 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	}
 
 	public static void updateDryBiomeRainTags(List<? extends String> tagIds) {
+		updateDryBiomeRainOverrides(tagIds, resolveDryBiomeRainBiomeIds(tagIds));
+	}
+
+	public static void updateDryBiomeRainOverrides(List<? extends String> tagIds, List<? extends String> biomeIds) {
 		List<String> normalizedTagIds = List.copyOf(tagIds);
 		dryBiomeRainTagIds = normalizedTagIds;
+		dryBiomeRainBiomeIds = createDryBiomeRainBiomeIds(biomeIds);
 		dryBiomeRainTags = createDryBiomeRainTags(normalizedTagIds);
+	}
+
+	public static List<String> resolveDryBiomeRainBiomeIds(List<? extends String> tagIds) {
+		MinecraftServer server = switch (net.neoforged.fml.util.thread.EffectiveSide.get()) {
+			case SERVER -> levelServer();
+			default -> null;
+		};
+		if (server == null)
+			return List.of();
+
+		List<TagKey<Biome>> tags = createDryBiomeRainTags(tagIds);
+		if (tags.isEmpty())
+			return List.of();
+
+		return server.registryAccess().lookupOrThrow(Registries.BIOME).listElements()
+				.filter(holder -> tags.stream().anyMatch(holder::is))
+				.map(holder -> holder.unwrapKey().map(key -> key.location().toString()).orElse(null))
+				.filter(Objects::nonNull)
+				.distinct()
+				.toList();
 	}
 
 	private static List<TagKey<Biome>> getDryBiomeRainTags() {
@@ -225,6 +255,17 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 				.filter(Objects::nonNull)
 				.map(loc -> TagKey.create(Registries.BIOME, loc))
 				.toList();
+	}
+
+	private static Set<ResourceLocation> createDryBiomeRainBiomeIds(List<? extends String> biomeIds) {
+		return biomeIds.stream()
+				.map(ResourceLocation::tryParse)
+				.filter(Objects::nonNull)
+				.collect(java.util.stream.Collectors.toUnmodifiableSet());
+	}
+
+	private static @Nullable MinecraftServer levelServer() {
+		return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
 	}
 
 	protected static boolean shouldAllowRainInDryBiomes() {

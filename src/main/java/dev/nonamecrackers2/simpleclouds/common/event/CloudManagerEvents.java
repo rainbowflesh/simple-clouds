@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
+import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfigListeners;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
@@ -90,6 +91,7 @@ public class CloudManagerEvents {
 
 	private static void update(ServerPlayer player) {
 		PacketDistributor.sendToPlayer(player, new SendCloudManagerPayload(CloudManager.get(player.level())));
+		SimpleCloudsConfigListeners.syncDryBiomeRainSettings(player);
 		sendFullCloudRegionsToPlayer(player);
 	}
 

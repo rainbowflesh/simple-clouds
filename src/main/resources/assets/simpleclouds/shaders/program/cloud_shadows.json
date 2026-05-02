@@ -4,6 +4,7 @@
     "attributes": [ "Position" ],
     "samplers": [
         { "name": "ShadowMap" },
+        { "name": "ShadowMapColor" },
         { "name": "DepthSampler" },
         { "name": "DiffuseSampler" }
     ],

@@ -17,7 +17,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class SimpleCloudsPayloadRegistrar {
 	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler) {
-		PayloadRegistrar registrar = event.registrar("1.3").optional();
+		PayloadRegistrar registrar = event.registrar("1.4").optional();
 		registrar.playToClient(
 				NotifyAllowRainInDryBiomesUpdatedPayload.TYPE,
 				NotifyAllowRainInDryBiomesUpdatedPayload.CODEC,

@@ -1,6 +1,7 @@
 #version 150
 
 uniform sampler2DShadow ShadowMap;
+uniform sampler2D ShadowMapColor;
 uniform sampler2D DepthSampler;
 uniform sampler2D DiffuseSampler;
 uniform mat4 InverseWorldProjMat;
@@ -36,6 +37,16 @@ float shadowStrengthAt(vec3 pos)
 	return texture(ShadowMap, coord);
 }
 
+float shadowTransmissionAt(vec3 pos)
+{
+	vec4 shadowMapPos = ShadowProjMat * ShadowModelViewMat * vec4(pos, 1.0);
+	vec3 ndc = shadowMapPos.xyz / shadowMapPos.w;
+	if (any(lessThan(ndc, vec3(-1.0))) || any(greaterThan(ndc, vec3(1.0))))
+		return 1.0;
+	vec2 coord = ndc.xy * 0.5 + 0.5;
+	return texture(ShadowMapColor, coord).r;
+}
+
 void main() 
 {
 	vec3 col = texture(DiffuseSampler, texCoord).rgb;
@@ -65,12 +76,25 @@ void main()
 	
 	//https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
 	float strength = 0.0;
+	float transmission = 0.0;
 	for (int x = -1; x <= 1; x++)
 	{
 		for (int y = -1; y <= 1; y++)
-			strength += shadowStrengthAt(pos + vec3(x, 0.0, y) * 10.0);
+		{
+			vec3 samplePos = pos + vec3(x, 0.0, y) * 10.0;
+			float sampleStrength = shadowStrengthAt(samplePos);
+			strength += sampleStrength;
+			transmission += shadowTransmissionAt(samplePos) * sampleStrength;
+		}
 	}
+	if (strength > 0.0001)
+		transmission /= strength;
+	else
+		transmission = 1.0;
 	strength /= 9.0;
+	strength = pow(strength, 0.65);
+	float occlusion = clamp(1.35 - transmission, 0.35, 1.0);
+	strength *= occlusion;
 	strength *= distFade;
 	strength = clamp(strength, 0.0, 1.0);
 	

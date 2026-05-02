@@ -346,7 +346,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			int distantShadowSpan = SimpleCloudsConfig.CLIENT.shadowDistance.get() * 2;
 			distantShadowSpan = Math.min(distantShadowSpan, span);
 			this.shadowMap = Optional.of(new ShadowMapBuffer(distantShadowSpan, distantShadowSpan, SHADOW_MAP_SIZE,
-					SHADOW_MAP_SIZE, 0.0F, 10000.0F, false, true));
+					SHADOW_MAP_SIZE, 0.0F, 10000.0F, true, true));
 		} else {
 			this.shadowMap = Optional.empty();
 		}
