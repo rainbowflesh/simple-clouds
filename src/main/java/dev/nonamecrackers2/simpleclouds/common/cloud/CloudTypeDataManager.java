@@ -16,71 +16,72 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 
+import dev.nonamecrackers2.simpleclouds.common.data.SourceCloudTypeImporter;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.profiling.ProfilerFiller;
 
-public class CloudTypeDataManager extends SimpleJsonResourceReloadListener implements CloudTypeSource
-{
+public class CloudTypeDataManager extends SimpleJsonResourceReloadListener implements CloudTypeSource {
 	private static final Logger LOGGER = LogManager.getLogger();
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 	private static final CloudTypeDataManager SERVER = new CloudTypeDataManager();
-	private Map<ResourceLocation, CloudType> cloudTypes = ImmutableMap.of(SimpleCloudsConstants.EMPTY.id(), SimpleCloudsConstants.EMPTY);
+	private Map<ResourceLocation, CloudType> cloudTypes = ImmutableMap.of(SimpleCloudsConstants.EMPTY.id(),
+			SimpleCloudsConstants.EMPTY);
 	private CloudType[] indexedCloudTypes = new CloudType[] { SimpleCloudsConstants.EMPTY };
-	
-	public CloudTypeDataManager()
-	{
+
+	public CloudTypeDataManager() {
 		super(GSON, "cloud_types");
 	}
-	
+
 	@Override
-	protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager manager, ProfilerFiller filler)
-	{
+	protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager manager, ProfilerFiller filler) {
 		Map<ResourceLocation, CloudType> types = Maps.newHashMap();
-		for (var entry : files.entrySet())
-		{
+		for (var entry : files.entrySet()) {
 			ResourceLocation id = entry.getKey();
 			JsonElement element = entry.getValue();
-			try
-			{
+			try {
 				JsonObject object = GsonHelper.convertToJsonObject(element, "root");
 				types.put(id, CloudType.readFromJson(id, object));
-			}
-			catch (JsonSyntaxException e)
-			{
+			} catch (JsonSyntaxException e) {
 				LOGGER.warn("Failed to load cloud type '" + id + "'", e);
 			}
 		}
-		
-		this.indexedCloudTypes = Streams.concat(Stream.of(SimpleCloudsConstants.EMPTY), types.values().stream().sorted(Comparator.comparing(t -> t.id().toString()))).toArray(i -> new CloudType[i]);
-		
+
+		try {
+			for (var definition : SourceCloudTypeImporter.loadCloudTypes())
+				types.putIfAbsent(definition.id(), definition.type());
+		} catch (IllegalStateException e) {
+			LOGGER.debug("Skipping bundled cloud type fallback", e);
+		}
+
+		this.indexedCloudTypes = Streams
+				.concat(Stream.of(SimpleCloudsConstants.EMPTY),
+						types.values().stream().sorted(Comparator.comparing(t -> t.id().toString())))
+				.toArray(i -> new CloudType[i]);
+
 		types.put(SimpleCloudsConstants.EMPTY.id(), SimpleCloudsConstants.EMPTY);
 		this.cloudTypes = ImmutableMap.copyOf(types);
-		
+
 		LOGGER.info("Loaded {} cloud types", this.cloudTypes.size());
 	}
-	
+
 	@Override
-	public CloudType getCloudTypeForId(ResourceLocation id)
-	{
+	public CloudType getCloudTypeForId(ResourceLocation id) {
 		return this.getCloudTypes().get(id);
 	}
-	
-	public Map<ResourceLocation, CloudType> getCloudTypes()
-	{
+
+	public Map<ResourceLocation, CloudType> getCloudTypes() {
 		return this.cloudTypes;
 	}
-	
+
 	@Override
-	public CloudType[] getIndexedCloudTypes()
-	{
+	public CloudType[] getIndexedCloudTypes() {
 		return this.indexedCloudTypes;
 	}
-	
-	public static CloudTypeDataManager getServerInstance()
-	{
+
+	public static CloudTypeDataManager getServerInstance() {
 		return SERVER;
 	}
 }
