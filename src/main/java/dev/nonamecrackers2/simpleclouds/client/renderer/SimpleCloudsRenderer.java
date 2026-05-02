@@ -342,7 +342,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		this.stormFogShadowMap = new ShadowMapBuffer(span, span, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 0.0F, 10000.0F, true,
 				false);
 
-		if (SimpleCloudsConfig.CLIENT.distantShadows.get() && SimpleCloudsMod.dhLoaded()) {
+		if (SimpleCloudsConfig.CLIENT.distantShadows.get()) {
 			int distantShadowSpan = SimpleCloudsConfig.CLIENT.shadowDistance.get() * 2;
 			distantShadowSpan = Math.min(distantShadowSpan, span);
 			this.shadowMap = Optional.of(new ShadowMapBuffer(distantShadowSpan, distantShadowSpan, SHADOW_MAP_SIZE,
@@ -1028,13 +1028,13 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		});
 	}
 
-	public void doCloudShadowProcessing(PoseStack stack, float partialTick, Matrix4f projMat, double camX, double camY,
+	public void doCloudShadowProcessing(Matrix4f camMat, float partialTick, Matrix4f projMat, double camX, double camY,
 			double camZ, int depthBufferId) {
 		if (this.shadowMap.isEmpty() || this.shadowMapMatrix == null)
 			return;
 
-		this.updateInverseMatrices(projMat, stack.last().pose());
-		float minimumRadius = this.mc.gameRenderer.getRenderDistance();
+		this.updateInverseMatrices(projMat, camMat);
+		float minimumRadius = 0.0F;
 		this.postProcessing.doCloudShadowProcessing(partialTick, effect -> {
 			effect.setSampler("DepthSampler", () -> depthBufferId);
 			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);

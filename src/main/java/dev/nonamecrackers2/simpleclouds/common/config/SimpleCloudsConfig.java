@@ -69,7 +69,7 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Boolean> shadedClouds;
 		public final ModConfigSpec.ConfigValue<Boolean> transparency;
 		public final ModConfigSpec.ConfigValue<Boolean> atmosphericClouds;
-		// Distant Horizons
+		// Terrain Shadows
 		public final ModConfigSpec.ConfigValue<Boolean> distantShadows;
 		public final ModConfigSpec.ConfigValue<Integer> shadowDistance;
 		// Vivecraft
@@ -233,13 +233,13 @@ public class SimpleCloudsConfig {
 
 			builder.pop();
 
-			builder.comment("Distant Horizons").push("distant_horizons");
+			builder.comment("Terrain Shadows").push("distant_horizons");
 
 			this.distantShadows = this.createValue(true, "distantShadows", RestartType.NONE,
-					"Toggles shadows that appear on distant terrain");
+					"Toggles cloud shadows cast onto terrain, including nearby terrain under overhead clouds and distant terrain when available");
 
 			this.shadowDistance = this.createRangedIntValue(4096, 512, 16384, "shadowDistance", RestartType.NONE,
-					"Specifies the distance shadows can render");
+					"Specifies the distance cloud shadows can render across terrain");
 
 			builder.pop();
 

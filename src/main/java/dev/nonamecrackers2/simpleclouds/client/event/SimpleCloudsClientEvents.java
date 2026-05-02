@@ -164,11 +164,6 @@ public class SimpleCloudsClientEvents {
 					event.setCanceled(true);
 				}
 			}
-			if (!SimpleCloudsMod.dhLoaded()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.distantShadows)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.shadowDistance))
-					event.setCanceled(true);
-			}
 		}
 	}
 
@@ -288,9 +283,7 @@ public class SimpleCloudsClientEvents {
 					text.add("Cloud types: " + ClientSideCloudTypeManager.getInstance().getCloudTypes().size());
 					int formationCount = multiRegion.getCloudFormationCount();
 					String formationText = "Cloud formations: " + formationCount + "/"
-							+ MultiRegionCloudMeshGenerator.MAX_CLOUD_FORMATIONS;
-					if (formationCount > MultiRegionCloudMeshGenerator.MAX_CLOUD_FORMATIONS)
-						formationText = ChatFormatting.RED + formationText;
+							+ multiRegion.getCloudFormationCapacity();
 					text.add(formationText);
 				}
 

@@ -59,6 +59,11 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 			mc.getMainRenderTarget().bindWrite(false);
 		}
 
+		mc.getProfiler().push("cloud_shadows");
+		renderer.doCloudShadowProcessing(camMat, partialTick, projMat, camX, camY, camZ,
+				mc.getMainRenderTarget().getDepthTextureId());
+		mc.getProfiler().pop();
+
 		mc.getProfiler().push("clouds_composite");
 		renderer.doFinalCompositePass(camMat, partialTick, projMat);
 		mc.getProfiler().pop();

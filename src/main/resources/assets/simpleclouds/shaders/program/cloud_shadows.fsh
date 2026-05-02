@@ -30,6 +30,8 @@ float shadowStrengthAt(vec3 pos)
 {
 	vec4 shadowMapPos = ShadowProjMat * ShadowModelViewMat * vec4(pos, 1.0);
 	vec3 ndc = shadowMapPos.xyz / shadowMapPos.w;
+	if (any(lessThan(ndc, vec3(-1.0))) || any(greaterThan(ndc, vec3(1.0))))
+		return 0.0;
 	vec3 coord = ndc * 0.5 + 0.5;
 	return texture(ShadowMap, coord);
 }
@@ -37,14 +39,20 @@ float shadowStrengthAt(vec3 pos)
 void main() 
 {
 	vec3 col = texture(DiffuseSampler, texCoord).rgb;
+	float screenDepth = texture(DepthSampler, texCoord).r;
+	if (screenDepth >= 1.0)
+	{
+		fragColor = vec4(col, 1.0);
+		return;
+	}
 	
-	vec3 localPos = screenToWorldPos(texCoord, texture(DepthSampler, texCoord).r * 2.0 - 1.0);
+	vec3 localPos = screenToWorldPos(texCoord, screenDepth * 2.0 - 1.0);
 	vec3 pos = CameraPos + localPos;
 	
 	float len = length(localPos);
 	float f = FadeDistance;
 	float invF = 1.0 / f;
-	float start = MinimumRadius + 32.0;
+	float start = MinimumRadius;
 	float end = ShadowSpan / 2.0;
 	
 	if (len < start || len > end)
@@ -53,7 +61,7 @@ void main()
 		return;
 	}
 	
-	float distFade = clamp(invF * (len - start), 0.0, 1.0) - clamp(invF * (len - end + f), 0.0, 1.0);
+	float distFade = 1.0 - clamp(invF * (len - end + f), 0.0, 1.0);
 	
 	//https://learnopengl.com/Advanced-Lighting/Shadows/Shadow-Mapping
 	float strength = 0.0;

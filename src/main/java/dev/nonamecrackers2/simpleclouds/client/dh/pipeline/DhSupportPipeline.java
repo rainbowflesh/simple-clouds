@@ -92,15 +92,9 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, modelViewMat, projMat, partialTick, camX, camY,
 				camZ, frustum, cloudColor, p, false, false);
 
-		PoseStack stack = new PoseStack();
-		stack.mulPose(modelViewMat);
-
 		p.push("cloud_shadows");
-		stack.pushPose();
-		renderer.translateClouds(stack, camX, camY, camZ);
-		renderer.doCloudShadowProcessing(stack, partialTick, projMat, camX, camY, camZ,
+		renderer.doCloudShadowProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ,
 				renderer.getCloudTarget().getDepthTextureId());
-		stack.popPose();
 		p.pop();
 
 		p.push("clouds_composite");
@@ -138,6 +132,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		// We can then render whatever we want to the main MC framebuffer while using DH
 		// LOD depth
+		PoseStack stack = new PoseStack();
+		stack.mulPose(modelViewMat);
 		stack.pushPose();
 		stack.translate(-camX, -camY, -camZ);
 		renderLightning(renderer.getWorldEffectsManager(), renderer, mc, stack, partialTick, camX, camY, camZ);

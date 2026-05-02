@@ -39,6 +39,11 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 				frustum, cloudColor, p, true, true);
 		p.pop();
 
+		p.push("cloud_shadows");
+		renderer.doCloudShadowProcessing(camMat, partialTick, projMat, camX, camY, camZ,
+				mc.getMainRenderTarget().getDepthTextureId());
+		p.pop();
+
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(camMat, partialTick, projMat);
 		p.pop();

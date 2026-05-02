@@ -49,7 +49,8 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public static final double DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS = 0.55D;
 	private static final List<String> DEFAULT_DRY_BIOME_RAIN_TAG_IDS = List.of(
 			Tags.Biomes.IS_DRY_OVERWORLD.location().toString(),
-			net.minecraft.tags.BiomeTags.IS_SAVANNA.location().toString());
+			net.minecraft.tags.BiomeTags.IS_SAVANNA.location().toString(),
+			"#terralith:shrublands");
 	private static volatile List<String> dryBiomeRainTagIds = DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
 	private static volatile List<TagKey<Biome>> dryBiomeRainTags = createDryBiomeRainTags(
 			DEFAULT_DRY_BIOME_RAIN_TAG_IDS);
