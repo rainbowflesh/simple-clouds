@@ -75,6 +75,9 @@ repositories {
 }
 
 dependencies {
+
+    compileOnly fileTree(dir: 'libs', include: '*.jar')
+
     implementation "net.neoforged:neoforge:${neo_version}"
 
     jarJar("nonamecrackers2:crackerslib-neoforge:${crackerslib_version}") {
