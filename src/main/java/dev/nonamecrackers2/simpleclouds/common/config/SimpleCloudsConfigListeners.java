@@ -29,7 +29,8 @@ public class SimpleCloudsConfigListeners {
 				.addListener(SimpleCloudsConfig.SERVER.allowRainInDryBiomes, (o, n) -> onAllowRainInDryBiomesChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess,
 						(o, n) -> onDryBiomeRainMinStorminessChanged(n.doubleValue()))
-				.addListener(SimpleCloudsConfig.SERVER.dryBiomeRainTags, (o, n) -> onDryBiomeRainTagsChanged(n))
+				.addListener(SimpleCloudsConfig.SERVER.dryBiomeRainTags, (o, n) -> onRainBiomeTagsChanged())
+				.addListener(SimpleCloudsConfig.SERVER.normalRainBiomeTags, (o, n) -> onRainBiomeTagsChanged())
 				.addListener(SimpleCloudsConfig.SERVER.singleModeCloudType, (o, n) -> onSingleModeCloudTypeChanged(n))
 				.buildAndRegister();
 	}
@@ -53,10 +54,13 @@ public class SimpleCloudsConfigListeners {
 				new NotifyDryBiomeRainMinStorminessUpdatedPayload(dryBiomeRainMinStorminess)));
 	}
 
-	public static void onDryBiomeRainTagsChanged(List<? extends String> dryBiomeRainTags) {
-		CloudManager.updateDryBiomeRainTags(dryBiomeRainTags);
+	public static void onRainBiomeTagsChanged() {
+		List<String> dryBiomeRainTags = List.copyOf(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get());
+		List<String> normalRainBiomeTags = List.copyOf(SimpleCloudsConfig.SERVER.normalRainBiomeTags.get());
+		CloudManager.updateRainBiomeTags(dryBiomeRainTags, normalRainBiomeTags);
 		executeOnServerThread(
-				() -> PacketDistributor.sendToAllPlayers(createDryBiomeRainTagsUpdatedPayload(dryBiomeRainTags)));
+				() -> PacketDistributor.sendToAllPlayers(createDryBiomeRainTagsUpdatedPayload(dryBiomeRainTags,
+						normalRainBiomeTags)));
 	}
 
 	public static void syncDryBiomeRainSettings(ServerPlayer player) {
@@ -65,7 +69,8 @@ public class SimpleCloudsConfigListeners {
 		PacketDistributor.sendToPlayer(player, new NotifyDryBiomeRainMinStorminessUpdatedPayload(
 				SimpleCloudsConfig.SERVER.dryBiomeRainMinStorminess.get()));
 		PacketDistributor.sendToPlayer(player,
-				createDryBiomeRainTagsUpdatedPayload(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get()));
+				createDryBiomeRainTagsUpdatedPayload(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get(),
+						SimpleCloudsConfig.SERVER.normalRainBiomeTags.get()));
 	}
 
 	public static void onCloudSpeedChanged(float newSpeed) {
@@ -101,8 +106,12 @@ public class SimpleCloudsConfigListeners {
 	}
 
 	private static NotifyDryBiomeRainTagsUpdatedPayload createDryBiomeRainTagsUpdatedPayload(
-			List<? extends String> dryBiomeRainTags) {
-		List<String> tagIds = List.copyOf(dryBiomeRainTags);
-		return new NotifyDryBiomeRainTagsUpdatedPayload(tagIds, CloudManager.resolveDryBiomeRainBiomeIds(tagIds));
+			List<? extends String> dryBiomeRainTags, List<? extends String> normalRainBiomeTags) {
+		List<String> dryTagIds = List.copyOf(dryBiomeRainTags);
+		List<String> normalTagIds = List.copyOf(normalRainBiomeTags);
+		return new NotifyDryBiomeRainTagsUpdatedPayload(dryTagIds,
+				CloudManager.resolveDryBiomeRainBiomeIds(CloudManager.mergeBiomeTagIds(dryTagIds, normalTagIds)),
+				normalTagIds,
+				CloudManager.resolveDryBiomeRainBiomeIds(normalTagIds));
 	}
 }

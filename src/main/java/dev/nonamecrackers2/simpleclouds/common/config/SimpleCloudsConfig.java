@@ -172,10 +172,10 @@ public class SimpleCloudsConfig {
 					RestartType.NONE,
 					"How the amount of frames used to generate the entire mesh is calculated. Static will use the 'Frames To Generate Mesh' option. Dynamic will calculate it automatically depending on your FPS. Target FPS will target a certain perceived framerate for mesh generation");
 
-			this.framesToGenerateMesh = this.createRangedIntValue(3, 1, 32, "framesToGenerateMesh", RestartType.NONE,
+			this.framesToGenerateMesh = this.createRangedIntValue(1, 1, 30, "framesToGenerateMesh", RestartType.NONE,
 					"Specifies how many frames it should take to generate the entire cloud mesh. Higher values will improve performance at the cost of stuttery cloud movement");
 
-			this.targetMeshGenFps = this.createRangedIntValue(48, 1, 480, "targetMeshGenFps", RestartType.NONE,
+			this.targetMeshGenFps = this.createRangedIntValue(24, 1, 480, "targetMeshGenFps", RestartType.NONE,
 					"Used to set the target FPS with the 'Target FPS' option in 'Generation Interval'");
 
 			builder.pop();
@@ -255,6 +255,7 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Boolean> allowRainInDryBiomes;
 		public final ModConfigSpec.ConfigValue<Double> dryBiomeRainMinStorminess;
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dryBiomeRainTags;
+		public final ModConfigSpec.ConfigValue<List<? extends String>> normalRainBiomeTags;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMin;
 		public final ModConfigSpec.ConfigValue<Integer> lightningSpawnIntervalMax;
 		public final ModConfigSpec.ConfigValue<String> singleModeCloudType;
@@ -302,6 +303,13 @@ public class SimpleCloudsConfig {
 					val -> ResourceLocation.tryParse(val) != null,
 					"dryBiomeRainTags", RestartType.NONE,
 					"List of biome tags that should be treated as rain-capable dry biomes when dry-biome rain is enabled",
+					"minecraft:tag");
+
+			this.normalRainBiomeTags = this.createListValue(String.class,
+					() -> Lists.newArrayList(CloudManager.getDefaultNormalRainBiomeTagIds()),
+					val -> ResourceLocation.tryParse(val) != null,
+					"normalRainBiomeTags", RestartType.NONE,
+					"List of biome tags that should behave like normal rain biomes, bypassing dry-biome rain restrictions. These tags are automatically appended to Dry Biome Rain Tags for compatibility",
 					"minecraft:tag");
 
 			builder.pop();
