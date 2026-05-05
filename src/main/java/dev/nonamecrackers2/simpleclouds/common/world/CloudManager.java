@@ -49,12 +49,17 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public static final float DEFAULT_CLOUD_SPEED = 0.675F;
 	public static final double DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS = 0.55D;
 	private static final List<String> DEFAULT_DRY_BIOME_RAIN_TAG_IDS = List.of("c:is_dry/overworld",
-			"minecraft:is_savanna",
-			"terralith:shrublands", "terralith:reference/plains");
-	private static volatile List<String> dryBiomeRainTagIds = DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
+			"minecraft:is_savanna");
+	private static final List<String> DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS = List.of("terralith:reference/plains");
+	private static volatile List<String> dryBiomeRainTagIds = mergeBiomeTagIds(DEFAULT_DRY_BIOME_RAIN_TAG_IDS,
+			DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS);
 	private static volatile Set<ResourceLocation> dryBiomeRainBiomeIds = Set.of();
 	private static volatile List<TagKey<Biome>> dryBiomeRainTags = createDryBiomeRainTags(
-			DEFAULT_DRY_BIOME_RAIN_TAG_IDS);
+			dryBiomeRainTagIds);
+	private static volatile List<String> normalRainBiomeTagIds = DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS;
+	private static volatile Set<ResourceLocation> normalRainBiomeIds = Set.of();
+	private static volatile List<TagKey<Biome>> normalRainBiomeTags = createDryBiomeRainTags(
+			DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS);
 	protected final T level;
 	protected final CloudTypeSource cloudSource;
 	protected final CloudGenerator cloudGenerator;
@@ -165,6 +170,10 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		return DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
 	}
 
+	public static List<String> getDefaultNormalRainBiomeTagIds() {
+		return DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS;
+	}
+
 	public static Biome.Precipitation resolveBiomePrecipitation(Level level, Holder<Biome> biome, BlockPos pos) {
 		CloudType type = CloudManager.get(level)
 				.getCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F)
@@ -174,13 +183,16 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 
 	public static Biome.Precipitation resolveBiomePrecipitation(Level level, Holder<Biome> biome, BlockPos pos,
 			CloudType type) {
+		if (shouldTreatAsNormalRainBiome(biome))
+			return biome.value().shouldSnow(level, pos) ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN;
 		if (shouldOverrideDryBiomePrecipitation(biome, type))
 			return biome.value().shouldSnow(level, pos) ? Biome.Precipitation.SNOW : Biome.Precipitation.RAIN;
 		return biome.value().getPrecipitationAt(pos);
 	}
 
 	public static boolean biomeHasConfiguredPrecipitation(Holder<Biome> biome) {
-		return biome.value().hasPrecipitation() || shouldOverrideDryBiomePrecipitation(biome);
+		return biome.value().hasPrecipitation() || shouldTreatAsNormalRainBiome(biome)
+				|| shouldOverrideDryBiomePrecipitation(biome);
 	}
 
 	public static boolean shouldOverrideDryBiomePrecipitation(Holder<Biome> biome) {
@@ -191,6 +203,10 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		return shouldOverrideDryBiomePrecipitation(biome) && type.storminess() >= getDryBiomeRainMinStorminess();
 	}
 
+	public static boolean shouldTreatAsNormalRainBiome(Holder<Biome> biome) {
+		return isBiomeInRainOverrideSet(biome, normalRainBiomeIds, getNormalRainBiomeTags());
+	}
+
 	public static float getDryBiomeRainMinStorminess() {
 		if (!SimpleCloudsConfig.SERVER_SPEC.isLoaded())
 			return (float) DEFAULT_DRY_BIOME_RAIN_MIN_STORMINESS;
@@ -198,25 +214,37 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	}
 
 	private static boolean isDryBiomeForRainOverride(Holder<Biome> biome) {
-		var biomeKey = biome.unwrapKey();
-		if (biomeKey.isPresent() && dryBiomeRainBiomeIds.contains(biomeKey.get().location()))
-			return true;
-		for (TagKey<Biome> tag : getDryBiomeRainTags()) {
-			if (biome.is(tag))
-				return true;
-		}
-		return false;
+		return isBiomeInRainOverrideSet(biome, dryBiomeRainBiomeIds, getDryBiomeRainTags());
 	}
 
 	public static void updateDryBiomeRainTags(List<? extends String> tagIds) {
-		updateDryBiomeRainOverrides(tagIds, resolveDryBiomeRainBiomeIds(tagIds));
+		updateRainBiomeOverrides(tagIds,
+				resolveDryBiomeRainBiomeIds(mergeBiomeTagIds(tagIds, getConfiguredNormalRainBiomeTagIds())),
+				getConfiguredNormalRainBiomeTagIds(),
+				resolveDryBiomeRainBiomeIds(getConfiguredNormalRainBiomeTagIds()));
 	}
 
 	public static void updateDryBiomeRainOverrides(List<? extends String> tagIds, List<? extends String> biomeIds) {
-		List<String> normalizedTagIds = List.copyOf(tagIds);
-		dryBiomeRainTagIds = normalizedTagIds;
-		dryBiomeRainBiomeIds = createDryBiomeRainBiomeIds(biomeIds);
-		dryBiomeRainTags = createDryBiomeRainTags(normalizedTagIds);
+		updateRainBiomeOverrides(tagIds, biomeIds, getConfiguredNormalRainBiomeTagIds(),
+				resolveDryBiomeRainBiomeIds(getConfiguredNormalRainBiomeTagIds()));
+	}
+
+	public static void updateRainBiomeTags(List<? extends String> dryTagIds, List<? extends String> normalTagIds) {
+		updateRainBiomeOverrides(dryTagIds,
+				resolveDryBiomeRainBiomeIds(mergeBiomeTagIds(dryTagIds, normalTagIds)),
+				normalTagIds, resolveDryBiomeRainBiomeIds(normalTagIds));
+	}
+
+	public static void updateRainBiomeOverrides(List<? extends String> dryTagIds, List<? extends String> dryBiomeIds,
+			List<? extends String> normalTagIds, List<? extends String> normalBiomeIds) {
+		List<String> normalizedNormalTagIds = List.copyOf(normalTagIds);
+		List<String> normalizedDryTagIds = mergeBiomeTagIds(dryTagIds, normalizedNormalTagIds);
+		dryBiomeRainTagIds = normalizedDryTagIds;
+		dryBiomeRainBiomeIds = createDryBiomeRainBiomeIds(dryBiomeIds);
+		dryBiomeRainTags = createDryBiomeRainTags(normalizedDryTagIds);
+		normalRainBiomeTagIds = normalizedNormalTagIds;
+		normalRainBiomeIds = createDryBiomeRainBiomeIds(normalBiomeIds);
+		normalRainBiomeTags = createDryBiomeRainTags(normalizedNormalTagIds);
 	}
 
 	public static List<String> resolveDryBiomeRainBiomeIds(List<? extends String> tagIds) {
@@ -241,11 +269,54 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 
 	private static List<TagKey<Biome>> getDryBiomeRainTags() {
 		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded()) {
-			List<String> configuredTagIds = List.copyOf(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get());
-			if (!configuredTagIds.equals(dryBiomeRainTagIds))
-				updateDryBiomeRainTags(configuredTagIds);
+			List<String> configuredTagIds = getConfiguredDryBiomeRainTagIds();
+			List<String> configuredNormalTagIds = getConfiguredNormalRainBiomeTagIds();
+			List<String> effectiveTagIds = mergeBiomeTagIds(configuredTagIds, configuredNormalTagIds);
+			if (!effectiveTagIds.equals(dryBiomeRainTagIds) || !configuredNormalTagIds.equals(normalRainBiomeTagIds))
+				updateRainBiomeTags(configuredTagIds, configuredNormalTagIds);
 		}
 		return dryBiomeRainTags;
+	}
+
+	private static List<TagKey<Biome>> getNormalRainBiomeTags() {
+		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded()) {
+			List<String> configuredTagIds = getConfiguredDryBiomeRainTagIds();
+			List<String> configuredNormalTagIds = getConfiguredNormalRainBiomeTagIds();
+			List<String> effectiveTagIds = mergeBiomeTagIds(configuredTagIds, configuredNormalTagIds);
+			if (!effectiveTagIds.equals(dryBiomeRainTagIds) || !configuredNormalTagIds.equals(normalRainBiomeTagIds))
+				updateRainBiomeTags(configuredTagIds, configuredNormalTagIds);
+		}
+		return normalRainBiomeTags;
+	}
+
+	private static List<String> getConfiguredDryBiomeRainTagIds() {
+		if (!SimpleCloudsConfig.SERVER_SPEC.isLoaded())
+			return DEFAULT_DRY_BIOME_RAIN_TAG_IDS;
+		return List.copyOf(SimpleCloudsConfig.SERVER.dryBiomeRainTags.get());
+	}
+
+	private static List<String> getConfiguredNormalRainBiomeTagIds() {
+		if (!SimpleCloudsConfig.SERVER_SPEC.isLoaded())
+			return DEFAULT_NORMAL_RAIN_BIOME_TAG_IDS;
+		return List.copyOf(SimpleCloudsConfig.SERVER.normalRainBiomeTags.get());
+	}
+
+	public static List<String> mergeBiomeTagIds(List<? extends String> tagIds, List<? extends String> appendedTagIds) {
+		java.util.LinkedHashSet<String> merged = new java.util.LinkedHashSet<>(tagIds);
+		merged.addAll(appendedTagIds);
+		return List.copyOf(merged);
+	}
+
+	private static boolean isBiomeInRainOverrideSet(Holder<Biome> biome, Set<ResourceLocation> biomeIds,
+			List<TagKey<Biome>> biomeTags) {
+		var biomeKey = biome.unwrapKey();
+		if (biomeKey.isPresent() && biomeIds.contains(biomeKey.get().location()))
+			return true;
+		for (TagKey<Biome> tag : biomeTags) {
+			if (biome.is(tag))
+				return true;
+		}
+		return false;
 	}
 
 	private static List<TagKey<Biome>> createDryBiomeRainTags(List<? extends String> tagIds) {

@@ -81,6 +81,8 @@
   "gui.simpleclouds.config.dryBiomeRainMinStorminess.title": "Dry Biome Rain Min Storminess",
   "gui.simpleclouds.config.dryBiomeRainTags.description": "List of biome tags that should be treated as rain-capable dry biomes when dry-biome rain is enabled.",
   "gui.simpleclouds.config.dryBiomeRainTags.title": "Dry Biome Rain Tags",
+  "gui.simpleclouds.config.normalRainBiomeTags.description": "List of biome tags that should behave like normal rain biomes, bypassing dry-biome rain restrictions. These tags are automatically appended to Dry Biome Rain Tags for compatibility.",
+  "gui.simpleclouds.config.normalRainBiomeTags.title": "Normal Rain Biome Tags",
   "gui.simpleclouds.config.fogMode.description": "Specifies the type of world fog that should be used. Each has their own advantages and disadvantages, ranging from visual discrepancies to possible compatibility issues.",
   "gui.simpleclouds.config.fogMode.title": "Fog Mode",
   "gui.simpleclouds.config.framesToGenerateMesh.description": "Specifies how many frames it should take to generate the entire cloud mesh. Higher values will improve performance at the cost of stuttery cloud movement.",

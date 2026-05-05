@@ -83,9 +83,11 @@ public class SimpleCloudsClientConfigListeners {
 	}
 
 	public static void onDryBiomeRainTagsUpdatedFromServer(List<String> dryBiomeRainTags,
-			List<String> dryBiomeRainBiomes) {
+			List<String> dryBiomeRainBiomes, List<String> normalRainBiomeTags, List<String> normalRainBiomeBiomes) {
 		SimpleCloudsConfig.SERVER.dryBiomeRainTags.set(dryBiomeRainTags);
-		CloudManager.updateDryBiomeRainOverrides(dryBiomeRainTags, dryBiomeRainBiomes);
+		SimpleCloudsConfig.SERVER.normalRainBiomeTags.set(normalRainBiomeTags);
+		CloudManager.updateRainBiomeOverrides(dryBiomeRainTags, dryBiomeRainBiomes, normalRainBiomeTags,
+				normalRainBiomeBiomes);
 	}
 
 	public static void onSingleModeCloudTypeUpdated(String type) {
