@@ -95,6 +95,11 @@ public class ClientCloudManager extends CloudManager<ClientLevel> {
 	}
 
 	@Override
+	protected float getPrecipitationCeilingHeight(CloudType type) {
+		return Math.max(super.getPrecipitationCeilingHeight(type), this.getCloudBaseHeight(type));
+	}
+
+	@Override
 	public int getCloudHeight() {
 		return this.receivedSync ? super.getCloudHeight() : SimpleCloudsConfig.SERVER.cloudHeight.get();
 	}
