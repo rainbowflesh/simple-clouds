@@ -152,7 +152,7 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		var info = this.getCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F);
 		CloudType type = info.getLeft();
 		Biome.Precipitation precipitation = resolveBiomePrecipitation(this.level, this.level.getBiome(pos), pos, type);
-		if ((float) pos.getY() + 0.5F > this.getStormStartHeight(type))
+		if ((float) pos.getY() + 0.5F > this.getPrecipitationCeilingHeight(type))
 			return Pair.of(false, Biome.Precipitation.NONE);
 
 		if (info.getLeft().weatherType().includesRain()
@@ -377,7 +377,8 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 
 		float fade = info.getRight();
 		float verticalFade = 1.0F - Mth
-				.clamp((y - this.getStormStartHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F, 1.0F);
+				.clamp((y - this.getPrecipitationCeilingHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE,
+						0.0F, 1.0F);
 		return Math.min(1.0F,
 				Math.max(0.0F, SimpleCloudsConstants.RAIN_THRESHOLD - fade) / SimpleCloudsConstants.RAIN_FADE)
 				* verticalFade;
@@ -422,6 +423,15 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	public float getStormStartHeight(CloudType type) {
 		return (float) this.getCloudHeight()
 				+ type.getStormStartRelativeToCloudBase() * SimpleCloudsConstants.CLOUD_SCALE;
+	}
+
+	protected float getCloudBaseHeight(CloudType type) {
+		return (float) this.getCloudHeight()
+				+ (float) type.noiseConfig().getStartHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+	}
+
+	protected float getPrecipitationCeilingHeight(CloudType type) {
+		return this.getStormStartHeight(type);
 	}
 
 	public void tick() {
