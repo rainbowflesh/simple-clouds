@@ -7,39 +7,40 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 public record SpawnLightningPayload(
-		BlockPos pos, 
-		boolean onlySound, 
-		int seed, 
-		int maxDepth, 
-		int branchCount, 
-		float maxBranchLength, 
-		float maxWidth, 
-		float minimumPitch, 
-		float maximumPitch
-) implements CustomPacketPayload {
+		BlockPos pos,
+		BlockPos targetPos,
+		boolean onlySound,
+		int seed,
+		int maxDepth,
+		int branchCount,
+		float maxBranchLength,
+		float maxWidth,
+		float minimumPitch,
+		float maximumPitch) implements CustomPacketPayload {
 
-	public static final CustomPacketPayload.Type<SpawnLightningPayload> TYPE = new CustomPacketPayload.Type<>(SimpleCloudsMod.id("spawn_lightning"));
-	
-	public static final StreamCodec<FriendlyByteBuf, SpawnLightningPayload> CODEC = StreamCodec.ofMember(SpawnLightningPayload::encode, SpawnLightningPayload::new);
-	
-	public SpawnLightningPayload(FriendlyByteBuf buffer)
-	{
+	public static final CustomPacketPayload.Type<SpawnLightningPayload> TYPE = new CustomPacketPayload.Type<>(
+			SimpleCloudsMod.id("spawn_lightning"));
+
+	public static final StreamCodec<FriendlyByteBuf, SpawnLightningPayload> CODEC = StreamCodec
+			.ofMember(SpawnLightningPayload::encode, SpawnLightningPayload::new);
+
+	public SpawnLightningPayload(FriendlyByteBuf buffer) {
 		this(
-			buffer.readBlockPos(),
-			buffer.readBoolean(),
-			buffer.readVarInt(),
-			buffer.readVarInt(),
-			buffer.readVarInt(),
-			buffer.readFloat(),
-			buffer.readFloat(),
-			buffer.readFloat(),
-			buffer.readFloat()
-		);
+				buffer.readBlockPos(),
+				buffer.readBlockPos(),
+				buffer.readBoolean(),
+				buffer.readVarInt(),
+				buffer.readVarInt(),
+				buffer.readVarInt(),
+				buffer.readFloat(),
+				buffer.readFloat(),
+				buffer.readFloat(),
+				buffer.readFloat());
 	}
-	
-	public void encode(FriendlyByteBuf buffer)
-	{
+
+	public void encode(FriendlyByteBuf buffer) {
 		buffer.writeBlockPos(this.pos);
+		buffer.writeBlockPos(this.targetPos);
 		buffer.writeBoolean(this.onlySound);
 		buffer.writeVarInt(this.seed);
 		buffer.writeVarInt(this.maxDepth);
@@ -49,10 +50,9 @@ public record SpawnLightningPayload(
 		buffer.writeFloat(this.minimumPitch);
 		buffer.writeFloat(this.maximumPitch);
 	}
-	
+
 	@Override
-	public CustomPacketPayload.Type<SpawnLightningPayload> type()
-	{
+	public CustomPacketPayload.Type<SpawnLightningPayload> type() {
 		return TYPE;
 	}
 }

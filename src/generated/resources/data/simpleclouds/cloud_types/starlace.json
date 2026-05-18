@@ -1,0 +1,63 @@
+{
+  "spawning": {
+    "exist_ticks": {
+      "type": "minecraft:biased_to_bottom",
+      "max_inclusive": 48000,
+      "min_inclusive": 24000
+    },
+    "grow_ticks": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 2400,
+      "min_inclusive": 1200
+    },
+    "moves_to_player": false,
+    "order_weight": 280,
+    "radius": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 9000,
+      "min_inclusive": 5000
+    },
+    "speed": {
+      "type": "minecraft:uniform",
+      "max_exclusive": 0.18,
+      "min_inclusive": 0.1
+    },
+    "stretch_factor": {
+      "type": "minecraft:uniform",
+      "max_exclusive": 1.3,
+      "min_inclusive": 0.95
+    },
+    "weight": 6
+  },
+  "visual": {
+    "noise_settings": [
+      {
+        "fade_distance": 8,
+        "height": 28,
+        "height_offset": 110,
+        "scale_x": 240,
+        "scale_y": 18,
+        "scale_z": 240,
+        "value_offset": 0.98,
+        "value_scale": 1
+      },
+      {
+        "fade_distance": 8,
+        "height": 18,
+        "height_offset": 114,
+        "scale_x": 18,
+        "scale_y": 10,
+        "scale_z": 18,
+        "value_offset": 0,
+        "value_scale": 0.14
+      }
+    ],
+    "transparency_fade": 0.46
+  },
+  "weather": {
+    "type": "none",
+    "storm_fade_distance": 22,
+    "storm_start": 34,
+    "storminess": 0.08
+  }
+}

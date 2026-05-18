@@ -1,26 +1,4 @@
 {
-  "noise_settings": [
-    {
-      "fade_distance": 12.0,
-      "height": 28.0,
-      "height_offset": 0.0,
-      "scale_x": 720.0,
-      "scale_y": 24.0,
-      "scale_z": 240.0,
-      "value_offset": 1.1,
-      "value_scale": 1.0
-    },
-    {
-      "fade_distance": 10.0,
-      "height": 24.0,
-      "height_offset": 0.0,
-      "scale_x": 18.0,
-      "scale_y": 18.0,
-      "scale_z": 18.0,
-      "value_offset": 0.0,
-      "value_scale": 0.22
-    }
-  ],
   "spawning": {
     "exist_ticks": {
       "type": "minecraft:biased_to_bottom",
@@ -51,9 +29,35 @@
     },
     "weight": 7
   },
-  "storm_fade_distance": 36.0,
-  "storm_start": 0.0,
-  "storminess": 0.35,
-  "transparency_fade": 0.0,
-  "weather_type": "rain"
+  "visual": {
+    "noise_settings": [
+      {
+        "fade_distance": 12,
+        "height": 28,
+        "height_offset": 0,
+        "scale_x": 720,
+        "scale_y": 24,
+        "scale_z": 240,
+        "value_offset": 1.1,
+        "value_scale": 1
+      },
+      {
+        "fade_distance": 10,
+        "height": 24,
+        "height_offset": 0,
+        "scale_x": 18,
+        "scale_y": 18,
+        "scale_z": 18,
+        "value_offset": 0,
+        "value_scale": 0.22
+      }
+    ],
+    "transparency_fade": 0
+  },
+  "weather": {
+    "type": "rain",
+    "storm_fade_distance": 36,
+    "storm_start": 0,
+    "storminess": 0.35
+  }
 }

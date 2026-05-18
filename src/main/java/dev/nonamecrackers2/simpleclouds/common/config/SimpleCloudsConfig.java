@@ -149,7 +149,7 @@ public class SimpleCloudsConfig {
 					"Specifies if transparent cubes should be generated for supported cloud types. May cause performance drops");
 
 			this.atmosphericClouds = this.createValue(true, "atmosphericClouds", RestartType.NONE,
-					"Specifies if a purely visual 2D atmospheric cloud layer should render");
+					"Specifies if a purely visual 2D atmospheric cloud layer should render above the scene");
 
 			builder.pop();
 
@@ -252,6 +252,7 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<CloudMode> cloudMode;
 		public final ModConfigSpec.ConfigValue<Double> cloudSpeed;
 		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
+		public final ModConfigSpec.ConfigValue<Integer> cloudLayerSeparation;
 		public final ModConfigSpec.ConfigValue<Boolean> allowRainInDryBiomes;
 		public final ModConfigSpec.ConfigValue<Double> dryBiomeRainMinStorminess;
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dryBiomeRainTags;
@@ -287,6 +288,10 @@ public class SimpleCloudsConfig {
 			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
 					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
 					"Specifies the lowest Y level any cloud may spawn at");
+
+			this.cloudLayerSeparation = this.createRangedIntValue(128, 1, 2048, "cloudLayerSeparation",
+					RestartType.WORLD,
+					"Specifies the vertical cloud band height used for cloud shaping and legacy cloud type alignment");
 
 			builder.comment("Biome Precipitation").push("biome_precipitation");
 

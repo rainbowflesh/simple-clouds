@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:tower_garden",
+  "exist_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 60000,
+    "min_inclusive": 36000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 10500,
+    "min_inclusive": 6500
+  },
+  "moves_to_player": true,
+  "order_weight": 930,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 10500,
+    "min_inclusive": 6500
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.09,
+    "min_inclusive": 0.04
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.72,
+    "min_inclusive": 0.38
+  },
+  "weight": 4
+}

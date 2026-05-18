@@ -30,8 +30,10 @@ import dev.nonamecrackers2.simpleclouds.client.mesh.instancing.InstanceableMesh;
 import dev.nonamecrackers2.simpleclouds.client.mesh.lod.LevelOfDetailConfig;
 import dev.nonamecrackers2.simpleclouds.client.mesh.lod.PreparedChunk;
 import dev.nonamecrackers2.simpleclouds.client.shader.buffer.BindingManager;
+import dev.nonamecrackers2.simpleclouds.client.shader.buffer.ShaderStorageBufferObject;
 import dev.nonamecrackers2.simpleclouds.client.shader.compute.ComputeShader;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudInfo;
+import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinFrustumAccessor;
 import net.minecraft.CrashReportCategory;
@@ -83,7 +85,7 @@ public abstract class CloudMeshGenerator {
 	public static final String SIDES_PER_CHUNK_NAME = "SidesPerChunk";
 	// Transparent
 	public static final int BYTES_PER_CUBE_INFO = 24;
-	public static final int MAX_TRANSPARENT_CUBE_INFO_BUFFER_SIZE = 50331648;
+	public static final int INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE = 50331648;
 	public static final String TRANSPARENT_CUBE_INFO_BUFFER_NAME = "TransparentCubeInfoBuffer";
 	public static final String TRANSPARENT_TOTAL_CUBES_NAME = "TotalTransparentCubes";
 	public static final String TRANSPARENT_CUBES_PER_CHUNK_NAME = "TransparentCubesPerChunk";
@@ -112,6 +114,7 @@ public abstract class CloudMeshGenerator {
 	protected float scrollX;
 	protected float scrollY;
 	protected float scrollZ;
+	protected int cloudBandHeight = CloudType.getConfiguredLayerSeparation();
 	protected boolean testFacesFacingAway;
 	private float fadeStart;
 	private float fadeEnd;
@@ -173,6 +176,10 @@ public abstract class CloudMeshGenerator {
 		return this.useFixedMeshDataSectionSize;
 	}
 
+	protected boolean usesFixedTransparentMeshDataSectionSize() {
+		return false;
+	}
+
 	public LevelOfDetailConfig getLodConfig() {
 		return this.lodConfig;
 	}
@@ -191,6 +198,11 @@ public abstract class CloudMeshGenerator {
 	public CloudMeshGenerator setTestFacesFacingAway(boolean flag) {
 		this.testFacesFacingAway = flag;
 		return this;
+	}
+
+	public void setCloudBandHeight(int cloudBandHeight) {
+		this.cloudBandHeight = Math.max(1, cloudBandHeight);
+		this.uploadCloudBandHeight();
 	}
 
 	/**
@@ -372,15 +384,16 @@ public abstract class CloudMeshGenerator {
 		}
 
 		try {
-			this.initExtra(manager);
+			if (this.shader != null)
+				this.initExtra(manager);
 		} catch (Exception e) {
 			builder.errorUnknown(e, "Init Extra");
 		}
 
 		List<PreparedChunk> preparedChunks = this.getLodConfig().getPreparedChunks();
 		CloudMeshBufferHelper.ChunkMeshLayout chunkLayout = CloudMeshBufferHelper.buildChunkMeshes(preparedChunks,
-				this.opaqueBufferSize, this.transparentBufferSize, this.useTransparency,
-				this.useFixedMeshDataSectionSize);
+				this.opaqueBufferSize, this.useTransparency ? INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE : 0,
+				this.useTransparency, this.useFixedMeshDataSectionSize, this.usesFixedTransparentMeshDataSectionSize());
 		this.opaqueBytesPerChunk = chunkLayout.opaqueBytesPerChunk();
 		this.transparentBytesPerChunk = chunkLayout.transparentBytesPerChunk();
 		this.chunks = chunkLayout.chunks();
@@ -409,7 +422,11 @@ public abstract class CloudMeshGenerator {
 				"FADE_NEAR_ORIGIN", this.fadeNearOrigin ? "1" : "0",
 				"STYLE", this.shadedClouds ? "1" : "0",
 				"TRANSPARENCY", this.useTransparency ? "1" : "0",
-				"FIXED_SECTION_SIZE", this.useFixedMeshDataSectionSize ? "1" : "0");
+				"FIXED_SECTION_SIZE", this.useFixedMeshDataSectionSize ? "1" : "0",
+				"FIXED_TRANSPARENCY_SECTION_SIZE", this.usesFixedTransparentMeshDataSectionSize() ? "1" : "0",
+				"CLOUD_BAND_COUNT", String.valueOf(CloudType.MAX_CLOUD_LAYERS),
+				"CLOUD_LAYER_SPEED_REDUCTION",
+				String.valueOf(SimpleCloudsConstants.CLOUD_LAYER_SPEED_REDUCTION));
 		return ComputeShader.loadShader(this.meshShaderLoc, manager, LOCAL_SIZE, LOCAL_SIZE, LOCAL_SIZE, parameters);
 	}
 
@@ -428,18 +445,30 @@ public abstract class CloudMeshGenerator {
 			this.transparentBufferSize = CloudMeshBufferHelper.createBuffers(
 					this.shader,
 					totalChunks,
-					this.useFixedMeshDataSectionSize,
+					this.usesFixedTransparentMeshDataSectionSize(),
 					TRANSPARENT_TOTAL_CUBES_NAME,
 					TRANSPARENT_CUBES_PER_CHUNK_NAME,
 					TRANSPARENT_CUBE_INFO_BUFFER_NAME,
-					MAX_TRANSPARENT_CUBE_INFO_BUFFER_SIZE * (this.useFixedMeshDataSectionSize ? 4 : 1));
+					INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE);
 		}
+
+		this.uploadTransparentMeshLimit();
 
 		this.shader.forUniform("TotalLodLevels", (id, loc) -> {
 			GL41.glProgramUniform1i(id, loc, this.lodConfig.getLods().length);
 		});
 
+		this.uploadCloudBandHeight();
 		this.uploadFadeData();
+	}
+
+	private void uploadCloudBandHeight() {
+		if (this.shader == null || !this.shader.isValid())
+			return;
+
+		this.shader.forUniform("CloudBandHeight", (id, loc) -> {
+			GL41.glProgramUniform1i(id, loc, this.cloudBandHeight);
+		});
 	}
 
 	private void uploadFadeData() {
@@ -455,6 +484,32 @@ public abstract class CloudMeshGenerator {
 		this.shader.forUniform("FadeEnd", (id, loc) -> {
 			GL41.glProgramUniform1f(id, loc, this.fadeEnd);
 		});
+	}
+
+	private void uploadTransparentMeshLimit() {
+		if (this.shader == null || !this.shader.isValid() || !this.useTransparency)
+			return;
+
+		this.shader.forUniform("TransparentMeshDataLimit", (id, loc) -> {
+			GL41.glProgramUniform1i(id, loc, this.transparentBufferSize / BYTES_PER_CUBE_INFO);
+		});
+	}
+
+	private boolean ensureTransparentBufferCapacity(int requiredBytes) {
+		if (!this.useTransparency || this.shader == null || !this.shader.isValid()
+				|| requiredBytes <= this.transparentBufferSize)
+			return false;
+
+		int growthStep = Math.max(INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE / 2, this.transparentBufferSize / 2);
+		int targetSize = Math.max(requiredBytes, this.transparentBufferSize + growthStep);
+		int newSize = Math.min(targetSize, ShaderStorageBufferObject.getMaxSize());
+		if (newSize <= this.transparentBufferSize)
+			return false;
+
+		this.transparentBufferSize = this.shader.getShaderStorageBuffer(TRANSPARENT_CUBE_INFO_BUFFER_NAME)
+				.allocateBuffer(newSize);
+		this.uploadTransparentMeshLimit();
+		return true;
 	}
 
 	protected void initExtra(ResourceManager manager) throws IOException {
@@ -545,7 +600,9 @@ public abstract class CloudMeshGenerator {
 				SIDE_INFO_BUFFER_NAME,
 				MeshChunk::getOpaqueBuffers,
 				BYTES_PER_SIDE_INFO,
-				this.opaqueBufferSize);
+				this.opaqueBufferSize,
+				this.useFixedMeshDataSectionSize,
+				false);
 
 		if (this.useTransparency) {
 			transparentResult = this.copyMeshData(
@@ -554,7 +611,9 @@ public abstract class CloudMeshGenerator {
 					TRANSPARENT_CUBE_INFO_BUFFER_NAME,
 					c -> c.getTransparentBuffers().get(),
 					BYTES_PER_CUBE_INFO,
-					this.transparentBufferSize);
+					this.transparentBufferSize,
+					this.usesFixedTransparentMeshDataSectionSize(),
+					true);
 		}
 
 		this.opaqueBufferBytesUsed = 0;
@@ -571,10 +630,10 @@ public abstract class CloudMeshGenerator {
 
 	private CloudMeshGenerator.MeshGenStatus copyMeshData(String totalCountBufferName, String countPerChunkBufferName,
 			String elementBufferName, Function<MeshChunk, MeshChunk.BufferSet> bufferSetFunction, int bytesPerElement,
-			int elementBufferSize) {
+			int elementBufferSize, boolean useFixedSectionSize, boolean allowBufferGrowth) {
 		CloudMeshGenerator.MeshGenStatus status = CloudMeshGenerator.MeshGenStatus.NORMAL;
 
-		if (!this.useFixedMeshDataSectionSize) {
+		if (!useFixedSectionSize) {
 			// Get the total amount of sides and indices across all chunks and reset
 			this.shader.getShaderStorageBuffer(totalCountBufferName).writeData(b -> {
 				b.putInt(0, 0);
@@ -593,11 +652,25 @@ public abstract class CloudMeshGenerator {
 		}, this.chunks.size() * 4);
 
 		List<MeshChunk> completedChunks = Lists.newArrayListWithCapacity(this.taskScheduler.getCompletedTasks().size());
-		for (CloudMeshGenerator.ChunkGenTask completedGenTask : this.taskScheduler.getCompletedTasks())
+		int totalRequiredBytes = 0;
+		for (CloudMeshGenerator.ChunkGenTask completedGenTask : this.taskScheduler.getCompletedTasks()) {
+			MeshChunk.BufferSet bufferSet = bufferSetFunction.apply(completedGenTask.chunk());
+			bufferSet.ensureCapacity(bufferSet.getElementCount());
+			totalRequiredBytes += bufferSet.getElementCount() * bytesPerElement;
 			completedChunks.add(completedGenTask.chunk());
+		}
+
+		if (allowBufferGrowth && totalRequiredBytes > elementBufferSize) {
+			if (this.ensureTransparentBufferCapacity(totalRequiredBytes)) {
+				for (MeshChunk chunk : completedChunks)
+					bufferSetFunction.apply(chunk).setTotalElementCount(0);
+				return CloudMeshGenerator.MeshGenStatus.NO_TASKS;
+			}
+			status = CloudMeshGenerator.MeshGenStatus.MESH_POOL_OVERFLOW;
+		}
 
 		int elementBufferId = this.shader.getShaderStorageBuffer(elementBufferName).getId();
-		if (this.useFixedMeshDataSectionSize)
+		if (useFixedSectionSize)
 			status = CloudMeshBufferHelper.copyFixedChunkData(elementBufferId, elementBufferSize, completedChunks,
 					bufferSetFunction.andThen(b -> b.getElementOffset() * bytesPerElement),
 					bufferSetFunction.andThen(MeshChunk.BufferSet::getBufferId),
@@ -655,7 +728,7 @@ public abstract class CloudMeshGenerator {
 		this.shader.getShaderStorageBuffer(SIDES_PER_CHUNK_NAME).readWriteData(buffer -> {
 		}, this.chunks.size() * 4);
 		if (this.useTransparency) {
-			if (!this.useFixedMeshDataSectionSize)
+			if (!this.usesFixedTransparentMeshDataSectionSize())
 				this.shader.getShaderStorageBuffer(TRANSPARENT_TOTAL_CUBES_NAME).readWriteData(b -> {
 				}, 4);
 			this.shader.getShaderStorageBuffer(TRANSPARENT_CUBES_PER_CHUNK_NAME).readWriteData(buffer -> {
@@ -687,17 +760,19 @@ public abstract class CloudMeshGenerator {
 		float maxX = (float) bounds.maxX + meshGenOffsetX;
 		float maxZ = (float) bounds.maxZ + meshGenOffsetZ;
 
-		if (frustum == null || ((MixinFrustumAccessor) frustum).simpleclouds$cubeInFrustum(minX, bounds.minY, minZ,
-				maxX, bounds.maxY, maxZ)) {
-			if (cullDistance <= 0.0D || getChunkDistanceSquared(bounds) < cullDistanceSquared) {
-				CloudMeshGenerator.ChunkGenSettings settings = this.determineChunkGenSettings(minX, minZ, maxX, maxZ);
-				if (settings.skipChunk()) {
-					chunk.clearChunk();
-					return false;
-				}
-				this.taskScheduler.queueTask(new CloudMeshGenerator.ChunkGenTask(chunk, minX, (float) bounds.minY, minZ,
-						maxX, (float) bounds.maxY, maxZ, chunkIndex, minX, 0.0F, minZ, settings.minimumHeight(),
-						settings.maximumHeight()));
+		if (cullDistance <= 0.0D || getChunkDistanceSquared(bounds) < cullDistanceSquared) {
+			CloudMeshGenerator.ChunkGenSettings settings = this.determineChunkGenSettings(minX, minZ, maxX, maxZ);
+			if (settings.skipChunk()) {
+				chunk.clearChunk();
+				return false;
+			}
+
+			float minY = settings.minimumHeight();
+			float maxY = settings.maximumHeight();
+			if (frustum == null || ((MixinFrustumAccessor) frustum).simpleclouds$cubeInFrustum(minX, minY, minZ, maxX,
+					maxY, maxZ)) {
+				this.taskScheduler.queueTask(new CloudMeshGenerator.ChunkGenTask(chunk, minX, minY, minZ, maxX, maxY,
+						maxZ, chunkIndex, minX, 0.0F, minZ, settings.minimumHeight(), settings.maximumHeight()));
 				return true;
 			}
 		}
@@ -759,7 +834,9 @@ public abstract class CloudMeshGenerator {
 				this.shader.forUniform("OpaqueMeshDataOffset", (id, loc) -> {
 					GL41.glProgramUniform1i(id, loc, task.chunk().getOpaqueBuffers().getElementOffset());
 				});
+			}
 
+			if (this.usesFixedTransparentMeshDataSectionSize()) {
 				task.chunk().getTransparentBuffers().ifPresent(bufferSet -> {
 					this.shader.forUniform("TransparentMeshDataOffset", (id, loc) -> {
 						GL41.glProgramUniform1i(id, loc, bufferSet.getElementOffset());
@@ -768,7 +845,8 @@ public abstract class CloudMeshGenerator {
 			}
 
 			this.shader.dispatch(WORK_SIZE, localHeightInvocations, WORK_SIZE, false);
-			if (!this.useFixedMeshDataSectionSize)
+			if (!this.useFixedMeshDataSectionSize
+					|| (this.useTransparency && !this.usesFixedTransparentMeshDataSectionSize()))
 				GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT);
 		}
 	}

@@ -8,7 +8,6 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
-import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
@@ -22,18 +21,6 @@ public final class CloudPipelineRenderSteps {
     public static CloudColor resolveCloudColor(SimpleCloudsRenderer renderer, float partialTick) {
         float[] cloudColor = renderer.getCloudColor(partialTick);
         return new CloudColor((float) cloudColor[0], (float) cloudColor[1], (float) cloudColor[2]);
-    }
-
-    public static void renderAtmosphericClouds(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat,
-            Matrix4f projMat, float partialTick, double camX, double camY, double camZ, CloudColor cloudColor,
-            ProfilerFiller profiler) {
-        profiler.push("atmospheric_clouds");
-        PoseStack stack = new PoseStack();
-        stack.mulPose(camMat);
-        renderer.getAtmosphericCloudRenderer().render(stack, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
-                cloudColor.g(), cloudColor.b());
-        mc.getMainRenderTarget().bindWrite(false);
-        profiler.pop();
     }
 
     public static void renderCloudGeometry(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat,
@@ -52,8 +39,8 @@ public final class CloudPipelineRenderSteps {
             renderer.copyDepthFromMainToClouds();
         cloudTarget.bindWrite(false);
 
-        CloudMeshGenerator generator = renderer.getMeshGenerator();
-        SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, projMat, renderer.getFogStart(), renderer.getFogEnd(),
+        SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), stack, projMat, renderer.getFogStart(),
+                renderer.getFogEnd(),
                 partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
                 SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
 
@@ -62,10 +49,11 @@ public final class CloudPipelineRenderSteps {
         if (clearTargets)
             transparencyTarget.clear(Minecraft.ON_OSX);
 
-        if (generator.transparencyEnabled()) {
+        if (renderer.getMeshGenerator().transparencyEnabled()) {
             renderer.copyDepthFromCloudsToTransparency();
             transparencyTarget.bindWrite(false);
-            SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, projMat, renderer.getFogStart(),
+            SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), stack, projMat,
+                    renderer.getFogStart(),
                     renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
                     SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
         }

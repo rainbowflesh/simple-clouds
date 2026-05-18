@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.List;
+import java.util.Objects;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -31,6 +32,8 @@ import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.client.world.FogRenderMode;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudTypeDataManager;
+import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
+import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.ChatFormatting;
@@ -83,7 +86,7 @@ public class SimpleCloudsClientEvents {
 
 	public static void registerConfigMenu(RegisterConfigScreensEvent event) {
 		event.builder(ConfigHomeScreen.builder(ImageTitle.ofMod(SimpleCloudsMod.MODID, 192, 96, 1.0F))
-				.crackersDefault("https://github.com/nonamecrackers2/simple-clouds")
+				.crackersDefault("https://github.com/xvr6/simple-clouds")
 				.build(SimpleCloudsConfigScreen::new))
 				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC)
 				.addSpec(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC).register();
@@ -130,7 +133,8 @@ public class SimpleCloudsClientEvents {
 						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
 						.setPreset(SimpleCloudsConfig.CLIENT.cubeNormals, true)
 						.setPreset(SimpleCloudsConfig.CLIENT.shadedClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false).build());
+						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
+						.build());
 	}
 
 	@SubscribeEvent
@@ -305,6 +309,7 @@ public class SimpleCloudsClientEvents {
 					String vanillaWeatherOverrideAppend = manager.shouldUseVanillaWeather()
 							? " (Vanilla Weather Enabled)"
 							: "";
+					text.add(buildWeatherStatusDebugLine(manager, mc) + vanillaWeatherOverrideAppend);
 					text.add("Storminess: " + round(effects.getStorminessAtCamera()) + vanillaWeatherOverrideAppend);
 				}
 			} else {
@@ -327,5 +332,28 @@ public class SimpleCloudsClientEvents {
 
 	private static float round(float val) {
 		return (float) Math.round(val * 100.0F) / 100.0F;
+	}
+
+	private static String buildWeatherStatusDebugLine(CloudManager<ClientLevel> manager, Minecraft mc) {
+		var entity = Objects.requireNonNullElse(mc.player, mc.getCameraEntity());
+		if (entity == null)
+			return "Cloud weather: unavailable";
+
+		float x = (float) entity.getX();
+		float y = (float) entity.getY();
+		float z = (float) entity.getZ();
+		var thunder = manager.getThunderCloudTypeAtWorldPos(x, z);
+		float thunderLevel = manager.getThunderLevel(x, y, z);
+		if (thunderLevel > 0.0F && thunder.getLeft() != SimpleCloudsConstants.EMPTY)
+			return "Cloud weather: thundering from " + thunder.getLeft().id() + " (fade "
+					+ round(thunder.getRight()) + ")";
+
+		var rain = manager.getRainCloudTypeAtWorldPos(x, z);
+		float rainLevel = manager.getRainLevel(x, y, z);
+		if (rainLevel > 0.0F && rain.getLeft() != SimpleCloudsConstants.EMPTY)
+			return "Cloud weather: raining from " + rain.getLeft().id() + " (fade " + round(rain.getRight())
+					+ ")";
+
+		return "Cloud weather: none";
 	}
 }

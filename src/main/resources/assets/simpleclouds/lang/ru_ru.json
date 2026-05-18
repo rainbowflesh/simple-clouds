@@ -40,8 +40,6 @@
   "gui.simpleclouds.cloud_previewer.transparency_fade.title": "Затухание прозрачности",
   "gui.simpleclouds.cloud_previewer.warning.too_many_cubes": "Предупреждение: слишком много кубов",
   "gui.simpleclouds.cloud_previewer.weather_type.title": "Тип погоды",
-  "gui.simpleclouds.config.atmosphericClouds.description": "Определяет, должен ли отображаться чисто визуальный 2D слой атмосферных облаков.",
-  "gui.simpleclouds.config.atmosphericClouds.title": "Атмосферные облака",
   "gui.simpleclouds.config.category.debug.title": "Отладка",
   "gui.simpleclouds.config.category.distant_horizons.title": "Distant Horizons",
   "gui.simpleclouds.config.category.lightning_and_thunder.title": "Гром и молнии",

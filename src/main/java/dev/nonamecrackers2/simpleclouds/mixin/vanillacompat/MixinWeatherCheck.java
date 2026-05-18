@@ -15,22 +15,19 @@ import net.minecraft.world.level.storage.loot.predicates.WeatherCheck;
 import net.minecraft.world.phys.Vec3;
 
 @Mixin(WeatherCheck.class)
-public class MixinWeatherCheck
-{
+public class MixinWeatherCheck {
 	@Redirect(method = "test", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;isRaining()Z"))
-	public boolean simpleclouds$localizedRainCheck_test(ServerLevel level, LootContext context)
-	{
-		return weatherCheck(level, context, WeatherType::includesRain);
+	public boolean simpleclouds$localizedRainCheck_test(ServerLevel level, LootContext context) {
+		return weatherCheck(level, context, WeatherType::includesRain, false);
 	}
-	
+
 	@Redirect(method = "test", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;isThundering()Z"))
-	public boolean simpleclouds$localizedThunderCheck_test(ServerLevel level, LootContext context)
-	{
-		return weatherCheck(level, context, WeatherType::includesThunder);
+	public boolean simpleclouds$localizedThunderCheck_test(ServerLevel level, LootContext context) {
+		return weatherCheck(level, context, WeatherType::includesThunder, true);
 	}
-	
-	private static boolean weatherCheck(ServerLevel level, LootContext context, Predicate<WeatherType> weatherType)
-	{
+
+	private static boolean weatherCheck(ServerLevel level, LootContext context, Predicate<WeatherType> weatherType,
+			boolean useThunderWeather) {
 		Vec3 pos = null;
 		if (context.hasParam(LootContextParams.DAMAGE_SOURCE))
 			pos = context.getParam(LootContextParams.DAMAGE_SOURCE).getSourcePosition();
@@ -44,10 +41,14 @@ public class MixinWeatherCheck
 			pos = context.getParam(LootContextParams.BLOCK_ENTITY).getBlockPos().getCenter();
 		else if (context.hasParam(LootContextParams.ORIGIN))
 			pos = context.getParam(LootContextParams.ORIGIN);
-		
-		if (pos != null)
-			return weatherType.test(CloudManager.get(level).getCloudTypeAtWorldPos((float)pos.x, (float)pos.z).getLeft().weatherType());
-		else
+
+		if (pos != null) {
+			CloudManager<?> manager = CloudManager.get(level);
+			WeatherType localizedWeather = useThunderWeather
+					? manager.getThunderCloudTypeAtWorldPos((float) pos.x, (float) pos.z).getLeft().weatherType()
+					: manager.getRainCloudTypeAtWorldPos((float) pos.x, (float) pos.z).getLeft().weatherType();
+			return weatherType.test(localizedWeather);
+		} else
 			return false;
 	}
 }

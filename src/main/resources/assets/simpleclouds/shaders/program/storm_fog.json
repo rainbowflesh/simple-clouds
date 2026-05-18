@@ -28,6 +28,9 @@
         { "name": "CutoffDistance", "type": "float", "count": 1, "values": [ 1000.0 ] },
         { "name": "ColorModulator", "type": "float", "count": 4, "values": [ 1.0, 1.0, 1.0, 1.0 ] },
         { "name": "TotalLightningBolts", "type": "int", "count": 1, "values": [ 0 ] },
-        { "name": "LightTransmittenceDistance", "type": "float", "count": 1, "values": [ 500.0 ] }
+        { "name": "LightTransmittenceDistance", "type": "float", "count": 1, "values": [ 500.0 ] },
+        { "name": "DistantDensityMultiplier", "type": "float", "count": 1, "values": [ 1.0 ] },
+        { "name": "NearFadeStart", "type": "float", "count": 1, "values": [ 0.0 ] },
+        { "name": "NearFadeEnd", "type": "float", "count": 1, "values": [ 0.0 ] }
     ]
 }

@@ -6,7 +6,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record SendCloudManagerPayload(long seed, float speed, float scrollAngle, int cloudHeight)
+public record SendCloudManagerPayload(long seed, float speed, float scrollAngle, int cloudHeight,
+		int layerSeparation)
 		implements CustomPacketPayload, CloudManagerInfoPayload {
 	public static final CustomPacketPayload.Type<SendCloudManagerPayload> TYPE = new CustomPacketPayload.Type<>(
 			SimpleCloudsMod.id("send_cloud_manager"));
@@ -19,7 +20,8 @@ public record SendCloudManagerPayload(long seed, float speed, float scrollAngle,
 				manager.getSeed(),
 				manager.getCloudSpeed(),
 				manager.getScrollAngle(),
-				manager.getCloudHeight());
+				manager.getCloudHeight(),
+				manager.getCloudLayerSeparation());
 	}
 
 	public SendCloudManagerPayload(FriendlyByteBuf buffer) {
@@ -27,6 +29,7 @@ public record SendCloudManagerPayload(long seed, float speed, float scrollAngle,
 				buffer.readLong(),
 				buffer.readFloat(),
 				buffer.readFloat(),
+				buffer.readVarInt(),
 				buffer.readVarInt());
 	}
 

@@ -5,13 +5,19 @@
 #define STYLE ${STYLE}     //0 for default, 1 for shaded
 #define TRANSPARENCY ${TRANSPARENCY}     //0 for no transparency, 1 for transparency
 #define FIXED_SECTION_SIZE ${FIXED_SECTION_SIZE}     //0 for false, 1 for true
+#define FIXED_TRANSPARENCY_SECTION_SIZE ${FIXED_TRANSPARENCY_SECTION_SIZE}     //0 for packed transparency, 1 for fixed sections
+#define CLOUD_BAND_COUNT ${CLOUD_BAND_COUNT}
+#define CLOUD_LAYER_SPEED_REDUCTION ${CLOUD_LAYER_SPEED_REDUCTION}
 
 #define SHADE_DIRECTION normalize(vec3(0.5, 0.5, 0.5))
+#define MIN_TRANSPARENT_ALPHA 0.08
 
 #define TILE_PERIOD vec3(32.0, 64.0, 32.0)
 
 #define LOCAL_SIZE vec3(${LOCAL_SIZE_X}, ${LOCAL_SIZE_Y}, ${LOCAL_SIZE_Z})
 layout(local_size_x = ${LOCAL_SIZE_X}, local_size_y = ${LOCAL_SIZE_Y}, local_size_z = ${LOCAL_SIZE_Z}) in;
+
+uniform int CloudBandHeight;
 
 #moj_import <simpleclouds:psrdnoise.glsl>
 
@@ -110,7 +116,7 @@ sidesPerChunk;
 
 #if TRANSPARENCY == 1
 
-#if FIXED_SECTION_SIZE == 0
+#if FIXED_TRANSPARENCY_SECTION_SIZE == 0
 layout(std430) restrict buffer TotalTransparentCubes {
 	uint totalTransparentCubes;
 };
@@ -159,11 +165,15 @@ uniform int ChunkIndex;
 #if FIXED_SECTION_SIZE == 1
 //Offset in number of mesh elements
 uniform int OpaqueMeshDataOffset;
+
+#if TRANSPARENCY == 1 && FIXED_TRANSPARENCY_SECTION_SIZE == 1
 uniform int TransparentMeshDataOffset;
+#endif
 #endif
 
 #if TRANSPARENCY == 1
 uniform int TransparencyDistance = 300;
+uniform int TransparentMeshDataLimit = 0;
 #endif
 
 #if TYPE == 0
@@ -178,12 +188,19 @@ uniform float FadeStart;
 uniform float FadeEnd;
 #endif
 
+int getCloudBandIndex(float y)
+{
+	float bandHeight = float(CloudBandHeight);
+	return int(clamp(floor(max(y, 0.0) / bandHeight), 0.0, float(CLOUD_BAND_COUNT - 1)));
+}
+
 float getNoiseForLayer(NoiseLayer layer, float x, float y, float z, out vec3 gradient)
 {
 	if (y < layer.HeightOffset || y > layer.HeightOffset + layer.Height - 1)
 		return -10000.0;
 	vec3 scale = vec3(layer.ScaleX, layer.ScaleY, layer.ScaleZ);
-	vec3 scrollScaled = Scroll / scale;
+	float layerSpeedFactor = max(0.1, 1.0 - float(getCloudBandIndex(y)) * CLOUD_LAYER_SPEED_REDUCTION);
+	vec3 scrollScaled = (Scroll * layerSpeedFactor) / scale;
 	vec3 samplePos = vec3(x, y, z) / scale + scrollScaled;
 	float noise = psrdnoise(samplePos, TILE_PERIOD, Wiggle, gradient) * layer.ValueScale + layer.ValueOffset;
 	float heightDelta = y - layer.HeightOffset;
@@ -227,6 +244,23 @@ float getNoiseForLayerGroup(LayerGroup group, float x, float y, float z, out vec
 	}
 	return 0.0;
 }
+int getPackedRegionLayer(float y)
+{
+	return LodLevel * CLOUD_BAND_COUNT + getCloudBandIndex(y);
+}
+
+#if TYPE == 0
+vec4 sampleRegionInfo(float y, int nx, int nz)
+{
+	vec2 texelCoord = gl_GlobalInvocationID.xz + RegionSampleOffset + vec2(nx, nz);
+	return texture(RegionsSampler, vec3(texelCoord / RegionsTexSize, float(getPackedRegionLayer(y))));
+}
+
+bool hasRegionInfo(vec4 info)
+{
+	return info.g > 0.0;
+}
+#endif
 
 bool isPosValid(float x, float y, float z, LayerGroup group, float fade)
 {
@@ -237,8 +271,9 @@ bool isPosValid(float x, float y, float z, LayerGroup group, float fade)
 bool isPosValid(float x, float y, float z, int nx, int nz)
 {
 #if TYPE == 0
-	vec2 texelCoord = gl_GlobalInvocationID.xz + RegionSampleOffset + vec2(nx, nz);
-    vec4 info = texture(RegionsSampler, vec3(texelCoord / RegionsTexSize, float(LodLevel)));
+	vec4 info = sampleRegionInfo(y, nx, nz);
+	if (!hasRegionInfo(info))
+		return false;
     uint regionId = uint(info.r);
     LayerGroup group = layerGroupings.data[regionId];
     float fade = -5.0 * pow(1.0 - info.g, 10.0);
@@ -253,6 +288,38 @@ bool isPosValid(float x, float y, float z, int nx, int nz)
 #endif
     return isPosValid(x, y, z, group, fade);
 }
+
+#if TRANSPARENCY == 1
+bool isTransparentPosValid(float x, float y, float z, LayerGroup group, float fade)
+{
+	if (group.TransparencyFade <= 0.01)
+		return false;
+	vec3 gradient = vec3(0.0);
+	return getNoiseForLayerGroup(group, x, y, z, gradient) + fade > -group.TransparencyFade;
+}
+
+bool isTransparentPosValid(float x, float y, float z, int nx, int nz)
+{
+#if TYPE == 0
+	vec4 info = sampleRegionInfo(y, nx, nz);
+	if (!hasRegionInfo(info))
+		return false;
+	uint regionId = uint(info.r);
+	LayerGroup group = layerGroupings.data[regionId];
+	float fade = -5.0 * pow(1.0 - info.g, 10.0);
+#if FADE_NEAR_ORIGIN == 1
+	float len = distance(vec2(x, z), Origin.xz);
+	fade = min(fade, -5.0 * (1.0 - min(max(len - FadeStart, 0.0) / (FadeEnd - FadeStart), 1.0)));
+#endif
+#elif TYPE == 1
+	LayerGroup group = layerGroupings.data[0];
+	float len = distance(vec2(x, z), Origin.xz);
+	float fade = -5.0 * min(max(len - FadeStart, 0.0) / (FadeEnd - FadeStart), 1.0);
+#endif
+	return isTransparentPosValid(x, y, z, group, fade);
+}
+
+#endif
 
 bool shouldNotOcclude(int index)
 {
@@ -280,6 +347,24 @@ bool shouldNotOcclude(int index)
 		return false;
 	}
 }
+
+float getTransparentAlphaFactor(float y)
+{
+	float bandLerp = float(getCloudBandIndex(y)) / float(max(CLOUD_BAND_COUNT - 1, 1));
+	return mix(1.0, 0.55, bandLerp);
+}
+
+#if TRANSPARENCY == 1
+bool isTransparentCubeVisible(float x, float y, float z)
+{
+	return !isTransparentPosValid(x, y - Scale, z, 0, 0) || shouldNotOcclude(2)
+		|| !isTransparentPosValid(x, y + Scale, z, 0, 0) || shouldNotOcclude(3)
+		|| !isTransparentPosValid(x - Scale, y, z, -1, 0) || shouldNotOcclude(0)
+		|| !isTransparentPosValid(x + Scale, y, z, 1, 0) || shouldNotOcclude(1)
+		|| !isTransparentPosValid(x, y, z - Scale, 0, -1) || shouldNotOcclude(4)
+		|| !isTransparentPosValid(x, y, z + Scale, 0, 1) || shouldNotOcclude(5);
+}
+#endif
 
 // ----- Opaque -----
 
@@ -336,12 +421,14 @@ void createCube(float x, float y, float z, float cubeRadius, float brightness, f
 
 void createTransparentCube(float x, float y, float z, float cubeRadius, float brightness, float alpha)
 {
-#if FIXED_SECTION_SIZE == 0
 	atomicAdd(transparentCubesPerChunk.data[ChunkIndex], 1u);
+#if FIXED_TRANSPARENCY_SECTION_SIZE == 0
 	uint currentCube = atomicAdd(totalTransparentCubes, 1u);
-#elif FIXED_SECTION_SIZE == 1
+#elif FIXED_TRANSPARENCY_SECTION_SIZE == 1
 	uint currentCube = atomicAdd(transparentCubesPerChunk.data[ChunkIndex], 1u);
 #endif
+	if (currentCube >= uint(TransparentMeshDataLimit))
+		return;
 	TransparentCubeInfo cube;
 	cube.x = x + cubeRadius;
 	cube.y = y + cubeRadius;
@@ -349,9 +436,9 @@ void createTransparentCube(float x, float y, float z, float cubeRadius, float br
 	cube.brightness = brightness;
 	cube.alpha = alpha;
 	cube.radius = cubeRadius;
-#if FIXED_SECTION_SIZE == 0
+	#if FIXED_TRANSPARENCY_SECTION_SIZE == 0
 	cubesTransparent.data[currentCube] = cube;
-#elif FIXED_SECTION_SIZE == 1
+	#elif FIXED_TRANSPARENCY_SECTION_SIZE == 1
 	cubesTransparent.data[TransparentMeshDataOffset + currentCube] = cube;
 #endif
 }
@@ -368,8 +455,9 @@ void main()
     float z = id.z * Scale + RenderOffset.z;
     
 #if TYPE == 0
-	vec2 texelCoord = gl_GlobalInvocationID.xz + RegionSampleOffset;
-    vec4 info = texture(RegionsSampler, vec3(texelCoord / RegionsTexSize, float(LodLevel)));
+	vec4 info = sampleRegionInfo(y, 0, 0);
+	if (!hasRegionInfo(info))
+		return;
     uint regionId = uint(info.r);
     LayerGroup group = layerGroupings.data[regionId];
     float fade = -5.0 * pow(1.0 - info.g, 10.0);
@@ -401,8 +489,10 @@ void main()
    		float length = distance(vec2(x, z), Origin.xz);
    		if (length < TransparencyDistance)
    		{
-   			float alpha = 1.0 / group.TransparencyFade * (noise + group.TransparencyFade);
-    		createTransparentCube(x, y, z, Scale / 2.0, brightness, alpha);
+				float alpha = 1.0 / group.TransparencyFade * (noise + group.TransparencyFade);
+				alpha *= getTransparentAlphaFactor(y);
+	    		if (alpha >= MIN_TRANSPARENT_ALPHA)
+	    			createTransparentCube(x, y, z, Scale / 2.0, brightness, alpha);
    		}
     }
 #endif

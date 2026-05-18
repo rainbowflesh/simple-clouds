@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:ragged_banks",
+  "exist_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 54000,
+    "min_inclusive": 36000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 8000,
+    "min_inclusive": 4500
+  },
+  "moves_to_player": false,
+  "order_weight": 820,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 8000,
+    "min_inclusive": 4500
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.18,
+    "min_inclusive": 0.08
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 1.2,
+    "min_inclusive": 0.7
+  },
+  "weight": 7
+}

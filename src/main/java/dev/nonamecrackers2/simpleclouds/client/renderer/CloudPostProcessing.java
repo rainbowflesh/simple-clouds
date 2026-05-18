@@ -207,13 +207,24 @@ final class CloudPostProcessing {
         if (this.blurTarget == null)
             return;
 
+        this.renderStormFogOverlay(this.blurTarget);
+    }
+
+    public void renderRawStormFogOverlay() {
+        if (this.stormFogTarget == null)
+            return;
+
+        this.renderStormFogOverlay(this.stormFogTarget);
+    }
+
+    private void renderStormFogOverlay(RenderTarget target) {
         Window window = this.mc.getWindow();
         this.mc.getMainRenderTarget().bindWrite(false);
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
                 GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
                 GlStateManager.DestFactor.ONE);
-        this.blurTarget.blitToScreen(window.getWidth(), window.getHeight(), false);
+        target.blitToScreen(window.getWidth(), window.getHeight(), false);
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
     }
@@ -331,6 +342,7 @@ final class CloudPostProcessing {
             return;
 
         stateSetup.run();
+        RenderSystem.colorMask(true, true, true, true);
         for (PostPass pass : ((MixinPostChain) chain).simpleclouds$getPostPasses())
             effectConsumer.accept(pass.getEffect());
         chain.process(partialTick);

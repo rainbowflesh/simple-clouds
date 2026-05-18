@@ -10,12 +10,13 @@ We expect all issues to be made in English, with correct spelling and proper gra
 
 ### Questions/Support
 
-This repository is not the place for general questions/support, so do not open an issue requesting such. Our [Discord server](https://discord.gg/cracker-s-modded-community-987817685293355028) is a far more suitable place for general discussion, support, and questions related to Simple Clouds.
+This repository is not the place for general questions/support, so do not open an issue requesting such. Please keep the issue tracker focused on actionable bug reports and feature requests related to Simple Clouds.
 
 ### Bug Reports
 
 Before opening a bug report, please do the following:
-- Read our [notes about compatibility](https://github.com/nonamecrackers2/simple-clouds/wiki/Compatibility) to make sure you aren't opening an issue we're already aware about.
+
+- Read our [notes about compatibility](https://github.com/xvr6/simple-clouds/wiki/Compatibility) to make sure you aren't opening an issue we're already aware about.
 - Ensure that all mods, including Simple Clouds, **are up to date**, and that you are using a **Minecraft version that is actively supported by Simple Clouds**, unless if you consider the issue you are experiencing as a critical bug.
 - Check to see if your **graphics drivers are up to date**, and if they are not, **update them** and **see if the issue persists**.
 - While we understand this may not always be possible, **make sure you can accurately replicate your bug with precise, and concise, set of steps to reproduce the issue.**
@@ -25,9 +26,11 @@ Before opening a bug report, please do the following:
 ### Features/Suggestions
 
 Please **do not suggest** your idea if it pertains to:
+
 - Adding "fantasy" cloud types to the mod. By "fantasy" we mean cloud types that you come up with or those that do not exist in real life. You can create your own cloud types with datapacks/resourcepacks.
 
 Before opening a feature/suggestion/idea issue, please do the following:
+
 - Make sure your feature/suggestion/idea has not already been suggested (as outlined above) and that **it is not already planned or exists in the mod.** Make sure you are playing with the latest version to understand what all exists.
 - **Include all required information** in the feature request form.
 
@@ -37,6 +40,7 @@ Please ensure your suggestion, feature, or idea aligns with the core vision of S
 
 > [!WARNING]
 > **DO NOT suggest your idea if it relates to:**
+>
 > - Making Simple Clouds more realistic,
 > - Plainly stating "improve performance/optimize this" without any suggestions as to how
 
@@ -45,9 +49,9 @@ _Failure to follow any of these requirements will result in your issue being clo
 ## Pull Requests
 
 > [!IMPORTANT]
-> When submitting a pull request, you grant nonamecrackers2 the right to license your contributions under [PolyForm Perimeter License 1.0.1](https://github.com/nonamecrackers2/simple-clouds/blob/1.20.1/LICENSE.md).
+> When submitting a pull request, you grant nonamecrackers2 the right to license your contributions under [PolyForm Perimeter License 1.0.1](https://github.com/xvr6/simple-clouds/blob/1.20.1/LICENSE.md).
 
-Please follow and replicate, to the best of your ability, the primary author nonamecrackers2's code style as outlined [in this document](https://github.com/nonamecrackers2/nonamecrackers2/blob/main/CODE_STYLE.md).
+Please follow and replicate, to the best of your ability, the primary author nonamecrackers2's code style as outlined [in this document](https://github.com/xvr6/simple-clouds).
 
 Please ensure your contributions do not negatively impact performance in a noticeable way. If your change causes FPS to lower by 30 as an example, consider ways you can optimize your code, if possible.
 

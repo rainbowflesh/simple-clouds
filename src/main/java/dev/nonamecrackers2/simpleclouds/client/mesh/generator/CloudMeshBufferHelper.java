@@ -21,13 +21,16 @@ final class CloudMeshBufferHelper {
     }
 
     public static ChunkMeshLayout buildChunkMeshes(List<PreparedChunk> preparedChunks, int opaqueBufferSize,
-            int transparentBufferSize, boolean useTransparency, boolean useFixedMeshDataSectionSize) {
+            int transparentBufferSize, boolean useTransparency, boolean useFixedMeshDataSectionSize,
+            boolean useFixedTransparentMeshDataSectionSize) {
         ImmutableList.Builder<MeshChunk> meshChunks = ImmutableList.builder();
         int totalPreparedChunks = preparedChunks.size();
         int opaqueBytesPerChunk = Mth.ceil((float) opaqueBufferSize / (float) totalPreparedChunks);
         int transparentBytesPerChunk = Mth.ceil((float) transparentBufferSize / (float) totalPreparedChunks);
         if (!useFixedMeshDataSectionSize) {
             opaqueBytesPerChunk *= 4;
+        }
+        if (!useFixedTransparentMeshDataSectionSize) {
             transparentBytesPerChunk *= 4;
         }
 

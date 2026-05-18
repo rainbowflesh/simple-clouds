@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:mackerel_field",
+  "exist_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 54000,
+    "min_inclusive": 30000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 9000,
+    "min_inclusive": 5000
+  },
+  "moves_to_player": false,
+  "order_weight": 560,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 9000,
+    "min_inclusive": 5000
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.16,
+    "min_inclusive": 0.08
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 1.15,
+    "min_inclusive": 0.85
+  },
+  "weight": 6
+}

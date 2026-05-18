@@ -1,6 +1,7 @@
 package dev.nonamecrackers2.simpleclouds.common.cloud;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -31,21 +32,54 @@ public interface CloudInfo {
 
 	float transparencyFade();
 
+	default boolean atmospheric() {
+		return false;
+	}
+
+	default boolean overrideAtmosphericClouds() {
+		return false;
+	}
+
+	default List<Integer> cloudLayers() {
+		return List.of(1);
+	}
+
+	default float getLayerSpeedMultiplier() {
+		List<Integer> layers = this.cloudLayers();
+		if (layers.isEmpty())
+			return 1.0F;
+		return CloudType.getLayerSpeedMultiplier(layers.getFirst());
+	}
+
+	default int getStormAnchorLayer() {
+		List<Integer> layers = this.cloudLayers();
+		if (layers.isEmpty())
+			return 1;
+		return layers.getLast();
+	}
+
 	default float getStormStartRelativeToCloudBase() {
-		return Math.max(0.0F, this.stormStart() - (float) this.noiseConfig().getStartHeight());
+		return (float) this.noiseConfig().getStartHeight() + this.stormStart();
 	}
 
 	default JsonObject toJson() throws JsonSyntaxException {
 		JsonObject object = new JsonObject();
-		object.add("noise_settings",
+		JsonObject visual = new JsonObject();
+		visual.add("noise_settings",
 				NoiseSettings.CODEC.encodeStart(JsonOps.INSTANCE, this.noiseConfig()).resultOrPartial(error -> {
 					throw new JsonSyntaxException(error);
 				}).orElseThrow());
-		object.addProperty("weather_type", this.weatherType().getSerializedName());
-		object.addProperty("storminess", Mth.clamp(this.storminess(), 0.0F, STORMINESS_MAX));
-		object.addProperty("storm_start", Mth.clamp(this.stormStart(), 0.0F, STORM_START_MAX));
-		object.addProperty("storm_fade_distance", Mth.clamp(this.stormFadeDistance(), 0.0F, STORM_FADE_DISTANCE_MAX));
-		object.addProperty("transparency_fade", Mth.clamp(this.transparencyFade(), 0.0F, TRANSPARENCY_FADE_MAX));
+		visual.addProperty("transparency_fade", Mth.clamp(this.transparencyFade(), 0.0F, TRANSPARENCY_FADE_MAX));
+		if (this.overrideAtmosphericClouds())
+			visual.addProperty("override_atmospheric_clouds", true);
+		object.add("visual", visual);
+
+		JsonObject weather = new JsonObject();
+		weather.addProperty("type", this.weatherType().getSerializedName());
+		weather.addProperty("storminess", Mth.clamp(this.storminess(), 0.0F, STORMINESS_MAX));
+		weather.addProperty("storm_start", Mth.clamp(this.stormStart(), 0.0F, STORM_START_MAX));
+		weather.addProperty("storm_fade_distance", Mth.clamp(this.stormFadeDistance(), 0.0F, STORM_FADE_DISTANCE_MAX));
+		object.add("weather", weather);
 		return object;
 	}
 

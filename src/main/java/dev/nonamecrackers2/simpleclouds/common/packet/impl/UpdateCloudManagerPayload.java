@@ -6,29 +6,28 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record UpdateCloudManagerPayload(float speed, float scrollAngle, int cloudHeight) implements CustomPacketPayload, CloudManagerInfoPayload
-{
-	public static final CustomPacketPayload.Type<UpdateCloudManagerPayload> TYPE = new CustomPacketPayload.Type<>(SimpleCloudsMod.id("update_cloud_manager"));
-	
-	public static final StreamCodec<FriendlyByteBuf, UpdateCloudManagerPayload> CODEC = CloudManagerInfoPayload.codec(UpdateCloudManagerPayload::new);
-	
-	public UpdateCloudManagerPayload(CloudManager<?> manager)
-	{
+public record UpdateCloudManagerPayload(float speed, float scrollAngle, int cloudHeight, int layerSeparation)
+		implements CustomPacketPayload, CloudManagerInfoPayload {
+	public static final CustomPacketPayload.Type<UpdateCloudManagerPayload> TYPE = new CustomPacketPayload.Type<>(
+			SimpleCloudsMod.id("update_cloud_manager"));
+
+	public static final StreamCodec<FriendlyByteBuf, UpdateCloudManagerPayload> CODEC = CloudManagerInfoPayload
+			.codec(UpdateCloudManagerPayload::new);
+
+	public UpdateCloudManagerPayload(CloudManager<?> manager) {
 		this(
-			manager.getCloudSpeed(),
-			manager.getScrollAngle(),
-			manager.getCloudHeight()
-		);
+				manager.getCloudSpeed(),
+				manager.getScrollAngle(),
+				manager.getCloudHeight(),
+				manager.getCloudLayerSeparation());
 	}
-	
-	public UpdateCloudManagerPayload(FriendlyByteBuf buffer)
-	{
-		this(buffer.readFloat(), buffer.readFloat(), buffer.readVarInt());
+
+	public UpdateCloudManagerPayload(FriendlyByteBuf buffer) {
+		this(buffer.readFloat(), buffer.readFloat(), buffer.readVarInt(), buffer.readVarInt());
 	}
-	
+
 	@Override
-	public CustomPacketPayload.Type<UpdateCloudManagerPayload> type()
-	{
+	public CustomPacketPayload.Type<UpdateCloudManagerPayload> type() {
 		return TYPE;
 	}
 }

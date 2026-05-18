@@ -11,33 +11,32 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPip
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
-public class SimpleCloudsAfterDhRenderHandler extends DhApiAfterRenderEvent
-{
+public class SimpleCloudsAfterDhRenderHandler extends DhApiAfterRenderEvent {
 	@Override
-	public void afterRender(DhApiEventParam<Void> event)
-	{
+	public void afterRender(DhApiEventParam<Void> event) {
 		if (SimpleCloudsDhCompatHandler._isPassComplete())
 			return;
-		
+
 		SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 		CloudsRenderPipeline pipeline = renderer.getRenderPipeline();
 		Minecraft mc = Minecraft.getInstance();
 		Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-		
+
 		Matrix4f projMat = SimpleCloudsDhCompatHandler._getDhProjMat();
 		Matrix4f modelView = SimpleCloudsDhCompatHandler._getDhModelViewMat();
-//		PoseStack stack = new PoseStack();
-//		stack.setIdentity();
-//		stack.last().pose().set(modelView);
+		// PoseStack stack = new PoseStack();
+		// stack.setIdentity();
+		// stack.last().pose().set(modelView);
 		float partialTick = mc.getTimer().getGameTimeDeltaPartialTick(true);
-		
+
 		int fbo = SimpleCloudsDhCompatHandler._getDhFramebufferId();
-		
+
 		if (SimpleCloudsRenderer.canRenderInDimension(mc.level))
-			pipeline.afterDistantHorizonsRender(mc, renderer, modelView, projMat, partialTick, camPos.x, camPos.y, camPos.z, renderer.getCullFrustum(), fbo);
-		
+			pipeline.afterDistantHorizonsRender(mc, renderer, modelView, projMat, partialTick, camPos.x, camPos.y,
+					camPos.z, renderer.getCullFrustum(), fbo);
+
 		SimpleCloudsDhCompatHandler._updateDhFramebufferId(0);
-		SimpleCloudsDhCompatHandler._updateCachedDhState(null, null);
+		SimpleCloudsDhCompatHandler._updateCachedDhState(null, null, null, null);
 		SimpleCloudsDhCompatHandler._markPassComplete(true);
 	}
 }

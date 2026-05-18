@@ -26,17 +26,17 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 		ProfilerFiller p = mc.getProfiler();
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
 
-		if (SimpleCloudsConfig.CLIENT.atmosphericClouds.get()) {
-			CloudPipelineRenderSteps.renderAtmosphericClouds(mc, renderer, camMat, projMat, partialTick, camX, camY,
-					camZ, cloudColor, p);
-		}
+		p.push("atmospheric_clouds");
+		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
+				cloudColor.g(), cloudColor.b());
+		p.pop();
 
 		p.push("clouds");
 		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ,
 				frustum, cloudColor, p, true, false);
 		p.pop();
 
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
+		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
 			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
 					cloudColor);
@@ -54,7 +54,8 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 	@Override
 	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get() && renderer.shouldUseScreenSpaceStormFog()) {
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
+		if (renderer.shouldRenderStormFog(partialTick) && renderer.shouldUseScreenSpaceStormFog()) {
 			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
 			mc.getMainRenderTarget().bindWrite(false);
 		}

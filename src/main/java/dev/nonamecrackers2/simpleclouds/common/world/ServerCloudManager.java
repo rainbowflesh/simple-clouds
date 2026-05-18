@@ -92,30 +92,35 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 	}
 
 	@Override
-	protected void attemptToSpawnLightning() {
+	protected float attemptToSpawnLightning() {
 		List<SpawnRegion> regions = regionsFromEntities(this.level.players(),
 				SimpleCloudsConstants.LIGHTNING_SPAWN_DIAMETER / 2);
+		final float[] strikeIntensity = new float[] { 0.0F };
 
 		SpawnRegion.randomPointForEachRegion(regions, this.random, SimpleCloudsConstants.LIGHTNING_SPAWN_ATTEMPTS,
 				(r, p) -> {
-					var info = this.getCloudTypeAtWorldPos((float) p.x + 0.5F, (float) p.y + 0.5F);
+					var info = this.getThunderCloudTypeAtWorldPos((float) p.x + 0.5F, (float) p.y + 0.5F);
 					CloudType type = info.getLeft();
 					if (!isValidLightning(type, info.getRight(), this.random))
 						return false;
-					this.spawnLightning(type, info.getRight(), p.x, p.y, this.random.nextInt(3) == 0);
+					this.spawnLightning(type, info.getRight(), p.x, p.y, false);
+					strikeIntensity[0] = CloudManager.getLightningStrikeIntensity(type, info.getRight());
 					return true;
 				});
+		return strikeIntensity[0];
 	}
 
 	@Override
 	protected void spawnLightning(CloudType type, float fade, int x, int z, boolean soundOnly) {
 		int y = (int) this.getStormStartHeight(type);
+		BlockPos pos = new BlockPos(x, y, z);
+		BlockPos targetPos = this.getLightningTargetPos(type, x, z);
 		float spreadnessFactor = this.random.nextFloat();
 		float length = spreadnessFactor * 300.0F + 200.0F;
 		float minPitch = 20.0F + spreadnessFactor * 40.0F;
 		float maxPitch = 80.0F + spreadnessFactor * 10.0F;
-		PacketDistributor.sendToPlayersInDimension(this.level, new SpawnLightningPayload(new BlockPos(x, y, z),
-				soundOnly, this.random.nextInt(), 4, 2, length, 20.0F, minPitch, maxPitch));
+		PacketDistributor.sendToPlayersInDimension(this.level, new SpawnLightningPayload(pos, targetPos, soundOnly,
+				this.random.nextInt(), 4, 2, length, 20.0F, minPitch, maxPitch));
 	}
 
 	public void queueSync(SyncType syncType) {

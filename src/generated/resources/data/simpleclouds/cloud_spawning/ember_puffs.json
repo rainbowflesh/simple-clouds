@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:ember_puffs",
+  "exist_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 36000,
+    "min_inclusive": 18000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 5000,
+    "min_inclusive": 2500
+  },
+  "moves_to_player": false,
+  "order_weight": 780,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 5000,
+    "min_inclusive": 2500
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.2,
+    "min_inclusive": 0.1
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 1.25,
+    "min_inclusive": 0.8
+  },
+  "weight": 6
+}

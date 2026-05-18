@@ -1,0 +1,63 @@
+{
+  "visual": {
+    "noise_settings": [
+      {
+        "fade_distance": 12,
+        "height": 22,
+        "height_offset": 116,
+        "scale_x": 980,
+        "scale_y": 18,
+        "scale_z": 220,
+        "value_offset": 1.08,
+        "value_scale": 1
+      },
+      {
+        "fade_distance": 10,
+        "height": 18,
+        "height_offset": 118,
+        "scale_x": 62,
+        "scale_y": 10,
+        "scale_z": 20,
+        "value_offset": 0,
+        "value_scale": 0.12
+      }
+    ],
+    "transparency_fade": 0.54
+  },
+  "weather": {
+    "type": "none",
+    "storminess": 0.05,
+    "storm_start": 38,
+    "storm_fade_distance": 24
+  },
+  "spawning": {
+    "exist_ticks": {
+      "type": "minecraft:biased_to_bottom",
+      "max_inclusive": 66000,
+      "min_inclusive": 36000
+    },
+    "grow_ticks": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 3000,
+      "min_inclusive": 1800
+    },
+    "moves_to_player": false,
+    "order_weight": 240,
+    "radius": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 13000,
+      "min_inclusive": 8000
+    },
+    "speed": {
+      "type": "minecraft:uniform",
+      "max_exclusive": 0.2,
+      "min_inclusive": 0.12
+    },
+    "stretch_factor": {
+      "type": "minecraft:uniform",
+      "max_exclusive": 1.9,
+      "min_inclusive": 1.25
+    },
+    "weight": 5
+  }
+}

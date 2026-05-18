@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -94,6 +95,7 @@ public class CloudPreviewerScreen extends Screen3D {
 	private final List<ModifiableNoiseSettings> layers;
 	private final List<LayerEditor> layerEditors = Lists.newArrayList();
 	private int currentLayer;
+	private List<Integer> cloudLayers = List.of(1);
 	private WeatherType weatherType = WeatherType.NONE;
 	private float storminess = 0.0F;
 	private float stormStart = 16.0F;
@@ -122,14 +124,22 @@ public class CloudPreviewerScreen extends Screen3D {
 
 		@Override
 		public NoiseSettings noiseConfig() {
+			NoiseSettings settings;
 			if (CloudPreviewerScreen.this.layers.isEmpty())
-				return NoiseSettings.EMPTY;
+				settings = NoiseSettings.EMPTY;
 			else if (CloudPreviewerScreen.this.layers.size() > 1)
-				return new ModifiableLayeredNoise(CloudPreviewerScreen.this.layers);
+				settings = new ModifiableLayeredNoise(CloudPreviewerScreen.this.layers);
 			else
-				return CloudPreviewerScreen.this.layers.get(0);
+				settings = CloudPreviewerScreen.this.layers.get(0);
+			return CloudType.alignNoiseSettingsToLayers(settings, CloudPreviewerScreen.this.cloudLayers);
 		}
 
+		@Override
+		public List<Integer> cloudLayers() {
+			return CloudPreviewerScreen.this.cloudLayers;
+		}
+
+		@Override
 		public float transparencyFade() {
 			return CloudPreviewerScreen.this.transparencyFade;
 		}
@@ -232,9 +242,11 @@ public class CloudPreviewerScreen extends Screen3D {
 			}
 		}, type -> {
 			this.clearAllLayers();
-			if (type.noiseConfig() instanceof AbstractNoiseSettings<?> settings) {
+			this.cloudLayers = List.of(1);
+			NoiseSettings normalizedNoise = type.noiseConfig();
+			if (normalizedNoise instanceof AbstractNoiseSettings<?> settings) {
 				this.addLayer(new ModifiableNoiseSettings(settings));
-			} else if (type.noiseConfig() instanceof AbstractLayeredNoise<?> layeredSettings) {
+			} else if (normalizedNoise instanceof AbstractLayeredNoise<?> layeredSettings) {
 				for (AbstractNoiseSettings<?> settings : layeredSettings.getNoiseLayers())
 					this.addLayer(new ModifiableNoiseSettings(settings));
 			}

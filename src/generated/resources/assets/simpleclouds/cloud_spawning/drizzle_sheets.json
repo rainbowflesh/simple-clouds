@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:drizzle_sheets",
+  "exist_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 66000,
+    "min_inclusive": 42000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 10000,
+    "min_inclusive": 6000
+  },
+  "moves_to_player": true,
+  "order_weight": 870,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 10000,
+    "min_inclusive": 6000
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.14,
+    "min_inclusive": 0.06
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.9,
+    "min_inclusive": 0.5
+  },
+  "weight": 5
+}

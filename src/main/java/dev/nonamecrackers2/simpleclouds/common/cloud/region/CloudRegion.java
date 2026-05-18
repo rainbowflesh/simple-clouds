@@ -166,6 +166,11 @@ public class CloudRegion implements ScAPICloudRegion {
 	}
 
 	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed) {
+		this.tick(random, level, isVisible, speed, 1.0F);
+	}
+
+	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed,
+			float movementSpeedMultiplier) {
 		// if (this.cloudTypeId.toString().equals("simpleclouds:nimbostratus"))
 		// {
 		// System.out.println("------ " + this.cloudTypeId + " -------");
@@ -178,8 +183,9 @@ public class CloudRegion implements ScAPICloudRegion {
 		// }
 
 		Vec2 movementDirection = this.movementDirection;
-		float maxSpeed = this.maxSpeed * speed;
-		float accelerationFactor = this.accelerationFactor * speed;
+		float movementSpeed = speed * movementSpeedMultiplier;
+		float maxSpeed = this.maxSpeed * movementSpeed;
+		float accelerationFactor = this.accelerationFactor * movementSpeed;
 
 		if (level != null) {
 			CloudRegionTickEvent event = new CloudRegionTickEvent(level, this);
@@ -217,6 +223,16 @@ public class CloudRegion implements ScAPICloudRegion {
 		}
 
 		this.priorVisible = isVisible;
+	}
+
+	public void beginDissipating(int fadeOutTicks) {
+		int clampedFadeOut = Math.max(1, fadeOutTicks);
+		float currentScale = this.initialRadius <= 0.0F ? 0.0F
+				: Mth.clamp(this.radius / this.initialRadius, 0.0F, 1.0F);
+		this.growTicks = 0;
+		this.existsForTicks = clampedFadeOut;
+		this.tickCount = Mth.clamp(Mth.floor((1.0F - currentScale) * (float) clampedFadeOut), 0, clampedFadeOut);
+		this.radiusO = this.radius;
 	}
 
 	public int getSyncId() {

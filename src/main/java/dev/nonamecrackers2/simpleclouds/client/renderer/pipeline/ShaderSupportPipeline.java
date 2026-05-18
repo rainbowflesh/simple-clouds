@@ -23,6 +23,11 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 	@Override
 	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
+		mc.getProfiler().push("atmospheric_clouds");
+		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
+				cloudColor.g(), cloudColor.b());
+		mc.getProfiler().pop();
 	}
 
 	@Override
@@ -50,7 +55,7 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 
 		mc.getMainRenderTarget().bindWrite(false);
 
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
+		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
 			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
 					cloudColor);

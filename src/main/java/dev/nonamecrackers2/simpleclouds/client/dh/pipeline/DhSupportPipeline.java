@@ -21,6 +21,7 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.WorldEffects;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps.CloudColor;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
+import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinRenderTargetAccessor;
@@ -35,6 +36,17 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	private DhSupportPipeline() {
 	}
 
+	private static int resolveActiveFramebuffer(int fallbackFramebuffer) {
+		int activeFramebuffer = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+		return activeFramebuffer != 0 ? activeFramebuffer : fallbackFramebuffer;
+	}
+
+	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
+		PoseStack stack = new PoseStack();
+		stack.last().pose().set(mat);
+		return stack;
+	}
+
 	@Override
 	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
@@ -43,12 +55,12 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	@Override
 	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		if (SimpleCloudsConfig.CLIENT.atmosphericClouds.get()) {
-			ProfilerFiller p = mc.getProfiler();
-			CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-			CloudPipelineRenderSteps.renderAtmosphericClouds(mc, renderer, camMat, projMat, partialTick, camX, camY,
-					camZ, cloudColor, p);
-		}
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
+		ProfilerFiller p = mc.getProfiler();
+		p.push("atmospheric_clouds");
+		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
+				cloudColor.g(), cloudColor.b());
+		p.pop();
 	}
 
 	@Override
@@ -64,12 +76,14 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	@Override
 	public void beforeDistantHorizonsApplyShader(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
 			Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum, int dhFbo) {
+		int targetFramebuffer = resolveActiveFramebuffer(dhFbo);
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
 		RenderTarget transparencyTarget = renderer.getCloudTransparencyTarget();
 		transparencyTarget.clear(Minecraft.ON_OSX);
 
-		GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, dhFbo);
+		GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, targetFramebuffer);
 		GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER,
 				((MixinRenderTargetAccessor) cloudTarget).simpleclouds$getFrameBufferId());
 		GL30.glBlitFramebuffer(0, 0, cloudTarget.width, cloudTarget.height, 0, 0, cloudTarget.width, cloudTarget.height,
@@ -78,19 +92,29 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 				((MixinRenderTargetAccessor) transparencyTarget).simpleclouds$getFrameBufferId());
 		GL30.glBlitFramebuffer(0, 0, cloudTarget.width, cloudTarget.height, 0, 0, transparencyTarget.width,
 				transparencyTarget.height, GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, dhFbo);
+		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, targetFramebuffer);
+
+		PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
+		renderer.translateClouds(cloudStack, camX, camY, camZ);
+		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), cloudStack, projMat,
+				renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(),
+				cloudColor.b(), null);
 	}
 
 	@Override
 	public void afterDistantHorizonsRender(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
 			Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum, int dhFbo) {
+		int targetFramebuffer = resolveActiveFramebuffer(dhFbo);
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
+		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler._getMcProjMat();
+		Matrix4f mcModelViewMat = SimpleCloudsDhCompatHandler._getMcModelViewMat();
+		Frustum renderFrustum = null;
 
 		ProfilerFiller p = mc.getProfiler();
 
 		p.push("clouds");
 		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, modelViewMat, projMat, partialTick, camX, camY,
-				camZ, frustum, cloudColor, p, false, false);
+				camZ, renderFrustum, cloudColor, p, false, false);
 
 		p.push("cloud_shadows");
 		renderer.doCloudShadowProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ,
@@ -105,16 +129,16 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		Matrix4f oldMcProjMat = RenderSystem.getProjectionMatrix();
 
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
+		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
-			CloudPipelineRenderSteps.prepareStormFog(renderer, modelViewMat, projMat, partialTick, camX, camY, camZ,
-					cloudColor);
+			renderer.doStormPostProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ, cloudColor.r(),
+					cloudColor.g(), cloudColor.b());
 			// DH exposes its own LOD depth, but this path does not keep a separate
 			// scene-depth
 			// texture for the screen-space fog composite. Using the prepared overlay here
 			// keeps
 			// the far horizon occluded instead of letting the screen-space pass skip it.
-			renderer.renderPreparedStormFogOverlay();
+			renderer.renderRawStormFogOverlay();
 
 			p.pop();
 		}
@@ -127,13 +151,12 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		// we have in the cloud framebuffer and swap back after
 		GlStateManager._glFramebufferTexture2D(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL11.GL_TEXTURE_2D,
 				renderer.getCloudTarget().getDepthTextureId(), 0);
-		RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN); // Make minecraft use the DH proj
-																						// mat
+		RenderSystem.setProjectionMatrix(mcProjMat, VertexSorting.DISTANCE_TO_ORIGIN);
 
 		// We can then render whatever we want to the main MC framebuffer while using DH
 		// LOD depth
 		PoseStack stack = new PoseStack();
-		stack.mulPose(modelViewMat);
+		stack.mulPose(mcModelViewMat);
 		stack.pushPose();
 		stack.translate(-camX, -camY, -camZ);
 		renderLightning(renderer.getWorldEffectsManager(), renderer, mc, stack, partialTick, camX, camY, camZ);
@@ -157,7 +180,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 			PoseStack stack, float partialTick, double camX, double camY, double camZ) {
 		Tesselator tesselator = Tesselator.getInstance();
 		RenderSystem.enableBlend();
-		RenderSystem.enableDepthTest();
+		RenderSystem.disableDepthTest();
+		RenderSystem.depthMask(false);
 
 		if (effects.hasLightningToRender()) {
 			float cachedFogStart = RenderSystem.getShaderFogStart();
@@ -171,7 +195,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 						(float) camZ) <= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF && bolt.getFade(partialTick) > 0.5F)
 					mc.level.setSkyFlashTime(2);
 				float dist = bolt.getPosition().distance((float) camX, (float) camY, (float) camZ);
-				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, renderer.getFadeFactorForDistance(dist));
+				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, effects.getLightningVisibility(dist));
 			});
 
 			MeshData data = builder.build();
@@ -183,6 +207,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 			RenderSystem.defaultBlendFunc();
 		}
 
+		RenderSystem.depthMask(true);
+		RenderSystem.enableDepthTest();
 		RenderSystem.disableBlend();
 	}
 }

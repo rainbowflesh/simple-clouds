@@ -65,7 +65,8 @@ public class SimpleCloudsEvents {
 			return;
 		CloudManager<?> manager = CloudManager.get(entity.level());
 		if (!manager.shouldUseVanillaWeather()
-				&& manager.getCloudTypeAtWorldPos((float) entity.getX(), (float) entity.getZ()).getLeft().weatherType()
+				&& manager.getThunderCloudTypeAtWorldPos((float) entity.getX(), (float) entity.getZ()).getLeft()
+						.weatherType()
 						.includesThunder())
 			event.setContinueSleeping(true);
 	}

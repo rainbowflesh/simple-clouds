@@ -47,24 +47,10 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 			double camX, double camY, double camZ, Frustum frustum) {
 	}
 
-	// -----------------------------------------------------------------------
-	// afterSky — renders ONLY the atmospheric clouds
-	// -----------------------------------------------------------------------
 	@Override
 	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer,
 			Matrix4f viewMat, Matrix4f projMat, float partialTick,
 			double camX, double camY, double camZ, Frustum frustum) {
-		if (SimpleCloudsConfig.CLIENT.atmosphericClouds.get()) {
-			float[] cloudCol = renderer.getCloudColor(partialTick);
-			mc.getProfiler().push("atmospheric_clouds");
-			PoseStack stack = poseStackFromMatrix(viewMat);
-			renderer.getAtmosphericCloudRenderer().render(
-					stack, projMat, partialTick,
-					camX, camY, camZ,
-					cloudCol[0], cloudCol[1], cloudCol[2]);
-			mc.getMainRenderTarget().bindWrite(false);
-			mc.getProfiler().pop();
-		}
 	}
 
 	// -----------------------------------------------------------------------
@@ -97,6 +83,9 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 
 		// -- Volumetric cloud geometry --------------------------------------
 		p.push("clouds");
+		p.push("atmospheric_clouds");
+		renderer.renderAtmosphericClouds(viewMat, projMat, partialTick, camX, camY, camZ, cloudR, cloudG, cloudB);
+		p.pop();
 
 		// translateClouds / renderCloudsOpaque/Transparency still use PoseStack
 		PoseStack cloudStack = poseStackFromMatrix(viewMat);
@@ -137,7 +126,7 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		p.pop(); // "clouds"
 
 		// -- Storm fog ------------------------------------------------------
-		if (SimpleCloudsConfig.CLIENT.renderStormFog.get()) {
+		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
 			// doStormPostProcessing takes Matrix4f in 1.21.1, NOT PoseStack
 			renderer.doStormPostProcessing(

@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:anvil_bloom",
+  "exist_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 78000,
+    "min_inclusive": 54000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 12000,
+    "min_inclusive": 7500
+  },
+  "moves_to_player": true,
+  "order_weight": 1150,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 12000,
+    "min_inclusive": 7500
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.08,
+    "min_inclusive": 0.03
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.7,
+    "min_inclusive": 0.32
+  },
+  "weight": 2
+}

@@ -39,6 +39,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/CloudGenerator");
+	private static final int LAYER_CONFLICT_DISSIPATE_TICKS = 240;
 	private List<SpawnRegion> spawnRegions = Lists.newArrayList();
 	private final List<CloudRegion> clouds = Lists.newArrayList();
 	private final List<SpawnRegion> readOnlySpawnRegions = Collections.unmodifiableList(this.spawnRegions);
@@ -147,6 +148,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		var iterator = this.clouds.iterator();
 		while (iterator.hasNext()) {
 			CloudRegion region = iterator.next();
+			CloudType type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
 			if (predicate.test(region)) {
 				iterator.remove();
 				NeoForge.EVENT_BUS
@@ -159,7 +161,8 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 
 	@Override
 	public boolean addCloud(CloudRegion region, CloudGenerator.Order order) {
-		if (!this.cloudGetter.doesCloudTypeExist(region.getCloudTypeId())) {
+		CloudType addedType = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
+		if (addedType == null) {
 			LOGGER.warn("Attempted to spawn a cloud formation: unknown id '{}'", region.getCloudTypeId());
 			return false;
 		}
@@ -169,13 +172,24 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		if (this.clouds.contains(region))
 			return false;
 
+		List<CloudRegion> conflictingClouds = this.findLayerConflicts(region, addedType, true);
+		for (CloudRegion conflictingCloud : conflictingClouds) {
+			CloudType conflictingType = this.cloudGetter.getCloudTypeForId(conflictingCloud.getCloudTypeId());
+			if (conflictingType == null)
+				continue;
+
+			if (this.compareRegionDominance(region, addedType, conflictingCloud, conflictingType) <= 0)
+				return false;
+		}
+		Set<CloudRegion> replacedClouds = Set.copyOf(conflictingClouds);
+
 		// Ensures we wont go over the maximum cloud formations for all regions that
 		// would include
 		// this cloud formation
 		for (SpawnRegion spawnRegion : this.getRegionsThatOccupyCloud(region)) {
 			int totalCount = 0;
 			for (CloudRegion cloud : this.clouds) {
-				if (cloud.intersects(spawnRegion))
+				if (!replacedClouds.contains(cloud) && cloud.intersects(spawnRegion))
 					totalCount++;
 			}
 			if (totalCount >= SimpleCloudsConstants.MAX_CLOUD_FORMATIONS) {
@@ -185,6 +199,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		}
 
 		order.appender.accept(this.clouds, region);
+		replacedClouds.forEach(cloud -> cloud.beginDissipating(LAYER_CONFLICT_DISSIPATE_TICKS));
 
 		// System.out.println(this.clouds.stream().map(CloudRegion::getOrderWeight).toList());
 
@@ -214,6 +229,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		var iterator = this.clouds.iterator();
 		while (iterator.hasNext()) {
 			CloudRegion region = iterator.next();
+			CloudType type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
 
 			// NOTE: If a cloud formation (region) is on the edge of a spawn region and is
 			// not visible, if the player moves even a slightly bit they can make that
@@ -229,7 +245,8 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 							/ SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR);
 			if (isVisible != region.wasPriorVisible())
 				this.onRegionVisibilityChange(region, isVisible);
-			region.tick(this.random, level, isVisible, speed);
+			float movementSpeedMultiplier = type != null ? type.getLayerSpeedMultiplier() : 1.0F;
+			region.tick(this.random, level, isVisible, speed, movementSpeedMultiplier);
 
 			if (!this.cloudGetter.doesCloudTypeExist(region.getCloudTypeId())) {
 				LOGGER.warn("Cloud type with id {} no longer exists, removing cloud region", region.getCloudTypeId());
@@ -249,6 +266,8 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 				// " + this.getTotalCloudRegions());
 			}
 		}
+
+		this.resolveLayerConflicts();
 
 		if (this.ticksTillNextGen > 0)
 			this.ticksTillNextGen -= Math.max(1, Mth.ceil(speed));
@@ -379,12 +398,6 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 	@Override
 	public Optional<CloudRegion> createRegion(SpawnInfo info, float playerX, float playerZ, float x, float z,
 			RandomSource random, boolean growTime) {
-		for (CloudRegion region : this.getClouds()) {
-			float dist = Vector2f.distance(x, z, region.getWorldX(), region.getWorldZ()) - region.getWorldRadius();
-			if (dist <= SimpleCloudsConstants.MIN_SPAWN_DIST_BETWEEN_REGIONS)
-				return Optional.empty();
-		}
-
 		float deltaAdj = info.movesToPlayer() ? 0.1F : 1.0F;
 		float deltaX = (playerX - x) * (1.0F + random.nextFloat() * deltaAdj);
 		float deltaZ = (playerZ - z) * (1.0F + random.nextFloat() * deltaAdj);
@@ -437,6 +450,83 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 	}
 
 	protected void onRegionVisibilityChange(CloudRegion region, boolean nowVisible) {
+	}
+
+	private void resolveLayerConflicts() {
+		for (int i = 0; i < this.clouds.size(); i++) {
+			CloudRegion first = this.clouds.get(i);
+			CloudType firstType = this.cloudGetter.getCloudTypeForId(first.getCloudTypeId());
+			if (firstType == null)
+				continue;
+
+			for (int j = i + 1; j < this.clouds.size(); j++) {
+				CloudRegion second = this.clouds.get(j);
+				CloudType secondType = this.cloudGetter.getCloudTypeForId(second.getCloudTypeId());
+				if (secondType == null || !this.doCloudTypesShareLayer(firstType, secondType)
+						|| !this.doRegionsOverlap(first, second, false))
+					continue;
+
+				if (this.compareRegionDominance(first, firstType, second, secondType) >= 0)
+					second.beginDissipating(LAYER_CONFLICT_DISSIPATE_TICKS);
+				else
+					first.beginDissipating(LAYER_CONFLICT_DISSIPATE_TICKS);
+			}
+		}
+	}
+
+	private List<CloudRegion> findLayerConflicts(CloudRegion candidate, CloudType candidateType,
+			boolean useSpawnBuffer) {
+		List<CloudRegion> conflicts = Lists.newArrayList();
+		for (CloudRegion existing : this.clouds) {
+			CloudType existingType = this.cloudGetter.getCloudTypeForId(existing.getCloudTypeId());
+			if (existingType == null || !this.doCloudTypesShareLayer(candidateType, existingType)
+					|| !this.doRegionsOverlap(candidate, existing, useSpawnBuffer))
+				continue;
+			conflicts.add(existing);
+		}
+		return conflicts;
+	}
+
+	private boolean doCloudTypesShareLayer(CloudType first, CloudType second) {
+		for (int layer : first.cloudLayers()) {
+			if (second.cloudLayers().contains(layer))
+				return true;
+		}
+		return false;
+	}
+
+	private boolean doRegionsOverlap(CloudRegion first, CloudRegion second, boolean useSpawnBuffer) {
+		float firstRadius = this.getConflictRadius(first, useSpawnBuffer);
+		float secondRadius = this.getConflictRadius(second, useSpawnBuffer);
+		float extraPadding = useSpawnBuffer ? SimpleCloudsConstants.MIN_SPAWN_DIST_BETWEEN_REGIONS : 0.0F;
+		return Vector2f.distance(first.getWorldX(), first.getWorldZ(), second.getWorldX(),
+				second.getWorldZ()) <= firstRadius + secondRadius + extraPadding;
+	}
+
+	private float getConflictRadius(CloudRegion region, boolean useInitialRadius) {
+		float radius = useInitialRadius ? region.getInitialWorldRadius() : region.getWorldRadius();
+		return radius / Math.max(0.01F, region.getStretch());
+	}
+
+	private int compareRegionDominance(CloudRegion first, CloudType firstType, CloudRegion second,
+			CloudType secondType) {
+		int layerSpanCompare = Integer.compare(firstType.cloudLayers().size(), secondType.cloudLayers().size());
+		if (layerSpanCompare != 0)
+			return layerSpanCompare;
+
+		int radiusCompare = Float.compare(first.getInitialWorldRadius(), second.getInitialWorldRadius());
+		if (radiusCompare != 0)
+			return radiusCompare;
+
+		int storminessCompare = Float.compare(firstType.storminess(), secondType.storminess());
+		if (storminessCompare != 0)
+			return storminessCompare;
+
+		int weightCompare = Integer.compare(first.getOrderWeight(), second.getOrderWeight());
+		if (weightCompare != 0)
+			return weightCompare;
+
+		return Integer.compare(second.getSyncId(), first.getSyncId());
 	}
 
 	protected abstract List<SpawnRegion> determineValidSpawnRegions(RandomSource random, @Nullable Level level);

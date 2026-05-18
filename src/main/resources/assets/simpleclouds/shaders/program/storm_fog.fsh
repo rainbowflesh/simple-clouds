@@ -42,6 +42,9 @@ uniform vec4 ColorModulator;
 //a measure in which how far terrain must be in the storm fog
 //to still be somewhat visible 
 uniform float LightTransmittenceDistance;
+uniform float DistantDensityMultiplier;
+uniform float NearFadeStart;
+uniform float NearFadeEnd;
 
 in vec2 texCoord;
 in vec2 oneTexel;
@@ -143,7 +146,7 @@ void main()
 	
     for (int i = 0; i < STEPS; i++)
     {
-    	point = CameraPos + rayDir * 0.2 * pow(float(i), 2.0);
+	    	point = CameraPos + rayDir * 0.2 * pow(float(i), 2.0);
     	rayDepth = distance(point, CameraPos);
     	
     	//If at any point the ray intersects with any vertex in the scene, we stop
@@ -156,9 +159,11 @@ void main()
     	//and set the final color
     	if (col.a > 0.0 && col.r <= ColorThreshold.r && col.g <= ColorThreshold.g && col.b <= ColorThreshold.b)
     	{
-    		float densityAdd = rayDepth * 0.0001;
+	    		float densityAdd = rayDepth * 0.0001;
     		
     		float fadeFactor = 1.0;
+	    	if (NearFadeEnd > NearFadeStart && rayDepth < NearFadeEnd)
+	    		fadeFactor *= clamp((rayDepth - NearFadeStart) / (NearFadeEnd - NearFadeStart), 0.0, 1.0);
     		
     		// Distance fade
 			if (rayDepth > FogStart)
@@ -169,7 +174,7 @@ void main()
     		
     		density += densityAdd * fadeFactor;
     		
-    		fogSteps += 1.0;
+	    		fogSteps += 1.0;
 			colorAccum += vec3(col.rgb * ColorMultiplier * ColorModulator.rgb);
     	}
     	
@@ -185,6 +190,8 @@ void main()
     
     vec3 avgCol = colorAccum / fogSteps;
     vec4 finalCol = vec4(avgCol, min(density, 1.0));
+	float distantFogFactor = clamp(LightTransmittenceDistance / max(rayDepth, LightTransmittenceDistance), 0.0, 1.0);
+	finalCol.a *= mix(DistantDensityMultiplier, 1.0, distantFogFactor);
     
     // This is technically not correct but looks ok
     float lightningMul = getNearestLightningBoltColorModifier(point);

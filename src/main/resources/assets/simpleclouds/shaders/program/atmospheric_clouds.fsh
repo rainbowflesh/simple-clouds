@@ -25,13 +25,13 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient)
     vec4 vx = vec4(v0.x, v1.x, v2.x, v3.x);
     vec4 vy = vec4(v0.y, v1.y, v2.y, v3.y);
     vec4 vz = vec4(v0.z, v1.z, v2.z, v3.z);
-	if(period.x > 0.0) vx = mod(vx, period.x);
-	if(period.y > 0.0) vy = mod(vy, period.y);
-	if(period.z > 0.0) vz = mod(vz, period.z);
-	i0 = floor(M * vec3(vx.x, vy.x, vz.x) + 0.5);
-	i1 = floor(M * vec3(vx.y, vy.y, vz.y) + 0.5);
-	i2 = floor(M * vec3(vx.z, vy.z, vz.z) + 0.5);
-	i3 = floor(M * vec3(vx.w, vy.w, vz.w) + 0.5);
+        if(period.x > 0.0) vx = mod(vx, period.x);
+        if(period.y > 0.0) vy = mod(vy, period.y);
+        if(period.z > 0.0) vz = mod(vz, period.z);
+        i0 = floor(M * vec3(vx.x, vy.x, vz.x) + 0.5);
+        i1 = floor(M * vec3(vx.y, vy.y, vz.y) + 0.5);
+        i2 = floor(M * vec3(vx.z, vy.z, vz.z) + 0.5);
+        i3 = floor(M * vec3(vx.w, vy.w, vz.w) + 0.5);
   }
   vec4 hash = permute( permute( permute( 
               vec4(i0.z, i1.z, i2.z, i3.z ))
@@ -70,10 +70,11 @@ float psrdnoise(vec3 x, vec3 period, float alpha, out vec3 gradient)
 }
 
 uniform sampler2D DiffuseSampler;
+uniform sampler2D DiffuseDepthSampler;
 
 uniform mat4 InverseWorldProjMat;
 uniform mat4 InverseModelViewMat;
-//uniform vec3 CameraPos;
+uniform vec3 CameraPos;
 uniform mat2 Transform;
 uniform float Height;
 uniform float PixelScale;
@@ -90,53 +91,53 @@ out vec4 fragColor;
 
 vec3 getRayDirection(vec2 screenUV)
 {
-	vec2 uv = screenUV * 2.0 - 1.0;
-	vec4 near = vec4(uv, 0.0, 1.0);
-	vec4 far = vec4(uv, 1.0, 1.0);
-	near = InverseWorldProjMat * near;
-	far = InverseWorldProjMat * far;
-	near.xyz /= near.w;
-	far.xyz /= far.w;
-	vec3 nearResult = (InverseModelViewMat * near).xyz;
-	vec3 farResult = (InverseModelViewMat * far).xyz;
-	return normalize(farResult - nearResult);
+        vec2 uv = screenUV * 2.0 - 1.0;
+        vec4 near = vec4(uv, 0.0, 1.0);
+        vec4 far = vec4(uv, 1.0, 1.0);
+        near = InverseWorldProjMat * near;
+        far = InverseWorldProjMat * far;
+        near.xyz /= near.w;
+        far.xyz /= far.w;
+        vec3 nearResult = (InverseModelViewMat * near).xyz;
+        vec3 farResult = (InverseModelViewMat * far).xyz;
+        return normalize(farResult - nearResult);
 }
 
 void main() 
 {
-	vec3 col = texture(DiffuseSampler, texCoord).rgb;
-	
-	if (CloudDensity <= 0.01)
-	{
-		fragColor = vec4(col, 1.0);
-		return;
-	}
-	
-	vec3 rayDir = getRayDirection(texCoord);
-	//vec3 origin = vec3(CameraPos.x, 0.0, CameraPos.z);
-	float rayLen = Height / rayDir.y;//(Height - origin.y) / rayDir.y;
-	if (rayLen <= 0.0)
-	{
-		fragColor = vec4(col, 1.0);
-		return;
-	}
-	vec3 point = rayLen * rayDir;//origin + rayLen * rayDir;
-	
-	float len = length(point.xz);//distance(point.xz, CameraPos.xz);
-	if (len > MaxDist)
-	{
-		fragColor = vec4(col, 1.0);
-		return;
-	}
-	float fade = clamp((MaxDist - len) / (MaxDist - FadeStart), 0.0, 1.0);
-	
-	vec2 uv = floor(point.xz / PixelScale) * PixelScale / Span;
-	uv = Transform * uv;
-	
-	vec3 gradient = vec3(0.0);
-	float factor = psrdnoise(vec3(uv, ShiftMovement), vec3(32.0), 0.0, gradient) * 0.5 + 0.5;
-	factor = clamp(factor - 1.0 + CloudDensity, 0.0, 1.0);
-	col = mix(col, CloudColor.rgb, factor * fade * CloudColor.a);
-	
-	fragColor = vec4(col, 1.0);
+        vec3 col = texture(DiffuseSampler, texCoord).rgb;
+
+        if (CloudDensity <= 0.01)
+        {
+                fragColor = vec4(col, 1.0);
+                return;
+        }
+
+        vec3 rayDir = getRayDirection(texCoord);
+        vec3 origin = vec3(CameraPos.x, 0.0, CameraPos.z);
+        float rayLen = (Height - origin.y) / rayDir.y;
+        if (rayLen <= 0.0)
+        {
+                fragColor = vec4(col, 1.0);
+                return;
+        }
+        vec3 point = origin + rayLen * rayDir;
+
+        float len = distance(point.xz, CameraPos.xz);
+        if (len > MaxDist)
+        {
+                fragColor = vec4(col, 1.0);
+                return;
+        }
+        float fade = clamp((MaxDist - len) / (MaxDist - FadeStart), 0.0, 1.0);
+
+        vec2 uv = floor(point.xz / PixelScale) * PixelScale / Span;
+        uv = Transform * uv;
+
+        vec3 gradient = vec3(0.0);
+        float factor = psrdnoise(vec3(uv, ShiftMovement), vec3(32.0), 0.0, gradient) * 0.5 + 0.5;
+        factor = clamp(factor - 1.0 + CloudDensity, 0.0, 1.0);
+        col = mix(col, CloudColor.rgb, factor * fade * CloudColor.a);
+
+        fragColor = vec4(col, 1.0);
 }

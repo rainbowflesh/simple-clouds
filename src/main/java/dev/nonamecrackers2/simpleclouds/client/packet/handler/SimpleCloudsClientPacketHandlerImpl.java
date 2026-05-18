@@ -45,6 +45,7 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 		manager.setScrollAngle(payload.scrollAngle());
 		manager.setCloudSpeed(payload.speed());
 		manager.setCloudHeight(payload.cloudHeight());
+		manager.setCloudLayerSeparation(payload.layerSeparation());
 		if (manager instanceof ClientCloudManager clientManager)
 			clientManager.setReceivedSync();
 	}
@@ -99,9 +100,9 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 
 	@Override
 	public void handleSpawnLightningPayload(SpawnLightningPayload packet, IPayloadContext context) {
-		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(packet.pos(), packet.onlySound(),
-				packet.seed(), packet.maxDepth(), packet.branchCount(), packet.maxBranchLength(), packet.maxWidth(),
-				packet.minimumPitch(), packet.maximumPitch());
+		SimpleCloudsRenderer.getInstance().getWorldEffectsManager().spawnLightning(packet.pos(), packet.targetPos(),
+				packet.onlySound(), packet.seed(), packet.maxDepth(), packet.branchCount(), packet.maxBranchLength(),
+				packet.maxWidth(), packet.minimumPitch(), packet.maximumPitch());
 	}
 
 	@Override

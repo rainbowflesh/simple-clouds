@@ -36,7 +36,22 @@ public class SimpleCloudsConfigListeners {
 	}
 
 	public static void onCloudModeChanged(CloudMode newMode) {
-		executeOnServerThread(() -> PacketDistributor.sendToAllPlayers(new NotifyCloudModeUpdatedPayload(newMode)));
+		executeOnServerThread(() -> {
+			MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+			if (server == null)
+				return;
+
+			for (ServerLevel level : server.getAllLevels()) {
+				ServerCloudManager manager = (ServerCloudManager) CloudManager.get(level);
+				if (newMode != CloudMode.SINGLE && manager.getClouds().isEmpty()) {
+					for (ServerPlayer player : level.players())
+						manager.onPlayerJoin(player);
+					manager.queueSync(SyncType.CLOUD_FORMATIONS);
+				}
+			}
+
+			PacketDistributor.sendToAllPlayers(new NotifyCloudModeUpdatedPayload(newMode));
+		});
 	}
 
 	public static void onSingleModeCloudTypeChanged(String newType) {

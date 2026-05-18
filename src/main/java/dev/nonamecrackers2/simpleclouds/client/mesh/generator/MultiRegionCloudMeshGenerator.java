@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.joml.Matrix2f;
@@ -54,7 +53,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	private static final String LOD_SCALES_NAME = "LodScales";
 	private static final String CLOUD_REGIONS_NAME = "CloudRegions";
 	public static final int MAX_CLOUD_TYPES = 64;
-	private static final int BYTES_PER_REGION = 32;
+	private static final int REGION_TEXTURE_BAND_COUNT = CloudType.MAX_CLOUD_LAYERS;
+	private static final int BYTES_PER_REGION = 40;
 	private int requiredRegionTexSize;
 	private CloudGetter cloudGetter = CloudGetter.EMPTY;
 	private CloudInfo[] cachedTypes = new CloudInfo[0];
@@ -135,9 +135,10 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		if (this.regionTextureGenerator != null)
 			this.regionTextureGenerator.close();
 
-		var params = ImmutableMap.of("EDGE_FADE_FACTOR", String.valueOf(SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR));
-		this.regionTextureGenerator = ComputeShader.loadShader(REGION_GENERATOR_LOC, manager, 16, 16,
-				this.lodConfig.getLods().length + 1, params);
+		var params = ImmutableMap.of(
+				"EDGE_FADE_FACTOR", String.valueOf(SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR),
+				"CLOUD_BAND_COUNT", String.valueOf(REGION_TEXTURE_BAND_COUNT));
+		this.regionTextureGenerator = ComputeShader.loadShader(REGION_GENERATOR_LOC, manager, 16, 16, 1, params);
 
 		ShaderStorageBufferObject lodScales = this.regionTextureGenerator.createAndBindSSBO(LOD_SCALES_NAME,
 				GL15.GL_STATIC_READ);
@@ -184,7 +185,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		GL11.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
 		GL11.glTexParameteri(GL30.GL_TEXTURE_2D_ARRAY, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
 		GL12.glTexImage3D(GL30.GL_TEXTURE_2D_ARRAY, 0, GL30.GL_RG32F, this.requiredRegionTexSize,
-				this.requiredRegionTexSize, this.lodConfig.getLods().length + 1, 0, GL30.GL_RG, GL11.GL_FLOAT,
+				this.requiredRegionTexSize, this.getTotalRegionTextureLayers(), 0, GL30.GL_RG, GL11.GL_FLOAT,
 				(IntBuffer) null);
 		GL11.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, 0);
 
@@ -206,7 +207,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		});
 
 		LOGGER.debug("Created cloud region texture generator with size {}x{}x{}", this.requiredRegionTexSize,
-				this.requiredRegionTexSize, this.lodConfig.getLods().length + 1);
+				this.requiredRegionTexSize, this.getTotalRegionTextureLayers());
 	}
 
 	@Override
@@ -214,33 +215,17 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			float maxZ) {
 		int largestEndHeight = 0;
 		boolean empty = true;
-		float centerX = (minX + maxX) * 0.5F;
-		float centerZ = (minZ + maxZ) * 0.5F;
 
-		Pair<CloudType, Float> typeAt = this.cloudGetter.getCloudTypeAtPosition(minX, minZ);
-		if (typeAt.getRight() < 1.0F)
-			empty = false;
-		largestEndHeight = typeAt.getLeft().noiseConfig().getEndHeight();
+		for (CloudRegion region : this.cloudGetter.getClouds()) {
+			CloudType type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
+			if (type == null || !this.cloudTypeIndices.containsKey(type))
+				continue;
+			if (!this.intersectsChunkBounds(region, minX, minZ, maxX, maxZ))
+				continue;
 
-		typeAt = this.cloudGetter.getCloudTypeAtPosition(minX, maxZ);
-		if (typeAt.getRight() < 1.0F)
 			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
-
-		typeAt = this.cloudGetter.getCloudTypeAtPosition(maxX, minZ);
-		if (typeAt.getRight() < 1.0F)
-			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
-
-		typeAt = this.cloudGetter.getCloudTypeAtPosition(maxX, maxZ);
-		if (typeAt.getRight() < 1.0F)
-			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
-
-		typeAt = this.cloudGetter.getCloudTypeAtPosition(centerX, centerZ);
-		if (typeAt.getRight() < 1.0F)
-			empty = false;
-		largestEndHeight = Math.max(largestEndHeight, typeAt.getLeft().noiseConfig().getEndHeight());
+			largestEndHeight = Math.max(largestEndHeight, type.noiseConfig().getEndHeight());
+		}
 
 		if (empty || largestEndHeight == 0)
 			return skip();
@@ -270,7 +255,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			GL41.glProgramUniform2f(id, loc, meshOffsetX, meshOffsetZ);
 		});
 		this.regionTextureGenerator.dispatchAndWait(this.requiredRegionTexSize / 16, this.requiredRegionTexSize / 16,
-				1);
+				this.getTotalRegionTextureLayers());
 	}
 
 	private void uploadCloudRegionData(float meshOffsetX, float meshOffsetZ, float partialTick) {
@@ -282,7 +267,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		for (CloudRegion region : regions) {
 			CloudInfo type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
 			if (this.cloudTypeIndices.containsKey(type))
-				regionDataSize++;
+				regionDataSize += type.cloudLayers().size();
 		}
 
 		int count = regionDataSize;
@@ -305,20 +290,24 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 					.getShaderStorageBuffer(CLOUD_REGIONS_NAME);
 			regionsBuffer.writeData(b -> {
 				for (CloudRegion region : selectedRegions) {
-					Integer typeIndex = this.cloudTypeIndices
-							.get(this.cloudGetter.getCloudTypeForId(region.getCloudTypeId()));
+					CloudInfo type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
+					Integer typeIndex = this.cloudTypeIndices.get(type);
 					if (typeIndex == null)
 						continue;
 
 					Matrix2f transform = region.createTransform(partialTick);
-					b.putFloat(region.getPosX(partialTick));
-					b.putFloat(region.getPosZ(partialTick));
-					b.putFloat(typeIndex.floatValue());
-					b.putFloat(region.getRadius(partialTick));
-					b.putFloat(transform.m00);
-					b.putFloat(transform.m01);
-					b.putFloat(transform.m10);
-					b.putFloat(transform.m11);
+					for (int cloudLayer : type.cloudLayers()) {
+						b.putFloat(region.getPosX(partialTick));
+						b.putFloat(region.getPosZ(partialTick));
+						b.putFloat(typeIndex.floatValue());
+						b.putFloat(region.getRadius(partialTick));
+						b.putFloat((float) (cloudLayer - 1));
+						b.putFloat(0.0F);
+						b.putFloat(transform.m00);
+						b.putFloat(transform.m01);
+						b.putFloat(transform.m10);
+						b.putFloat(transform.m11);
+					}
 				}
 				b.rewind();
 			}, count * BYTES_PER_REGION, false);
@@ -436,5 +425,18 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		this.regionTextureGenerator.getShaderStorageBuffer(CLOUD_REGIONS_NAME)
 				.allocateBuffer(requiredCapacity * BYTES_PER_REGION);
 		this.currentCloudFormationCapacity = requiredCapacity;
+	}
+
+	private int getTotalRegionTextureLayers() {
+		return (this.lodConfig.getLods().length + 1) * REGION_TEXTURE_BAND_COUNT;
+	}
+
+	private boolean intersectsChunkBounds(CloudRegion region, float minX, float minZ, float maxX, float maxZ) {
+		float extent = region.getRadius() * Math.max(1.0F, region.getStretch());
+		float clampedX = Math.max(minX, Math.min(region.getPosX(), maxX));
+		float clampedZ = Math.max(minZ, Math.min(region.getPosZ(), maxZ));
+		float dx = region.getPosX() - clampedX;
+		float dz = region.getPosZ() - clampedZ;
+		return dx * dx + dz * dz <= extent * extent;
 	}
 }

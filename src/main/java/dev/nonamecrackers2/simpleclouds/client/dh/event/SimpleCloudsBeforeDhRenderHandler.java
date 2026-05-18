@@ -12,27 +12,29 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPip
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.Vec3;
 
-public class SimpleCloudsBeforeDhRenderHandler extends DhApiBeforeApplyShaderRenderEvent
-{
+public class SimpleCloudsBeforeDhRenderHandler extends DhApiBeforeApplyShaderRenderEvent {
 	@Override
-	public void beforeRender(DhApiCancelableEventParam<DhApiRenderParam> event)
-	{
+	public void beforeRender(DhApiCancelableEventParam<DhApiRenderParam> event) {
 		SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 		CloudsRenderPipeline pipeline = renderer.getRenderPipeline();
 		Minecraft mc = Minecraft.getInstance();
 		Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
-		
+
 		SimpleCloudsDhCompatHandler._markPassComplete(false);
-		
+
 		DhApiRenderParam params = event.value;
-		Matrix4f projMat = new Matrix4f().setTransposed(params.dhProjectionMatrix.getValuesAsArray());
-		Matrix4f modelView = new Matrix4f().setTransposed(params.mcModelViewMatrix.getValuesAsArray());
-		
-		SimpleCloudsDhCompatHandler._updateCachedDhState(projMat, modelView);
-		
+		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler.dhMat4ToMc(params.mcProjectionMatrix);
+		Matrix4f mcModelView = SimpleCloudsDhCompatHandler.dhMat4ToMc(params.mcModelViewMatrix);
+		Matrix4f dhProjMat = SimpleCloudsDhCompatHandler.dhMat4ToMc(params.dhProjectionMatrix);
+		Matrix4f dhModelView = SimpleCloudsDhCompatHandler.dhMat4ToMc(params.dhModelViewMatrix);
+
+		SimpleCloudsDhCompatHandler._updateCachedDhState(mcProjMat, mcModelView, dhProjMat, dhModelView);
+
 		int fbo = SimpleCloudsDhCompatHandler._getDhFramebufferId();
-		
+
 		if (SimpleCloudsRenderer.canRenderInDimension(mc.level))
-			pipeline.beforeDistantHorizonsApplyShader(mc, renderer, modelView, projMat, params.partialTicks, camPos.x, camPos.y, camPos.z, renderer.getCullFrustum(), fbo);
+			pipeline.beforeDistantHorizonsApplyShader(mc, renderer, dhModelView, dhProjMat, params.partialTicks,
+					camPos.x,
+					camPos.y, camPos.z, renderer.getCullFrustum(), fbo);
 	}
 }
