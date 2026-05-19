@@ -60,7 +60,6 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Integer> thunderAttenuationDistance;
 		public final ModConfigSpec.ConfigValue<Boolean> stormFogLightningFlashes;
 		public final ModConfigSpec.ConfigValue<Integer> transparencyRenderDistancePercentage;
-		public final ModConfigSpec.ConfigValue<Boolean> concurrentComputeDispatches;
 		public final ModConfigSpec.ConfigValue<GenerationInterval> generationInterval;
 		public final ModConfigSpec.ConfigValue<Integer> targetMeshGenFps;
 		public final ModConfigSpec.ConfigValue<Boolean> customRainSounds;
@@ -179,9 +178,6 @@ public class SimpleCloudsConfig {
 					"Used to set the target FPS with the 'Target FPS' option in 'Generation Interval'");
 
 			builder.pop();
-
-			this.concurrentComputeDispatches = this.createValue(false, "concurrentComputeDispatches", RestartType.NONE,
-					"EXPERIMENTAL. Uses a slightly modified algorithm that removes sync calls between chunk generator compute dispatches at the cost of higher memory usage. May result in a performance boost");
 
 			this.testSidesThatAreOccluded = this.createValue(true, "testSidesThatAreOccluded", RestartType.NONE,
 					"Specifies if faces that are not visible to the camera should be tested during mesh generation. Settings this to off can improve performance at the cost of visual issues with shadows and storm fog");

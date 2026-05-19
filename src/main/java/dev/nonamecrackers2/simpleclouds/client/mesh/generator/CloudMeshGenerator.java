@@ -27,6 +27,7 @@ import dev.nonamecrackers2.simpleclouds.client.mesh.LevelOfDetailOptions;
 import dev.nonamecrackers2.simpleclouds.client.mesh.RendererInitializeResult;
 import dev.nonamecrackers2.simpleclouds.client.mesh.chunk.MeshChunk;
 import dev.nonamecrackers2.simpleclouds.client.mesh.instancing.InstanceableMesh;
+import dev.nonamecrackers2.simpleclouds.client.mesh.lod.LevelOfDetail;
 import dev.nonamecrackers2.simpleclouds.client.mesh.lod.LevelOfDetailConfig;
 import dev.nonamecrackers2.simpleclouds.client.mesh.lod.PreparedChunk;
 import dev.nonamecrackers2.simpleclouds.client.shader.buffer.BindingManager;
@@ -78,13 +79,13 @@ public abstract class CloudMeshGenerator {
 	public static final int TICKS_UNTIL_FADE_RESET = 120;
 
 	// Opaque
-	public static final int BYTES_PER_SIDE_INFO = 24;
+	public static final int BYTES_PER_SIDE_INFO = 36;
 	public static final int MAX_SIDE_INFO_BUFFER_SIZE = 50331648;
 	public static final String SIDE_INFO_BUFFER_NAME = "SideInfoBuffer";
 	public static final String TOTAL_SIDES_NAME = "TotalSides";
 	public static final String SIDES_PER_CHUNK_NAME = "SidesPerChunk";
 	// Transparent
-	public static final int BYTES_PER_CUBE_INFO = 24;
+	public static final int BYTES_PER_CUBE_INFO = 36;
 	public static final int INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE = 50331648;
 	public static final String TRANSPARENT_CUBE_INFO_BUFFER_NAME = "TransparentCubeInfoBuffer";
 	public static final String TRANSPARENT_TOTAL_CUBES_NAME = "TotalTransparentCubes";
@@ -119,6 +120,7 @@ public abstract class CloudMeshGenerator {
 	private float fadeStart;
 	private float fadeEnd;
 	private float cullDistance;
+	private float transparencyDistancePercentage;
 	private int transparencyDistance;
 
 	private int opaqueBufferSize;
@@ -157,7 +159,8 @@ public abstract class CloudMeshGenerator {
 		float maxRadius = this.getCloudAreaMaxRadius();
 		this.fadeStart = 0.9F * maxRadius;
 		this.fadeEnd = maxRadius;
-		this.transparencyDistance = (int) maxRadius / 2;
+		this.transparencyDistancePercentage = 0.5F;
+		this.updateTransparencyDistance();
 	}
 
 	public boolean fadeNearOriginEnabled() {
@@ -220,12 +223,20 @@ public abstract class CloudMeshGenerator {
 		}
 		this.fadeStart = fs * (float) this.getCloudAreaMaxRadius();
 		this.fadeEnd = fe * (float) this.getCloudAreaMaxRadius();
+		this.updateTransparencyDistance();
 		return this;
 	}
 
 	public CloudMeshGenerator setTransparencyRenderDistance(float percentage) {
-		this.transparencyDistance = Mth.floor(percentage * (float) this.getCloudAreaMaxRadius());
+		this.transparencyDistancePercentage = percentage;
+		this.updateTransparencyDistance();
 		return this;
+	}
+
+	private void updateTransparencyDistance() {
+		int requestedDistance = Mth.floor(this.transparencyDistancePercentage * (float) this.getCloudAreaMaxRadius());
+		int minimumDistance = Mth.ceil(this.fadeEnd);
+		this.transparencyDistance = Math.max(requestedDistance, minimumDistance);
 	}
 
 	public float getFadeStart() {
@@ -243,11 +254,18 @@ public abstract class CloudMeshGenerator {
 	public void setCullDistance(float dist) {
 		if (dist <= 0.0F)
 			throw new IllegalArgumentException("Cull distance must be greater than zero");
-		this.cullDistance = dist;
+		this.cullDistance = dist + this.getCullDistancePadding();
 	}
 
 	public void disableCullDistance() {
 		this.cullDistance = 0.0F;
+	}
+
+	private float getCullDistancePadding() {
+		int maxChunkScale = 1;
+		for (LevelOfDetail lod : this.lodConfig.getLods())
+			maxChunkScale = Math.max(maxChunkScale, lod.chunkScale());
+		return (float) SimpleCloudsConstants.CHUNK_SIZE * (float) maxChunkScale * Mth.SQRT_OF_TWO;
 	}
 
 	public void setScroll(float x, float y, float z) {
@@ -827,8 +845,8 @@ public abstract class CloudMeshGenerator {
 			this.shader.forUniform("Scale", (id, loc) -> {
 				GL41.glProgramUniform1f(id, loc, lodScale);
 			});
-			this.shader.forUniform("DoNotOccludeSide", (id, loc) -> {
-				GL41.glProgramUniform1i(id, loc, chunkInfo.noOcclusionDirectionIndex());
+			this.shader.forUniform("DoNotOccludeSideMask", (id, loc) -> {
+				GL41.glProgramUniform1i(id, loc, chunkInfo.noOcclusionSideMask());
 			});
 			if (this.useFixedMeshDataSectionSize) {
 				this.shader.forUniform("OpaqueMeshDataOffset", (id, loc) -> {
@@ -959,7 +977,7 @@ public abstract class CloudMeshGenerator {
 		private LevelOfDetailConfig lodConfig = LevelOfDetailOptions.HIGH.getConfig();
 		private Supplier<Integer> meshGenIntervalCalculator = () -> 5;
 		private boolean useTransparency = true;
-		private boolean fixedMeshDataSectionSize;
+		private boolean fixedMeshDataSectionSize = true;
 		private float fadeStart = 0.5F;
 		private float fadeEnd = 1.0F;
 		private boolean testFacesFacingAway = false;
@@ -996,11 +1014,6 @@ public abstract class CloudMeshGenerator {
 
 		public Builder useTransparency(boolean flag) {
 			this.useTransparency = flag;
-			return this;
-		}
-
-		public Builder fixedMeshDataSectionSize(boolean flag) {
-			this.fixedMeshDataSectionSize = flag;
 			return this;
 		}
 

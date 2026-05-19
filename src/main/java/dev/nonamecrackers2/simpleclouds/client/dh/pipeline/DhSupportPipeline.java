@@ -94,11 +94,12 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 				transparencyTarget.height, GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
 		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, targetFramebuffer);
 
+		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 		PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
 		renderer.translateClouds(cloudStack, camX, camY, camZ);
 		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), cloudStack, projMat,
 				renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(),
-				cloudColor.b(), null);
+				cloudColor.b(), null, modelViewMat, cloudWorldMat, camX, camY, camZ);
 	}
 
 	@Override
@@ -180,7 +181,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 			PoseStack stack, float partialTick, double camX, double camY, double camZ) {
 		Tesselator tesselator = Tesselator.getInstance();
 		RenderSystem.enableBlend();
-		RenderSystem.disableDepthTest();
+		RenderSystem.enableDepthTest();
 		RenderSystem.depthMask(false);
 
 		if (effects.hasLightningToRender()) {

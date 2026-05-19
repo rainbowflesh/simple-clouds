@@ -27,7 +27,7 @@ import net.minecraft.util.GsonHelper;
 
 public record CloudType(ResourceLocation id, WeatherType weatherType, float storminess, float stormStart,
 		float stormFadeDistance, float transparencyFade, List<Integer> cloudLayers, NoiseSettings noiseConfig,
-		boolean overrideAtmosphericClouds)
+		boolean overrideAtmosphericClouds, CloudColorMode colorMode, float tintRed, float tintGreen, float tintBlue)
 		implements CloudInfo, ScAPICloudType {
 	public static final int MAX_CLOUD_LAYERS = 1;
 	private static final int LEGACY_MAX_CLOUD_LAYERS = 3;
@@ -111,6 +111,45 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 		if (primary != null && primary.has("override_atmospheric_clouds"))
 			return parseOverrideAtmosphericClouds(primary);
 		return parseOverrideAtmosphericClouds(fallback);
+	}
+
+	private static CloudColorMode parseColorMode(JsonObject object) {
+		return CloudColorMode.byName(
+				GsonHelper.getAsString(object, "color_mode", CloudColorMode.DEFAULT.getSerializedName()));
+	}
+
+	private static CloudColorMode parseColorMode(JsonObject primary, JsonObject fallback) {
+		if (primary != null && primary.has("color_mode"))
+			return parseColorMode(primary);
+		if (primary != null && primary.has("color"))
+			return CloudColorMode.FIXED;
+		if (fallback.has("color_mode"))
+			return parseColorMode(fallback);
+		if (fallback.has("color"))
+			return CloudColorMode.FIXED;
+		return CloudColorMode.DEFAULT;
+	}
+
+	private static float[] parseTintColor(JsonObject object) {
+		JsonArray array = GsonHelper.getAsJsonArray(object, "color");
+		if (array.size() != 3)
+			throw new JsonSyntaxException("'color' must contain exactly 3 float values");
+		float[] values = new float[3];
+		for (int i = 0; i < 3; i++) {
+			float value = array.get(i).getAsFloat();
+			if (value < 0.0F || value > 1.0F)
+				throw new JsonSyntaxException("'color' values must be between 0.0 and 1.0");
+			values[i] = value;
+		}
+		return values;
+	}
+
+	private static float[] parseTintColor(JsonObject primary, JsonObject fallback) {
+		if (primary != null && primary.has("color"))
+			return parseTintColor(primary);
+		if (fallback.has("color"))
+			return parseTintColor(fallback);
+		return new float[] { 1.0F, 1.0F, 1.0F };
 	}
 
 	private static WeatherType parseWeatherType(JsonObject primary, JsonObject fallback) {
@@ -214,6 +253,8 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 		List<Integer> legacyLayers = parseCloudLayers(object);
 		settings = alignNoiseSettingsToLayers(settings, legacyLayers, layerSeparation);
 		boolean overrideAtmosphericClouds = parseOverrideAtmosphericClouds(visual, object);
+		CloudColorMode colorMode = parseColorMode(visual, object);
+		float[] tint = parseTintColor(visual, object);
 		List<Integer> cloudLayers = List.of(1);
 
 		if (settings.layerCount() > CloudMeshGenerator.MAX_NOISE_LAYERS)
@@ -232,6 +273,6 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 				CloudInfo.TRANSPARENCY_FADE_MAX);
 
 		return new CloudType(id, weatherType, storminess, stormStart, stormFadeDistance, transparencyFade,
-				cloudLayers, settings, overrideAtmosphericClouds);
+				cloudLayers, settings, overrideAtmosphericClouds, colorMode, tint[0], tint[1], tint[2]);
 	}
 }

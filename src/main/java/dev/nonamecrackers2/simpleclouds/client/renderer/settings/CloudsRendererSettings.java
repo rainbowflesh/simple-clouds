@@ -17,48 +17,35 @@ import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 
-public abstract class CloudsRendererSettings
-{
+public abstract class CloudsRendererSettings {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/CloudsRendererSettings");
-	public static final CloudsRendererSettings DEFAULT = new CloudsRendererSettings()
-	{
+	public static final CloudsRendererSettings DEFAULT = new CloudsRendererSettings() {
 		@Override
-		public boolean useTransparency()
-		{
+		public boolean useTransparency() {
 			return SimpleCloudsConfig.CLIENT.transparency.get();
 		}
-		
+
 		@Override
-		public boolean shadedClouds()
-		{
+		public boolean shadedClouds() {
 			return SimpleCloudsConfig.CLIENT.shadedClouds.get();
 		}
-		
+
 		@Override
-		public boolean useFixedMeshDataSectionSize()
-		{
-			return SimpleCloudsConfig.CLIENT.concurrentComputeDispatches.get();
-		}
-		
-		@Override
-		public LevelOfDetailOptions getLodConfig()
-		{
+		public LevelOfDetailOptions getLodConfig() {
 			return SimpleCloudsConfig.CLIENT.levelOfDetail.get();
 		}
-		
+
 		@Override
-		public CloudMode getCloudMode()
-		{
+		public CloudMode getCloudMode() {
 			ClientLevel level = Minecraft.getInstance().level;
 			if (level != null)
 				return CloudManager.get(level).getCloudMode();
 			else
 				return CloudMode.DEFAULT;
 		}
-		
+
 		@Override
-		public @Nullable CloudType getSingleModeCloudType()
-		{
+		public @Nullable CloudType getSingleModeCloudType() {
 			String rawId;
 			ClientLevel level = Minecraft.getInstance().level;
 			if (level != null)
@@ -68,44 +55,39 @@ public abstract class CloudsRendererSettings
 			return ClientSideCloudTypeManager.getInstance().getCloudTypeFromRawId(rawId).orElse(null);
 		}
 	};
-	
+
 	private @Nullable CloudMode currentCloudMode;
 	private @Nullable LevelOfDetailOptions currentLod;
-	
+
 	public abstract CloudMode getCloudMode();
-	
+
 	public abstract boolean shadedClouds();
-	
+
 	public abstract boolean useTransparency();
-	
-	public abstract boolean useFixedMeshDataSectionSize();
-	
+
 	public abstract LevelOfDetailOptions getLodConfig();
-	
+
 	public abstract @Nullable CloudType getSingleModeCloudType();
-	
-	public boolean needsReinitialization(@Nullable CloudMeshGenerator generator)
-	{
+
+	public boolean needsReinitialization(@Nullable CloudMeshGenerator generator) {
 		return this.checkAndOrBeginInitialization(generator, false);
 	}
-	
-	public boolean checkAndOrBeginInitialization(@Nullable CloudMeshGenerator generator)
-	{
+
+	public boolean checkAndOrBeginInitialization(@Nullable CloudMeshGenerator generator) {
 		return this.checkAndOrBeginInitialization(generator, true);
 	}
-	
-	protected boolean checkAndOrBeginInitialization(@Nullable CloudMeshGenerator generator, boolean initializesAfterwards)
-	{
+
+	protected boolean checkAndOrBeginInitialization(@Nullable CloudMeshGenerator generator,
+			boolean initializesAfterwards) {
 		boolean flag = false;
-		
+
 		CloudMode mode = Objects.requireNonNull(this.getCloudMode(), "Must supply a cloud mode");
 		boolean shadedClouds = this.shadedClouds();
 		boolean transparency = this.useTransparency();
 		LevelOfDetailOptions lod = Objects.requireNonNull(this.getLodConfig(), "Must supply a LOD");
-		boolean fixedMeshDataSectionSize = this.useFixedMeshDataSectionSize();
-		
-		if (generator != null)
-		{
+		boolean fixedMeshDataSectionSize = true;
+
+		if (generator != null) {
 			if (this.currentCloudMode != mode)
 				flag = true;
 			else if (generator.shadedCloudsEnabled() != shadedClouds)
@@ -116,30 +98,27 @@ public abstract class CloudsRendererSettings
 				flag = true;
 			else if (generator.usesFixedMeshDataSectionSize() != fixedMeshDataSectionSize)
 				flag = true;
-		}
-		else
-		{
+		} else {
 			flag = true;
 		}
-		
-		if (flag && initializesAfterwards)
-		{
+
+		if (flag && initializesAfterwards) {
 			this.currentCloudMode = mode;
 			this.currentLod = lod;
-			
-			LOGGER.debug("Beginning mesh generator initialization for cloud mode {}, shaded clouds {}, transparency {}, and LOD {}", mode, shadedClouds, transparency, lod);
+
+			LOGGER.debug(
+					"Beginning mesh generator initialization for cloud mode {}, shaded clouds {}, transparency {}, and LOD {}",
+					mode, shadedClouds, transparency, lod);
 		}
-		
+
 		return flag;
 	}
-	
-	public @Nullable CloudMode getCurrentCloudMode()
-	{
+
+	public @Nullable CloudMode getCurrentCloudMode() {
 		return this.currentCloudMode;
 	}
-	
-	public @Nullable LevelOfDetailOptions getCurrentLod()
-	{
+
+	public @Nullable LevelOfDetailOptions getCurrentLod() {
 		return this.currentLod;
 	}
 }

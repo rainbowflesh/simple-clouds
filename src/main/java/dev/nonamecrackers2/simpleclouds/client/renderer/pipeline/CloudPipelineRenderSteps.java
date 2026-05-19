@@ -26,6 +26,7 @@ public final class CloudPipelineRenderSteps {
     public static void renderCloudGeometry(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat,
             Matrix4f projMat, float partialTick, double camX, double camY, double camZ, @Nullable Frustum frustum,
             CloudColor cloudColor, ProfilerFiller profiler, boolean clearTargets, boolean copyDepthFromMain) {
+        Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
         PoseStack stack = new PoseStack();
         stack.mulPose(camMat);
         stack.pushPose();
@@ -40,9 +41,9 @@ public final class CloudPipelineRenderSteps {
         cloudTarget.bindWrite(false);
 
         SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), stack, projMat, renderer.getFogStart(),
-                renderer.getFogEnd(),
-                partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
-                SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+                renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
+                SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, camMat, cloudWorldMat, camX, camY,
+                camZ);
 
         profiler.popPush("clouds_transparent");
         WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
@@ -53,9 +54,9 @@ public final class CloudPipelineRenderSteps {
             renderer.copyDepthFromCloudsToTransparency();
             transparencyTarget.bindWrite(false);
             SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), stack, projMat,
-                    renderer.getFogStart(),
-                    renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
-                    SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+                    renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(),
+                    cloudColor.b(), SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, camMat,
+                    cloudWorldMat, camX, camY, camZ);
         }
 
         profiler.pop();

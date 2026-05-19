@@ -6,6 +6,10 @@ in vec3 Position;
 
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
+uniform mat4 ViewMat;
+uniform mat4 CloudWorldMat;
+uniform vec3 CameraPos;
+uniform float EarthRadius;
 uniform vec3 Light0_Direction;
 uniform vec3 Light1_Direction;
 uniform float LightPower;
@@ -34,12 +38,23 @@ void main()
 	vec4 transformedPos = vec4(Position, 1.0) * transformations[uint(info.side)];
 	vec3 sideOffset = vec3(info.x, info.y, info.z);
 	vec4 finalPos = vec4(transformedPos.xyz * info.radius + sideOffset, 1.0);
-    gl_Position = ProjMat * ModelViewMat * finalPos;
-	vec4 modelPos = ModelViewMat * finalPos;
+	vec4 worldPos = CloudWorldMat * finalPos;
+	vec3 cameraRelativePos = worldPos.xyz - CameraPos;
+	if (EarthRadius < -1.0 || EarthRadius > 1.0)
+	{
+		float localRadius = EarthRadius + worldPos.y;
+		float phi = length(cameraRelativePos.xz) / localRadius;
+		cameraRelativePos.y += (cos(phi) - 1.0) * localRadius;
+		if (phi != 0.0)
+			cameraRelativePos.xz = cameraRelativePos.xz * sin(phi) / phi;
+	}
+	vec4 modelPos = ViewMat * vec4(cameraRelativePos, 1.0);
+    gl_Position = ProjMat * modelPos;
 	fogDistance = length(modelPos.xz);
 	vertexDistance = length(modelPos.xyz);
 
-    vec4 finalCol = vec4(mix(DarknessColorModifier, vec3(1.0), info.brightness), 1.0);
+	vec3 tint = vec3(info.tintR, info.tintG, info.tintB);
+	vec4 finalCol = vec4(tint * mix(DarknessColorModifier, vec3(1.0), info.brightness), 1.0);
     if (UseNormals)
     {
 	    vec3 normal = normals[uint(info.side)];

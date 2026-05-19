@@ -62,8 +62,6 @@
   "gui.simpleclouds.config.cloudMode.title": "Режим облаков",
   "gui.simpleclouds.config.cloudSeed.description": "Определяет ключ генерации для облаков. Применяется ко всем серверам, к которым подключается пользователь с модом только на стороне клиента.",
   "gui.simpleclouds.config.cloudSeed.title": "Ключ генерации облаков",
-  "gui.simpleclouds.config.concurrentComputeDispatches.description": "ЭКСПЕРИМЕНТАЛЬНО. Использует модифицированный алгоритм, удаляющий синхронные вызовы между диспетчерами генерации чанков ценой большего расхода памяти. Может повысить производительность.",
-  "gui.simpleclouds.config.concurrentComputeDispatches.title": "Параллельные диспетчеры вычислений",
   "gui.simpleclouds.config.cubeNormals.description": "Определяет, должны ли применяться нормали к каждому отдельному кубу в облаке, что добавляет немного затенения каждой грани куба. Помогает различить каждый отдельный куб в облаке.",
   "gui.simpleclouds.config.cubeNormals.title": "Нормали кубов",
   "gui.simpleclouds.config.dimensionWhitelist.description": "Определяет разрешённые измерения, в которых активен Simple Clouds",

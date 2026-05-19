@@ -24,6 +24,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 public class SimpleCloudsDhCompatHandler {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsDhCompatHandler");
+	private static final float EARTH_RADIUS_BLOCKS = 6_371_000.0F;
 	// Cached DH stuff, internal use
 	private static Matrix4f mcProjMat;
 	private static Matrix4f mcModelViewMat;
@@ -80,6 +81,15 @@ public class SimpleCloudsDhCompatHandler {
 			return true;
 		return DhApi.Delayed.configs.graphics().renderingEnabled().getValue()
 				&& DhApi.Delayed.configs.graphics().genericRendering().renderingEnabled().getValue();
+	}
+
+	public static float getEarthCurvatureRadius() {
+		if (DhApi.Delayed.configs == null)
+			return 0.0F;
+		Integer ratio = DhApi.Delayed.configs.graphics().earthCurvatureRatio().getValue();
+		if (ratio == null || ratio == 0)
+			return 0.0F;
+		return EARTH_RADIUS_BLOCKS / (float) ratio.intValue();
 	}
 
 	private static void requestRendererReloadForDhStateChange(String source, boolean enabled) {

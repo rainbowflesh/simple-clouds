@@ -69,8 +69,6 @@
   "gui.simpleclouds.config.cloudSeed.title": "Cloud Seed",
   "gui.simpleclouds.config.cloudSpeed.description": "Specifies the movement speed of clouds for this world/server. Lower values make weather transitions and cloud drift slower.",
   "gui.simpleclouds.config.cloudSpeed.title": "Cloud Speed",
-  "gui.simpleclouds.config.concurrentComputeDispatches.description": "EXPERIMENTAL. Uses a slightly modified algorithm that removes sync calls between chunk generator compute dispatches at the cost of higher memory usage. May result in a performance boost.",
-  "gui.simpleclouds.config.concurrentComputeDispatches.title": "Concurrent Compute Dispatches",
   "gui.simpleclouds.config.cubeNormals.description": "Specifies if normals should be applied to each individual cube in the cloud which applies a bit of shading per cube face. Helps distinguish each individual cube in a cloud.",
   "gui.simpleclouds.config.cubeNormals.title": "Cube Normals",
   "gui.simpleclouds.config.customRainSounds.description": "Specifies if new rain sounds should replace the vanilla ones.",

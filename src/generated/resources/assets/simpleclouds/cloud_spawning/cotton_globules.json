@@ -1,0 +1,31 @@
+{
+  "type": "simpleclouds:cotton_globules",
+  "exist_ticks": {
+    "type": "minecraft:biased_to_bottom",
+    "max_inclusive": 42000,
+    "min_inclusive": 18000
+  },
+  "grow_ticks": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 6500,
+    "min_inclusive": 3200
+  },
+  "moves_to_player": false,
+  "order_weight": 520,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 6500,
+    "min_inclusive": 3200
+  },
+  "speed": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 0.18,
+    "min_inclusive": 0.08
+  },
+  "stretch_factor": {
+    "type": "minecraft:uniform",
+    "max_exclusive": 1.2,
+    "min_inclusive": 0.9
+  },
+  "weight": 8
+}

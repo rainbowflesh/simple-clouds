@@ -6,6 +6,8 @@ import java.text.StringCharacterIterator;
 import java.util.List;
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
@@ -44,6 +46,7 @@ import net.minecraft.client.renderer.FogRenderer.FogMode;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.material.FogType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.config.ModConfig;
@@ -300,11 +303,8 @@ public class SimpleCloudsClientEvents {
 							+ round(manager.getScrollZ()));
 
 					WorldEffects effects = renderer.getWorldEffectsManager();
-					CloudType atCamera = effects.getCloudTypeAtCamera();
-					if (atCamera != null)
-						text.add(atCamera.id().toString());
-					else
-						text.add("UNKNOWN");
+					text.add(buildCurrentCloudDebugLine(renderer, mc));
+					text.add(buildAtmosphericCloudDebugLine(renderer, mc));
 
 					String vanillaWeatherOverrideAppend = manager.shouldUseVanillaWeather()
 							? " (Vanilla Weather Enabled)"
@@ -332,6 +332,35 @@ public class SimpleCloudsClientEvents {
 
 	private static float round(float val) {
 		return (float) Math.round(val * 100.0F) / 100.0F;
+	}
+
+	private static @Nullable Entity getDebugEntity(Minecraft mc) {
+		return Objects.requireNonNullElse(mc.player, mc.getCameraEntity());
+	}
+
+	private static String buildCurrentCloudDebugLine(SimpleCloudsRenderer renderer, Minecraft mc) {
+		Entity entity = getDebugEntity(mc);
+		if (entity == null)
+			return "Current cloud: unavailable";
+
+		CloudType type = renderer.getCurrentCloudType(entity.getX(), entity.getZ());
+		if (type == null)
+			return "Current cloud: unavailable";
+		return "Current cloud: " + type.id();
+	}
+
+	private static String buildAtmosphericCloudDebugLine(SimpleCloudsRenderer renderer, Minecraft mc) {
+		if (!SimpleCloudsConfig.CLIENT.atmosphericClouds.get())
+			return "Atmospheric clouds: disabled";
+
+		Entity entity = getDebugEntity(mc);
+		if (entity == null)
+			return "Atmospheric clouds: unavailable";
+
+		CloudType type = renderer.getCurrentCloudType(entity.getX(), entity.getZ());
+		if (type != null && type != SimpleCloudsConstants.EMPTY && type.suppressesAtmosphericClouds())
+			return "Atmospheric clouds: suppressed by " + type.id();
+		return "Atmospheric clouds: active";
 	}
 
 	private static String buildWeatherStatusDebugLine(CloudManager<ClientLevel> manager, Minecraft mc) {

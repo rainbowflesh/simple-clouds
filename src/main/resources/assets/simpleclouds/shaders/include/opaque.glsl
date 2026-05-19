@@ -5,6 +5,9 @@ struct SideInfo {
 	float z;
 	float brightness;
 	float radius;
+	float tintR;
+	float tintG;
+	float tintB;
 };
 
 layout(std430) restrict readonly buffer SideInfoBuffer {

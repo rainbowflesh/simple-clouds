@@ -1,0 +1,48 @@
+{
+  "spawning": {
+    "exist_ticks": {
+      "type": "minecraft:biased_to_bottom",
+      "max_inclusive": 54000,
+      "min_inclusive": 36000
+    },
+    "grow_ticks": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 2200,
+      "min_inclusive": 1200
+    },
+    "moves_to_player": false,
+    "order_weight": 280,
+    "radius": {
+      "type": "minecraft:uniform",
+      "max_inclusive": 9000,
+      "min_inclusive": 4200
+    },
+    "speed": {
+      "type": "minecraft:uniform",
+      "max_exclusive": 0.2,
+      "min_inclusive": 0.1
+    },
+    "stretch_factor": 1,
+    "weight": 2
+  },
+  "visual": {
+    "color_mode": "rainbow_cloud",
+    "noise_settings": {
+      "fade_distance": 10,
+      "height": 32,
+      "height_offset": 0,
+      "scale_x": 34,
+      "scale_y": 12,
+      "scale_z": 34,
+      "value_offset": -0.74,
+      "value_scale": 1
+    },
+    "transparency_fade": 0.22
+  },
+  "weather": {
+    "type": "none",
+    "storm_fade_distance": 32,
+    "storm_start": 16,
+    "storminess": 0
+  }
+}

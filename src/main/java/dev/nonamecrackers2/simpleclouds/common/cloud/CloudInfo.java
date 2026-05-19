@@ -3,6 +3,7 @@ package dev.nonamecrackers2.simpleclouds.common.cloud;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.JsonOps;
@@ -13,12 +14,15 @@ import dev.nonamecrackers2.simpleclouds.common.noise.NoiseSettings;
 import net.minecraft.util.Mth;
 
 public interface CloudInfo {
-	public static final int BYTES_PER_TYPE = 24;
+	public static final int BYTES_PER_TYPE = 40;
 	public static final float STORMINESS_MAX = 1.0F;
 	public static final float STORM_START_MAX = CloudMeshGenerator.LOCAL_SIZE * CloudMeshGenerator.WORK_SIZE
 			* CloudMeshGenerator.VERTICAL_CHUNK_SPAN;
 	public static final float STORM_FADE_DISTANCE_MAX = 1600.0F;
 	public static final float TRANSPARENCY_FADE_MAX = 32.0F;
+	public static final int HIGH_ATMOSPHERIC_CLOUD_BASE = 120;
+	public static final int HIGH_LEVEL_CLOUD_BASE = 96;
+	public static final int HIGH_LEVEL_FLAT_RANGE = 64;
 
 	NoiseSettings noiseConfig();
 
@@ -38,6 +42,29 @@ public interface CloudInfo {
 
 	default boolean overrideAtmosphericClouds() {
 		return false;
+	}
+
+	default boolean suppressesAtmosphericClouds() {
+		int cloudBase = this.noiseConfig().getStartHeight();
+		int cloudHeightRange = this.noiseConfig().getHeightRange();
+		return this.overrideAtmosphericClouds() || cloudBase >= HIGH_ATMOSPHERIC_CLOUD_BASE
+				|| (cloudBase >= HIGH_LEVEL_CLOUD_BASE && cloudHeightRange <= HIGH_LEVEL_FLAT_RANGE);
+	}
+
+	default CloudColorMode colorMode() {
+		return CloudColorMode.DEFAULT;
+	}
+
+	default float tintRed() {
+		return 1.0F;
+	}
+
+	default float tintGreen() {
+		return 1.0F;
+	}
+
+	default float tintBlue() {
+		return 1.0F;
 	}
 
 	default List<Integer> cloudLayers() {
@@ -72,6 +99,15 @@ public interface CloudInfo {
 		visual.addProperty("transparency_fade", Mth.clamp(this.transparencyFade(), 0.0F, TRANSPARENCY_FADE_MAX));
 		if (this.overrideAtmosphericClouds())
 			visual.addProperty("override_atmospheric_clouds", true);
+		if (this.colorMode() != CloudColorMode.DEFAULT)
+			visual.addProperty("color_mode", this.colorMode().getSerializedName());
+		if (this.colorMode() == CloudColorMode.FIXED) {
+			JsonArray color = new JsonArray();
+			color.add(Mth.clamp(this.tintRed(), 0.0F, 1.0F));
+			color.add(Mth.clamp(this.tintGreen(), 0.0F, 1.0F));
+			color.add(Mth.clamp(this.tintBlue(), 0.0F, 1.0F));
+			visual.add("color", color);
+		}
 		object.add("visual", visual);
 
 		JsonObject weather = new JsonObject();
@@ -91,6 +127,10 @@ public interface CloudInfo {
 		b.putFloat(this.getStormStartRelativeToCloudBase());
 		b.putFloat(this.stormFadeDistance());
 		b.putFloat(this.transparencyFade());
+		b.putFloat(this.colorMode().getShaderValue());
+		b.putFloat(this.tintRed());
+		b.putFloat(this.tintGreen());
+		b.putFloat(this.tintBlue());
 		return layerIndex + layerCount;
 	}
 }
