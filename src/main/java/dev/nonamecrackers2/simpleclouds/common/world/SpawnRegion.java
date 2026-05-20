@@ -11,84 +11,78 @@ import com.google.common.collect.Lists;
 import dev.nonamecrackers2.simpleclouds.api.common.world.ScAPISpawnRegion;
 import net.minecraft.util.RandomSource;
 
-public record SpawnRegion(int x, int z, int radius) implements ScAPISpawnRegion
-{
+public record SpawnRegion(int x, int z, int radius) implements ScAPISpawnRegion {
 	@Override
-	public boolean includesPoint(int x, int z)
-	{
+	public boolean includesPoint(int x, int z) {
 		return x >= this.getMinX() && x <= this.getMaxX() && z >= this.getMinZ() && z <= this.getMaxZ();
 	}
-	
+
 	@Override
-	public boolean intersectsCircle(float x, float z, float radius)
-	{
+	public boolean intersectsCircle(float x, float z, float radius) {
 		float dx = Math.abs(x - this.x);
 		float dz = Math.abs(z - this.z);
-	
-		if (dx > (float)this.radius + radius || dz > (float)this.radius + radius)
+
+		if (dx > (float) this.radius + radius || dz > (float) this.radius + radius)
 			return false;
-		
-		if (dx <= (float)this.radius || dz < (float)this.radius)
+
+		if (dx <= (float) this.radius || dz < (float) this.radius)
 			return true;
-		
-		float cornerDist = Vector2f.distanceSquared(dx, dz, (float)this.radius, (float)this.radius);
+
+		float cornerDist = Vector2f.distanceSquared(dx, dz, (float) this.radius, (float) this.radius);
 		return cornerDist <= radius * radius;
 	}
-	
+
 	@Override
-	public int getMinX()
-	{
+	public int getMinX() {
 		return this.x - this.radius;
 	}
-	
+
 	@Override
-	public int getMaxX()
-	{
+	public int getMaxX() {
 		return this.x + this.radius;
 	}
-	
+
 	@Override
-	public int getMinZ()
-	{
+	public int getMinZ() {
 		return this.z - this.radius;
 	}
-	
+
 	@Override
-	public int getMaxZ()
-	{
+	public int getMaxZ() {
 		return this.z + this.radius;
 	}
-	
-	public static void randomPointForEachRegion(Iterable<SpawnRegion> regions, RandomSource random, int maxAttemptsPerRegion, BiPredicate<SpawnRegion, Vector2i> consumer)
-	{
+
+	public static void randomPointForEachRegion(Iterable<SpawnRegion> regions, RandomSource random,
+			int maxAttemptsPerRegion, BiPredicate<SpawnRegion, Vector2i> consumer) {
 		List<Vector2i> prevPositions = Lists.newArrayList();
-		for (SpawnRegion region : regions)
-		{
-			if (prevPositions.stream().anyMatch(pos -> region.includesPoint(pos.x, pos.y)))
+		for (SpawnRegion region : regions) {
+			boolean overlapsPreviousPoint = false;
+			for (Vector2i pos : prevPositions) {
+				if (region.includesPoint(pos.x, pos.y)) {
+					overlapsPreviousPoint = true;
+					break;
+				}
+			}
+			if (overlapsPreviousPoint)
 				continue;
-			for (int i = 0; i < maxAttemptsPerRegion; i++)
-			{
+			for (int i = 0; i < maxAttemptsPerRegion; i++) {
 				Vector2i pos = getRandomPointInRegion(region, random);
-				if (consumer.test(region, pos))
-				{
+				if (consumer.test(region, pos)) {
 					prevPositions.add(pos);
 					break;
 				}
 			}
 		}
 	}
-	
-	public static Vector2i getRandomPointInRegion(SpawnRegion region, RandomSource random)
-	{
+
+	public static Vector2i getRandomPointInRegion(SpawnRegion region, RandomSource random) {
 		int x = random.nextInt(region.radius() * 2) - region.radius() + region.x();
 		int z = random.nextInt(region.radius() * 2) - region.radius() + region.z();
 		return new Vector2i(x, z);
 	}
-	
-	public static boolean doesCircleIntersect(Iterable<SpawnRegion> regions, float x, float z, float radius)
-	{
-		for (SpawnRegion region : regions)
-		{
+
+	public static boolean doesCircleIntersect(Iterable<SpawnRegion> regions, float x, float z, float radius) {
+		for (SpawnRegion region : regions) {
 			if (region.intersectsCircle(x, z, radius))
 				return true;
 		}

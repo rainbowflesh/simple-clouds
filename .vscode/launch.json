@@ -10,6 +10,7 @@
         "order": 0
       },
       "projectName": "simple-clouds",
+      "preLaunchTask": "simpleclouds-gradle-classes",
       "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
       "args": [
         "--launchTarget",
@@ -55,7 +56,7 @@
       ],
       "cwd": "${workspaceFolder}\\runs\\client",
       "env": {
-        "MOD_CLASSES": "simple-clouds%%C:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\bin\\main"
+        "MOD_CLASSES": "simple-clouds%%${workspaceFolder}\\build\\vscode-mod\\main"
       },
       "shortenCommandLine": "argfile"
     },
@@ -68,6 +69,7 @@
         "order": 1
       },
       "projectName": "simple-clouds",
+      "preLaunchTask": "simpleclouds-gradle-classes",
       "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
       "args": [
         "--mod",
@@ -115,7 +117,7 @@
       ],
       "cwd": "${workspaceFolder}\\runs\\data",
       "env": {
-        "MOD_CLASSES": "simple-clouds%%C:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\bin\\main"
+        "MOD_CLASSES": "simple-clouds%%${workspaceFolder}\\build\\vscode-mod\\main"
       },
       "shortenCommandLine": "argfile"
     },
@@ -128,6 +130,7 @@
         "order": 2
       },
       "projectName": "simple-clouds",
+      "preLaunchTask": "simpleclouds-gradle-classes",
       "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
       "args": [
         "--launchTarget",
@@ -167,7 +170,7 @@
       ],
       "cwd": "${workspaceFolder}\\runs\\gameTestServer",
       "env": {
-        "MOD_CLASSES": "simple-clouds%%C:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\bin\\main"
+        "MOD_CLASSES": "simple-clouds%%${workspaceFolder}\\build\\vscode-mod\\main"
       },
       "shortenCommandLine": "argfile"
     },
@@ -180,6 +183,7 @@
         "order": 3
       },
       "projectName": "simple-clouds",
+      "preLaunchTask": "simpleclouds-gradle-classes",
       "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
       "args": [
         "--launchTarget",
@@ -223,7 +227,7 @@
       ],
       "cwd": "${workspaceFolder}\\runs\\junit",
       "env": {
-        "MOD_CLASSES": "simple-clouds%%C:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\bin\\main"
+        "MOD_CLASSES": "simple-clouds%%${workspaceFolder}\\build\\vscode-mod\\main"
       },
       "shortenCommandLine": "argfile"
     },
@@ -236,6 +240,7 @@
         "order": 4
       },
       "projectName": "simple-clouds",
+      "preLaunchTask": "simpleclouds-gradle-classes",
       "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher",
       "args": [
         "--nogui",
@@ -274,7 +279,7 @@
       ],
       "cwd": "${workspaceFolder}\\runs\\server",
       "env": {
-        "MOD_CLASSES": "simple-clouds%%C:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\bin\\main"
+        "MOD_CLASSES": "simple-clouds%%${workspaceFolder}\\build\\vscode-mod\\main"
       },
       "shortenCommandLine": "argfile"
     }

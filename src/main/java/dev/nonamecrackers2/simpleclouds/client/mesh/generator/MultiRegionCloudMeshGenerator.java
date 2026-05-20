@@ -2,6 +2,7 @@ package dev.nonamecrackers2.simpleclouds.client.mesh.generator;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
@@ -263,11 +264,21 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			return;
 
 		List<CloudRegion> regions = this.cloudGetter.getClouds();
+		List<SelectedRegionData> selectedRegions = new ArrayList<>(regions.size());
 		int regionDataSize = 0;
 		for (CloudRegion region : regions) {
 			CloudInfo type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
-			if (this.cloudTypeIndices.containsKey(type))
-				regionDataSize += type.cloudLayers().size();
+			Integer typeIndex = this.cloudTypeIndices.get(type);
+			if (typeIndex == null)
+				continue;
+
+			float posX = region.getPosX(partialTick);
+			float posZ = region.getPosZ(partialTick);
+			float dx = posX - meshOffsetX;
+			float dz = posZ - meshOffsetZ;
+			selectedRegions.add(new SelectedRegionData(region, type, typeIndex.intValue(), posX, posZ,
+					region.getRadius(partialTick), region.createTransform(partialTick), dx * dx + dz * dz));
+			regionDataSize += type.cloudLayers().size();
 		}
 
 		int count = regionDataSize;
@@ -275,38 +286,23 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		this.ensureCloudRegionCapacity(Math.max(1, count));
 
 		if (count > 0) {
-			List<CloudRegion> selectedRegions = regions.stream()
-					.filter(region -> this.cloudTypeIndices
-							.containsKey(this.cloudGetter.getCloudTypeForId(region.getCloudTypeId())))
-					.sorted(Comparator.comparingDouble(region -> {
-						float dx = region.getPosX(partialTick) - meshOffsetX;
-						float dz = region.getPosZ(partialTick) - meshOffsetZ;
-						return dx * dx + dz * dz;
-					}))
-					.limit(count)
-					.toList();
+			selectedRegions.sort(Comparator.comparingDouble(SelectedRegionData::distanceSq));
 
 			ShaderStorageBufferObject regionsBuffer = this.regionTextureGenerator
 					.getShaderStorageBuffer(CLOUD_REGIONS_NAME);
 			regionsBuffer.writeData(b -> {
-				for (CloudRegion region : selectedRegions) {
-					CloudInfo type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
-					Integer typeIndex = this.cloudTypeIndices.get(type);
-					if (typeIndex == null)
-						continue;
-
-					Matrix2f transform = region.createTransform(partialTick);
-					for (int cloudLayer : type.cloudLayers()) {
-						b.putFloat(region.getPosX(partialTick));
-						b.putFloat(region.getPosZ(partialTick));
-						b.putFloat(typeIndex.floatValue());
-						b.putFloat(region.getRadius(partialTick));
+				for (SelectedRegionData regionData : selectedRegions) {
+					for (int cloudLayer : regionData.type().cloudLayers()) {
+						b.putFloat(regionData.posX());
+						b.putFloat(regionData.posZ());
+						b.putFloat((float) regionData.typeIndex());
+						b.putFloat(regionData.radius());
 						b.putFloat((float) (cloudLayer - 1));
 						b.putFloat(0.0F);
-						b.putFloat(transform.m00);
-						b.putFloat(transform.m01);
-						b.putFloat(transform.m10);
-						b.putFloat(transform.m11);
+						b.putFloat(regionData.transform().m00);
+						b.putFloat(regionData.transform().m01);
+						b.putFloat(regionData.transform().m10);
+						b.putFloat(regionData.transform().m11);
 					}
 				}
 				b.rewind();
@@ -316,6 +312,10 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		this.regionTextureGenerator.forUniform("TotalCloudRegions", (id, loc) -> {
 			GL41.glProgramUniform1i(id, loc, count);
 		});
+	}
+
+	private static record SelectedRegionData(CloudRegion region, CloudInfo type, int typeIndex, float posX,
+			float posZ, float radius, Matrix2f transform, float distanceSq) {
 	}
 
 	private void uploadCloudTypeData() {

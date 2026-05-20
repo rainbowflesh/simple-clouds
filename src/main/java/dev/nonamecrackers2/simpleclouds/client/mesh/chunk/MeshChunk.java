@@ -28,7 +28,7 @@ public class MeshChunk {
 	private float boundsMaxZ;
 	private float minHeight;
 	private float maxHeight;
-	private int ticksSinceLastGen;
+	private int lastGenTick;
 	private boolean fadeEnabled;
 	private float alpha;
 	private float alphaO;
@@ -56,19 +56,24 @@ public class MeshChunk {
 		this.maxHeight = this.boundsMaxY;
 	}
 
-	public void tick() {
-		this.ticksSinceLastGen++;
-
+	public boolean tickFade() {
 		this.alphaO = this.alpha;
 		if (this.fadeEnabled && this.alpha < 1.0F) {
 			this.alpha += SimpleCloudsRenderer.CHUNK_FADE_IN_ALPHA_PER_TICK;
 			if (this.alpha > 1.0F)
 				this.alpha = 1.0F;
 		}
+		return this.fadeEnabled && (this.alpha < 1.0F || this.alphaO != this.alpha);
 	}
 
 	public void setFadeEnabled(boolean flag) {
 		this.fadeEnabled = flag;
+	}
+
+	public boolean enableFade() {
+		boolean wasEnabled = this.fadeEnabled;
+		this.fadeEnabled = true;
+		return !wasEnabled && (this.alpha < 1.0F || this.alphaO != this.alpha);
 	}
 
 	public void resetAlpha() {
@@ -107,12 +112,12 @@ public class MeshChunk {
 		this.maxHeight = maxHeight;
 	}
 
-	public void resetLastGenTime() {
-		this.ticksSinceLastGen = 0;
+	public void resetLastGenTime(int currentTick) {
+		this.lastGenTick = currentTick;
 	}
 
-	public int getTicksSinceLastGen() {
-		return this.ticksSinceLastGen;
+	public int getTicksSinceLastGen(int currentTick) {
+		return currentTick - this.lastGenTick;
 	}
 
 	public float getBoundsMinX() {

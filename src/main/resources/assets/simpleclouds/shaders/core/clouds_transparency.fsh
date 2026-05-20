@@ -17,8 +17,8 @@ in float vertexDistance;
 layout(location = 0) out vec4 accumColor;
 layout(location = 1) out float revealage;
 
-const float WALL_TRANSITION_DISTANCE = 64.0;
-const float WALL_TRANSITION_MIN_OPACITY = 0.5;
+const float WALL_TRANSITION_DISTANCE = 96.0;
+const float WALL_TRANSITION_MIN_OPACITY = 0.85;
 
 float getWallTransitionFactor(float distanceToCamera)
 {
@@ -28,16 +28,13 @@ float getWallTransitionFactor(float distanceToCamera)
 void main() 
 {
 	float fade = ColorModulator.a;
-	float r = texture(BayerMatrixSampler, gl_FragCoord.xy * DitherScale).r;
-	if (fade < r)
-		discard;
 	
 	vec4 color = vertexColor * vec4(ColorModulator.rgb, 1.0);
 	float wallTransition = getWallTransitionFactor(vertexDistance);
 	float fogFactor = smoothstep(FogStart, FogEnd, fogDistance);
 	float horizonFade = 1.0 - fogFactor;
 	color.a = mix(color.a, max(color.a, WALL_TRANSITION_MIN_OPACITY), wallTransition);
-	color.a *= horizonFade;
+	color.a *= fade * horizonFade;
 	color = mix(color, FogColor, fogFactor);
 	
 	vec4 premul = vec4(color.r * color.a, color.g * color.a, color.b * color.a, color.a);

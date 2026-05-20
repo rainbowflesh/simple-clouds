@@ -1,4 +1,4 @@
-// 1.21.1	2026-05-19T16:24:58.6174497	Cloud Types
+// 1.21.1	2026-05-19T17:26:31.5770589	Cloud Types
 39c203ede85f92343a47c7b0ca0d9f74534a5f05 data/simpleclouds/cloud_types/altocumulus.json
 805725ceb1f478b2b0dce58f48000e40410c6192 data/simpleclouds/cloud_types/altostratus.json
 ea2723249098a62076a61458f341255022ec4c5e data/simpleclouds/cloud_types/anvil_bloom.json
@@ -16,7 +16,6 @@ ed9d140c40de1c1e002dbf363f28d0fb9d98c7e2 data/simpleclouds/cloud_types/glacier_p
 f6313bb5671df2b202676f908ef9c45db25dc617 data/simpleclouds/cloud_types/itty_bitty.json
 064f003ee528faa1121c00cbee1bdec6fd73cca9 data/simpleclouds/cloud_types/mackerel_field.json
 b89c801b76482cdb6dd786a278364b944ebeecbf data/simpleclouds/cloud_types/nimbostratus.json
-78d40eb295c4acc12d2cf00f14c9742cb3de2a8f data/simpleclouds/cloud_types/prism_puffs.json
 408ade511de74fb76b1d7ceb93b13635db5b9c5f data/simpleclouds/cloud_types/prism_sprinkles.json
 6ff2d38c4b8703241b13517fcff54d7381feae75 data/simpleclouds/cloud_types/ragged_banks.json
 84bab90b9da5c23f278c8de419d7e88dede0d004 data/simpleclouds/cloud_types/small_cumulus.json

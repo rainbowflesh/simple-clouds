@@ -53,7 +53,7 @@ void main()
 	fogDistance = length(modelPos.xz);
 	vertexDistance = length(modelPos.xyz);
 
-	vec3 tint = vec3(info.tintR, info.tintG, info.tintB);
+	vec3 tint = mix(vec3(1.0), vec3(info.tintR, info.tintG, info.tintB), 0.45);
 	vec4 finalCol = vec4(tint * mix(DarknessColorModifier, vec3(1.0), info.brightness), 1.0);
     if (UseNormals)
     {

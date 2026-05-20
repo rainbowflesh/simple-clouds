@@ -80,26 +80,25 @@ public class WorldEffects {
 
 	public void updateCameraWeatherStatus(double camX, double camY, double camZ) {
 		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
-		Pair<CloudType, Float> result = manager.getDarkeningCloudTypeAtWorldPos((float) camX, (float) camZ);
-		CloudType type = result.getLeft();
+		CloudManager.WeatherSample weather = manager.sampleWeatherAtWorldPos((float) camX, (float) camY,
+				(float) camZ);
+		CloudType type = weather.darkeningType();
 		this.typeAtCamera = type;
-		this.fadeAtCamera = result.getRight();
+		this.fadeAtCamera = weather.darkeningFade();
 
 		if (!manager.shouldUseVanillaWeather() && type.weatherType().causesDarkening()) {
 			float verticalFade = 1.0F - Mth.clamp(
 					((float) camY - manager.getStormStartHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F,
 					1.0F);
-			float factor = Mth.clamp((1.0F - result.getRight()) * 3.0F, 0.0F, 1.0F);
+			float factor = Mth.clamp((1.0F - weather.darkeningFade()) * 3.0F, 0.0F, 1.0F);
 			this.storminessAtCamera = type.storminess() * factor * verticalFade;
 		} else {
 			this.storminessAtCamera = 0.0F;
 		}
 
 		if (!manager.shouldUseVanillaWeather()) {
-			float rainLevel = manager.getRainLevel((float) camX, (float) camY, (float) camZ);
-			float thunderLevel = manager.getThunderLevel((float) camX, (float) camY, (float) camZ);
-			this.mc.level.setRainLevel(rainLevel);
-			this.mc.level.setThunderLevel(thunderLevel);
+			this.mc.level.setRainLevel(weather.rainLevel());
+			this.mc.level.setThunderLevel(weather.thunderLevel());
 		}
 	}
 

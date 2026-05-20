@@ -148,17 +148,17 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 
 	public Pair<CloudType, Float> getRainCloudTypeAtWorldPos(float x, float z) {
 		return this.getWeatherCloudTypeAtPosition(x / (float) SimpleCloudsConstants.CLOUD_SCALE,
-				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherType::includesRain);
+				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherSelection.RAIN);
 	}
 
 	public Pair<CloudType, Float> getThunderCloudTypeAtWorldPos(float x, float z) {
 		return this.getWeatherCloudTypeAtPosition(x / (float) SimpleCloudsConstants.CLOUD_SCALE,
-				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherType::includesThunder);
+				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherSelection.THUNDER);
 	}
 
 	public Pair<CloudType, Float> getDarkeningCloudTypeAtWorldPos(float x, float z) {
 		return this.getWeatherCloudTypeAtPosition(x / (float) SimpleCloudsConstants.CLOUD_SCALE,
-				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherType::causesDarkening);
+				z / (float) SimpleCloudsConstants.CLOUD_SCALE, WeatherSelection.DARKENING);
 	}
 
 	public Pair<CloudType, Float> getCloudTypeAtPositionForLayer(float x, float z, int cloudLayer) {
@@ -182,35 +182,159 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 				z / (float) SimpleCloudsConstants.CLOUD_SCALE, cloudLayer);
 	}
 
-	private Pair<CloudType, Float> getWeatherCloudTypeAtPosition(float x, float z,
-			Predicate<WeatherType> weatherPredicate) {
+	public WeatherSample sampleWeatherAtWorldPos(float x, float y, float z) {
+		WeatherStatus status = this.resolveWeatherStatusAtWorldPos(x, z);
+		return new WeatherSample(status.darkeningType(), status.darkeningFade(),
+				this.calculateRainLevel(y, status.rainType(), status.rainFade()),
+				this.calculateThunderLevel(y, status.thunderType(), status.thunderFade()));
+	}
+
+	private Pair<CloudType, Float> getWeatherCloudTypeAtPosition(float x, float z, WeatherSelection selection) {
+		WeatherStatus status = this.resolveWeatherStatusAtPosition(x, z);
+		return switch (selection) {
+			case RAIN -> Pair.of(status.rainType(), status.rainFade());
+			case THUNDER -> Pair.of(status.thunderType(), status.thunderFade());
+			case DARKENING -> Pair.of(status.darkeningType(), status.darkeningFade());
+		};
+	}
+
+	private WeatherStatus resolveWeatherStatusAtWorldPos(float x, float z) {
+		return this.resolveWeatherStatusAtPosition(x / (float) SimpleCloudsConstants.CLOUD_SCALE,
+				z / (float) SimpleCloudsConstants.CLOUD_SCALE);
+	}
+
+	private WeatherStatus resolveWeatherStatusAtPosition(float x, float z) {
 		if (this.getCloudMode() == CloudMode.SINGLE) {
 			Pair<CloudType, Float> info = this.getCloudTypeAtPosition(x, z);
-			return weatherPredicate.test(info.getLeft().weatherType()) ? info
-					: Pair.of(SimpleCloudsConstants.EMPTY, 1.0F);
+			CloudType type = info.getLeft();
+			float fade = info.getRight();
+			WeatherType weatherType = type.weatherType();
+			return new WeatherStatus(weatherType.includesRain() ? type : SimpleCloudsConstants.EMPTY,
+					weatherType.includesRain() ? fade : 1.0F,
+					weatherType.includesThunder() ? type : SimpleCloudsConstants.EMPTY,
+					weatherType.includesThunder() ? fade : 1.0F,
+					weatherType.causesDarkening() ? type : SimpleCloudsConstants.EMPTY,
+					weatherType.causesDarkening() ? fade : 1.0F);
 		}
 
-		CloudType bestType = SimpleCloudsConstants.EMPTY;
-		float bestFade = 1.0F;
-		float highestStorminess = -1.0F;
-		for (LayerCloudSelection selection : this.resolveLayerCloudSelections(x, z)) {
-			if (selection == null)
+		CloudType layer1Type = SimpleCloudsConstants.EMPTY;
+		float layer1Fade = 1.0F;
+		float layer1Storminess = -1.0F;
+		CloudType layer2Type = SimpleCloudsConstants.EMPTY;
+		float layer2Fade = 1.0F;
+		float layer2Storminess = -1.0F;
+		CloudType layer3Type = SimpleCloudsConstants.EMPTY;
+		float layer3Fade = 1.0F;
+		float layer3Storminess = -1.0F;
+
+		for (CloudRegion region : this.getClouds()) {
+			CloudType type = this.getCloudTypeForId(region.getCloudTypeId());
+			if (type == null)
 				continue;
 
-			CloudType type = selection.type();
-			if (!weatherPredicate.test(type.weatherType()))
+			float fade = this.getRegionFadeAt(region, x, z);
+			if (fade >= 1.0F)
 				continue;
 
-			float fade = selection.fade();
-			if (type.storminess() > highestStorminess
-					|| (type.storminess() == highestStorminess && fade < bestFade)) {
-				bestType = type;
-				bestFade = fade;
-				highestStorminess = type.storminess();
+			float storminess = type.storminess();
+			for (int cloudLayer : type.cloudLayers()) {
+				switch (cloudLayer) {
+					case 1 -> {
+						if (fade < layer1Fade - 1.0E-4F
+								|| (Math.abs(fade - layer1Fade) <= 1.0E-4F && storminess > layer1Storminess)) {
+							layer1Type = type;
+							layer1Fade = fade;
+							layer1Storminess = storminess;
+						}
+					}
+					case 2 -> {
+						if (fade < layer2Fade - 1.0E-4F
+								|| (Math.abs(fade - layer2Fade) <= 1.0E-4F && storminess > layer2Storminess)) {
+							layer2Type = type;
+							layer2Fade = fade;
+							layer2Storminess = storminess;
+						}
+					}
+					case 3 -> {
+						if (fade < layer3Fade - 1.0E-4F
+								|| (Math.abs(fade - layer3Fade) <= 1.0E-4F && storminess > layer3Storminess)) {
+							layer3Type = type;
+							layer3Fade = fade;
+							layer3Storminess = storminess;
+						}
+					}
+					default -> {
+					}
+				}
 			}
 		}
 
-		return Pair.of(bestType, bestFade);
+		CloudType bestRainType = SimpleCloudsConstants.EMPTY;
+		float bestRainFade = 1.0F;
+		float highestRainStorminess = -1.0F;
+		if (layer1Type.weatherType().includesRain()) {
+			bestRainType = layer1Type;
+			bestRainFade = layer1Fade;
+			highestRainStorminess = layer1Type.storminess();
+		}
+		if (layer2Type.weatherType().includesRain() && (layer2Type.storminess() > highestRainStorminess
+				|| (layer2Type.storminess() == highestRainStorminess && layer2Fade < bestRainFade))) {
+			bestRainType = layer2Type;
+			bestRainFade = layer2Fade;
+			highestRainStorminess = layer2Type.storminess();
+		}
+		if (layer3Type.weatherType().includesRain() && (layer3Type.storminess() > highestRainStorminess
+				|| (layer3Type.storminess() == highestRainStorminess && layer3Fade < bestRainFade))) {
+			bestRainType = layer3Type;
+			bestRainFade = layer3Fade;
+		}
+
+		CloudType bestThunderType = SimpleCloudsConstants.EMPTY;
+		float bestThunderFade = 1.0F;
+		float highestThunderStorminess = -1.0F;
+		if (layer1Type.weatherType().includesThunder()) {
+			bestThunderType = layer1Type;
+			bestThunderFade = layer1Fade;
+			highestThunderStorminess = layer1Type.storminess();
+		}
+		if (layer2Type.weatherType().includesThunder() && (layer2Type.storminess() > highestThunderStorminess
+				|| (layer2Type.storminess() == highestThunderStorminess && layer2Fade < bestThunderFade))) {
+			bestThunderType = layer2Type;
+			bestThunderFade = layer2Fade;
+			highestThunderStorminess = layer2Type.storminess();
+		}
+		if (layer3Type.weatherType().includesThunder() && (layer3Type.storminess() > highestThunderStorminess
+				|| (layer3Type.storminess() == highestThunderStorminess && layer3Fade < bestThunderFade))) {
+			bestThunderType = layer3Type;
+			bestThunderFade = layer3Fade;
+		}
+
+		CloudType bestDarkeningType = SimpleCloudsConstants.EMPTY;
+		float bestDarkeningFade = 1.0F;
+		float highestDarkeningStorminess = -1.0F;
+		if (layer1Type.weatherType().causesDarkening()) {
+			bestDarkeningType = layer1Type;
+			bestDarkeningFade = layer1Fade;
+			highestDarkeningStorminess = layer1Type.storminess();
+		}
+		if (layer2Type.weatherType().causesDarkening()
+				&& (layer2Type.storminess() > highestDarkeningStorminess
+						|| (layer2Type.storminess() == highestDarkeningStorminess
+								&& layer2Fade < bestDarkeningFade))) {
+			bestDarkeningType = layer2Type;
+			bestDarkeningFade = layer2Fade;
+			highestDarkeningStorminess = layer2Type.storminess();
+		}
+		if (layer3Type.weatherType().causesDarkening()
+				&& (layer3Type.storminess() > highestDarkeningStorminess
+						|| (layer3Type.storminess() == highestDarkeningStorminess
+								&& layer3Fade < bestDarkeningFade))) {
+			bestDarkeningType = layer3Type;
+			bestDarkeningFade = layer3Fade;
+		}
+
+		return new WeatherStatus(bestRainType, bestRainFade, bestThunderType, bestThunderFade, bestDarkeningType,
+				bestDarkeningFade);
 	}
 
 	private LayerCloudSelection[] resolveLayerCloudSelections(float x, float z) {
@@ -245,10 +369,13 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 		float rotatedX = dx * cos - dz * sin;
 		float rotatedZ = dx * sin + dz * cos;
 		float scaledX = rotatedX * region.getStretch();
-		float distance = Mth.sqrt(scaledX * scaledX + rotatedZ * rotatedZ);
+		float distanceSq = scaledX * scaledX + rotatedZ * rotatedZ;
 		float edgeFadeDistance = 1.0F / SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR;
-		if (distance > region.getRadius() + edgeFadeDistance)
+		float maxDistance = region.getRadius() + edgeFadeDistance;
+		if (distanceSq > maxDistance * maxDistance)
 			return 1.0F;
+
+		float distance = Mth.sqrt(distanceSq);
 		if (distance < region.getRadius()) {
 			float coverage = Math.min((region.getRadius() - distance) * SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR,
 					1.0F);
@@ -260,22 +387,30 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	private static record LayerCloudSelection(CloudType type, float fade) {
 	}
 
-	public Pair<Boolean, Biome.Precipitation> getPrecipitationAt(BlockPos pos) {
+	private @Nullable LocalizedPrecipitation resolveLocalizedPrecipitation(BlockPos pos) {
 		if (!this.level.canSeeSky(pos)
 				|| this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, pos).getY() > pos.getY())
-			return Pair.of(false, Biome.Precipitation.NONE);
+			return null;
 
-		var info = this.getRainCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F);
-		CloudType type = info.getLeft();
-		Biome.Precipitation precipitation = resolveBiomePrecipitation(this.level, this.level.getBiome(pos), pos, type);
-		if ((float) pos.getY() + 0.5F > this.getPrecipitationCeilingHeight(type))
-			return Pair.of(false, Biome.Precipitation.NONE);
+		WeatherStatus status = this.resolveWeatherStatusAtWorldPos((float) pos.getX() + 0.5F,
+				(float) pos.getZ() + 0.5F);
+		CloudType rainType = status.rainType();
+		Biome.Precipitation precipitation = resolveBiomePrecipitation(this.level, this.level.getBiome(pos), pos,
+				rainType);
+		if (precipitation == Biome.Precipitation.NONE)
+			return null;
+		if ((float) pos.getY() + 0.5F > this.getPrecipitationCeilingHeight(rainType))
+			return null;
+		if (!rainType.weatherType().includesRain() || status.rainFade() >= SimpleCloudsConstants.RAIN_THRESHOLD - 0.01F)
+			return null;
 
-		if (info.getLeft().weatherType().includesRain()
-				&& info.getRight() < SimpleCloudsConstants.RAIN_THRESHOLD - 0.01F)
-			return Pair.of(true, precipitation);
-		else
-			return Pair.of(false, Biome.Precipitation.NONE);
+		return new LocalizedPrecipitation(status, rainType, precipitation);
+	}
+
+	public Pair<Boolean, Biome.Precipitation> getPrecipitationAt(BlockPos pos) {
+		LocalizedPrecipitation precipitation = this.resolveLocalizedPrecipitation(pos);
+		return precipitation != null ? Pair.of(true, precipitation.precipitation())
+				: Pair.of(false, Biome.Precipitation.NONE);
 	}
 
 	public Biome.Precipitation getBiomePrecipitationAt(BlockPos pos) {
@@ -460,38 +595,78 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 
 	// For API calls, use Level#isRainingAt
 	public boolean isRainingAt(BlockPos pos) {
-		Pair<Boolean, Biome.Precipitation> val = this.getPrecipitationAt(pos);
-		return val.getLeft() && val.getRight() == Biome.Precipitation.RAIN;
+		LocalizedPrecipitation precipitation = this.resolveLocalizedPrecipitation(pos);
+		return precipitation != null && precipitation.precipitation() == Biome.Precipitation.RAIN;
+	}
+
+	public boolean isRainingAt(double x, double y, double z) {
+		return this.isRainingAt(BlockPos.containing(x, y, z));
 	}
 
 	public boolean isSnowingAt(BlockPos pos) {
-		Pair<Boolean, Biome.Precipitation> val = this.getPrecipitationAt(pos);
-		return val.getLeft() && val.getRight() == Biome.Precipitation.SNOW;
+		LocalizedPrecipitation precipitation = this.resolveLocalizedPrecipitation(pos);
+		return precipitation != null && precipitation.precipitation() == Biome.Precipitation.SNOW;
+	}
+
+	public boolean isSnowingAt(double x, double y, double z) {
+		return this.isSnowingAt(BlockPos.containing(x, y, z));
 	}
 
 	public boolean isThunderingAt(BlockPos pos) {
-		if (!this.hasPrecipitationAt(pos))
+		LocalizedPrecipitation precipitation = this.resolveLocalizedPrecipitation(pos);
+		if (precipitation == null)
 			return false;
 
-		var info = this.getThunderCloudTypeAtWorldPos((float) pos.getX() + 0.5F, (float) pos.getZ() + 0.5F);
-		return info.getLeft().weatherType().includesThunder()
-				&& info.getRight() < SimpleCloudsConstants.RAIN_THRESHOLD - 0.01F;
+		WeatherStatus status = precipitation.weatherStatus();
+		return status.thunderType().weatherType().includesThunder()
+				&& status.thunderFade() < SimpleCloudsConstants.RAIN_THRESHOLD - 0.01F;
+	}
+
+	public boolean isThunderingAt(double x, double y, double z) {
+		return this.isThunderingAt(BlockPos.containing(x, y, z));
 	}
 
 	public boolean hasPrecipitationAt(BlockPos pos) {
-		Pair<Boolean, Biome.Precipitation> val = this.getPrecipitationAt(pos);
-		return val.getLeft() && val.getRight() != Biome.Precipitation.NONE;
+		return this.resolveLocalizedPrecipitation(pos) != null;
+	}
+
+	public boolean hasPrecipitationAt(double x, double y, double z) {
+		return this.hasPrecipitationAt(BlockPos.containing(x, y, z));
+	}
+
+	public boolean hasPrecipitationForAnyPlayer(Iterable<? extends Player> players) {
+		return this.anyPlayerMatchesWeather(players, pos -> this.hasPrecipitationAt(pos));
+	}
+
+	public boolean isThunderingForAnyPlayer(Iterable<? extends Player> players) {
+		return this.anyPlayerMatchesWeather(players, pos -> this.isThunderingAt(pos));
+	}
+
+	private boolean anyPlayerMatchesWeather(Iterable<? extends Player> players, Predicate<BlockPos> weatherCheck) {
+		for (Player player : players) {
+			if (player.isSpectator())
+				continue;
+			if (weatherCheck.test(player.blockPosition()))
+				return true;
+		}
+		return false;
 	}
 
 	@Override
 	public float getRainLevel(float x, float y, float z) {
 		var info = this.getRainCloudTypeAtWorldPos(x, z);
-		CloudType type = info.getLeft();
+		return this.calculateRainLevel(y, info.getLeft(), info.getRight());
+	}
 
+	public float getThunderLevel(float x, float y, float z) {
+		var info = this.getThunderCloudTypeAtWorldPos(x, z);
+		return this.calculateThunderLevel(y, info.getLeft(), info.getRight());
+	}
+
+	private float calculateRainLevel(float y, CloudType type, float fade) {
 		if (!type.weatherType().includesRain())
 			return 0.0F;
 
-		float fade = info.getRight();
 		float verticalFade = 1.0F - Mth
 				.clamp((y - this.getPrecipitationCeilingHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE,
 						0.0F, 1.0F);
@@ -500,20 +675,11 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 				* verticalFade;
 	}
 
-	public float getThunderLevel(float x, float y, float z) {
-		var info = this.getThunderCloudTypeAtWorldPos(x, z);
-		CloudType type = info.getLeft();
-
+	private float calculateThunderLevel(float y, CloudType type, float fade) {
 		if (!type.weatherType().includesThunder())
 			return 0.0F;
 
-		float fade = info.getRight();
-		float verticalFade = 1.0F - Mth
-				.clamp((y - this.getPrecipitationCeilingHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE,
-						0.0F, 1.0F);
-		float rainLevel = Math.min(1.0F,
-				Math.max(0.0F, SimpleCloudsConstants.RAIN_THRESHOLD - fade) / SimpleCloudsConstants.RAIN_FADE)
-				* verticalFade;
+		float rainLevel = this.calculateRainLevel(y, type, fade);
 		if (rainLevel <= 0.0F)
 			return 0.0F;
 
@@ -636,6 +802,24 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	@Override
 	public final boolean shouldUseVanillaWeather() {
 		return this.useVanillaWeather;
+	}
+
+	private static record WeatherStatus(CloudType rainType, float rainFade, CloudType thunderType, float thunderFade,
+			CloudType darkeningType, float darkeningFade) {
+	}
+
+	public static record WeatherSample(CloudType darkeningType, float darkeningFade, float rainLevel,
+			float thunderLevel) {
+	}
+
+	private static record LocalizedPrecipitation(WeatherStatus weatherStatus, CloudType rainType,
+			Biome.Precipitation precipitation) {
+	}
+
+	private static enum WeatherSelection {
+		RAIN,
+		THUNDER,
+		DARKENING
 	}
 
 	protected abstract float attemptToSpawnLightning();

@@ -21,6 +21,14 @@ import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SnowLayerBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class ServerCloudManager extends CloudManager<ServerLevel> {
@@ -89,6 +97,42 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 		if (thunderLevel > 0.0F)
 			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, 0.0F),
 					this.level.dimension());
+	}
+
+	public void tickChunkPrecipitation(ChunkAccess chunk) {
+		if (this.level.random.nextInt(16) != 0)
+			return;
+
+		int blockX = chunk.getPos().getMinBlockX();
+		int blockZ = chunk.getPos().getMinBlockZ();
+		BlockPos checkPos = this.level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING,
+				this.level.getBlockRandomPos(blockX, 0, blockZ, 15));
+		var precipitation = this.getPrecipitationAt(checkPos);
+		if (!precipitation.getLeft())
+			return;
+
+		BlockPos belowPos = checkPos.below();
+		Biome.Precipitation precipitationType = precipitation.getRight();
+		if (precipitationType != Biome.Precipitation.NONE) {
+			BlockState blockState = this.level.getBlockState(belowPos);
+			blockState.getBlock().handlePrecipitation(blockState, this.level, belowPos, precipitationType);
+		}
+
+		int snowAccumulationHeight = this.level.getGameRules().getInt(GameRules.RULE_SNOW_ACCUMULATION_HEIGHT);
+		if (snowAccumulationHeight <= 0 || precipitationType != Biome.Precipitation.SNOW)
+			return;
+
+		BlockState blockStateAtCheckPos = this.level.getBlockState(checkPos);
+		if (blockStateAtCheckPos.is(Blocks.SNOW)) {
+			int layers = blockStateAtCheckPos.getValue(SnowLayerBlock.LAYERS);
+			if (layers < Math.min(snowAccumulationHeight, 8)) {
+				BlockState updatedBlockState = blockStateAtCheckPos.setValue(SnowLayerBlock.LAYERS, layers + 1);
+				Block.pushEntitiesUp(blockStateAtCheckPos, updatedBlockState, this.level, checkPos);
+				this.level.setBlockAndUpdate(checkPos, updatedBlockState);
+			}
+		} else {
+			this.level.setBlockAndUpdate(checkPos, Blocks.SNOW.defaultBlockState());
+		}
 	}
 
 	@Override

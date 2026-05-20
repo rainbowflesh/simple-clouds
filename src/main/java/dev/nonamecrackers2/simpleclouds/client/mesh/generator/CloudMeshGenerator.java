@@ -1,7 +1,11 @@
 package dev.nonamecrackers2.simpleclouds.client.mesh.generator;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -105,6 +109,7 @@ public abstract class CloudMeshGenerator {
 	protected final CloudMeshTaskScheduler taskScheduler = new CloudMeshTaskScheduler();
 	protected final Supplier<Integer> meshGenIntervalCalculator;
 	protected @Nullable ComputeShader shader;
+	protected final Set<MeshChunk> fadingChunks = Collections.newSetFromMap(new IdentityHashMap<>());
 
 	protected @Nullable InstanceableMesh sideMesh;
 	protected @Nullable InstanceableMesh cubeMesh;
@@ -122,6 +127,9 @@ public abstract class CloudMeshGenerator {
 	private float cullDistance;
 	private float transparencyDistancePercentage;
 	private int transparencyDistance;
+	private int worldTickCount;
+	private float frustumWorldScale = (float) SimpleCloudsConstants.CLOUD_SCALE;
+	private float frustumWorldOffsetY;
 
 	private int opaqueBufferSize;
 	private int opaqueBufferBytesUsed;
@@ -235,7 +243,7 @@ public abstract class CloudMeshGenerator {
 
 	private void updateTransparencyDistance() {
 		int requestedDistance = Mth.floor(this.transparencyDistancePercentage * (float) this.getCloudAreaMaxRadius());
-		int minimumDistance = Mth.ceil(this.fadeEnd);
+		int minimumDistance = this.fadeNearOrigin ? this.getCloudAreaMaxRadius() : Mth.ceil(this.fadeEnd);
 		this.transparencyDistance = Math.max(requestedDistance, minimumDistance);
 	}
 
@@ -272,6 +280,11 @@ public abstract class CloudMeshGenerator {
 		this.scrollX = x;
 		this.scrollY = y;
 		this.scrollZ = z;
+	}
+
+	public void setFrustumCullingTransform(float worldScale, float worldOffsetY) {
+		this.frustumWorldScale = worldScale;
+		this.frustumWorldOffsetY = worldOffsetY;
 	}
 
 	public Pair<CloudMeshGenerator.MeshGenStatus, CloudMeshGenerator.MeshGenStatus> getMeshGenStatus() {
@@ -332,6 +345,8 @@ public abstract class CloudMeshGenerator {
 
 		GL42.glMemoryBarrier(GL42.GL_ALL_BARRIER_BITS);
 		this.taskScheduler.clear();
+		this.fadingChunks.clear();
+		this.worldTickCount = 0;
 
 		if (this.shader != null)
 			this.shader.close();
@@ -375,6 +390,8 @@ public abstract class CloudMeshGenerator {
 
 		GL42.glMemoryBarrier(GL42.GL_ALL_BARRIER_BITS);
 		this.taskScheduler.clear();
+		this.fadingChunks.clear();
+		this.worldTickCount = 0;
 
 		LOGGER.debug("Beginning mesh generator initialization");
 
@@ -415,6 +432,7 @@ public abstract class CloudMeshGenerator {
 		this.opaqueBytesPerChunk = chunkLayout.opaqueBytesPerChunk();
 		this.transparentBytesPerChunk = chunkLayout.transparentBytesPerChunk();
 		this.chunks = chunkLayout.chunks();
+		this.fadingChunks.clear();
 
 		LOGGER.debug("Opaque buffer size: {} bytes, transparent buffer size: {} bytes", this.opaqueBufferSize,
 				this.transparentBufferSize);
@@ -552,8 +570,15 @@ public abstract class CloudMeshGenerator {
 	}
 
 	public void worldTick() {
-		if (this.chunks != null)
-			this.chunks.forEach(MeshChunk::tick);
+		this.worldTickCount++;
+		if (this.fadingChunks.isEmpty())
+			return;
+
+		for (Iterator<MeshChunk> iterator = this.fadingChunks.iterator(); iterator.hasNext();) {
+			MeshChunk chunk = iterator.next();
+			if (!chunk.tickFade())
+				iterator.remove();
+		}
 	}
 
 	/**
@@ -782,13 +807,13 @@ public abstract class CloudMeshGenerator {
 			CloudMeshGenerator.ChunkGenSettings settings = this.determineChunkGenSettings(minX, minZ, maxX, maxZ);
 			if (settings.skipChunk()) {
 				chunk.clearChunk();
+				this.fadingChunks.remove(chunk);
 				return false;
 			}
 
 			float minY = settings.minimumHeight();
 			float maxY = settings.maximumHeight();
-			if (frustum == null || ((MixinFrustumAccessor) frustum).simpleclouds$cubeInFrustum(minX, minY, minZ, maxX,
-					maxY, maxZ)) {
+			if (this.isVisibleByFrustum(frustum, minX, minY, minZ, maxX, maxY, maxZ)) {
 				this.taskScheduler.queueTask(new CloudMeshGenerator.ChunkGenTask(chunk, minX, minY, minZ, maxX, maxY,
 						maxZ, chunkIndex, minX, 0.0F, minZ, settings.minimumHeight(), settings.maximumHeight()));
 				return true;
@@ -813,7 +838,7 @@ public abstract class CloudMeshGenerator {
 	protected void updateMeshChunkAfterGeneration(MeshChunk chunk, CloudMeshGenerator.ChunkGenTask task) {
 		chunk.setBounds(task.minX(), task.minY(), task.minZ(), task.maxX(), task.maxY(), task.maxZ());
 		chunk.setHeights(task.startY(), task.endY());
-		chunk.resetLastGenTime();
+		chunk.resetLastGenTime(this.worldTickCount);
 	}
 
 	/**
@@ -883,28 +908,37 @@ public abstract class CloudMeshGenerator {
 		for (MeshChunk chunk : this.chunks) {
 			MeshChunk.BufferSet bufferSet = bufferSetFunction.apply(chunk);
 			if (bufferSet.getElementCount() > 0) {
-				if (updateFade && chunk.getTicksSinceLastGen() > TICKS_UNTIL_FADE_RESET) {
+				if (updateFade && chunk.getTicksSinceLastGen(this.worldTickCount) > TICKS_UNTIL_FADE_RESET) {
 					chunk.resetAlpha();
 					chunk.setFadeEnabled(false);
+					this.fadingChunks.remove(chunk);
 				}
 
-				boolean render = true;
-				if (frustum != null)
-					render = ((MixinFrustumAccessor) frustum).simpleclouds$cubeInFrustum(chunk.getBoundsMinX(),
-							chunk.getBoundsMinY(), chunk.getBoundsMinZ(), chunk.getBoundsMaxX(), chunk.getBoundsMaxY(),
-							chunk.getBoundsMaxZ());
+				boolean render = this.isVisibleByFrustum(frustum, chunk.getBoundsMinX(), chunk.getBoundsMinY(),
+						chunk.getBoundsMinZ(), chunk.getBoundsMaxX(), chunk.getBoundsMaxY(), chunk.getBoundsMaxZ());
 
 				if (render) {
 					PreparedChunk chunkInfo = chunk.getChunkInfo();
 					AABB bounds = chunkInfo.bounds();
 					if (cullDistance <= 0.0D || cullDistanceSquared > getChunkDistanceSquared(bounds)) {
-						if (updateFade)
-							chunk.setFadeEnabled(true);
+						if (updateFade && chunk.enableFade())
+							this.fadingChunks.add(chunk);
 						function.accept(chunk, bufferSet);
 					}
 				}
 			}
 		}
+	}
+
+	private boolean isVisibleByFrustum(@Nullable Frustum frustum, float minX, float minY, float minZ, float maxX,
+			float maxY, float maxZ) {
+		if (frustum == null)
+			return true;
+
+		double scale = this.frustumWorldScale;
+		double offsetY = this.frustumWorldOffsetY;
+		return ((MixinFrustumAccessor) frustum).simpleclouds$cubeInFrustum(minX * scale, minY * scale + offsetY,
+				minZ * scale, maxX * scale, maxY * scale + offsetY, maxZ * scale);
 	}
 
 	public void fillReport(CrashReportCategory category) {

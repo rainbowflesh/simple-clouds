@@ -27,14 +27,30 @@ public class LevelOfDetailConfig {
 		int currentRadius = this.primaryChunkSpan / 2;
 		int primaryChunkCount = 0;
 		for (int r = 0; r <= currentRadius; r++) {
+			boolean noOuterOcclusion = this.lods.length > 0 && r == currentRadius;
 			for (int x = -r; x < r; x++) {
-				builder.add(PreparedChunk.create(0, 1, x, 0, -r, 0));
-				builder.add(PreparedChunk.create(0, 1, x, 0, r - 1, 0));
+				int northMask = 0;
+				int southMask = 0;
+				if (noOuterOcclusion) {
+					northMask = PreparedChunk.sideMask(PreparedChunk.NEG_Z_SIDE);
+					southMask = PreparedChunk.sideMask(PreparedChunk.POS_Z_SIDE);
+					if (x == -r) {
+						northMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
+						southMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
+					} else if (x == r - 1) {
+						northMask |= PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE);
+						southMask |= PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE);
+					}
+				}
+				builder.add(PreparedChunk.create(0, 1, x, 0, -r, northMask));
+				builder.add(PreparedChunk.create(0, 1, x, 0, r - 1, southMask));
 				primaryChunkCount += 2;
 			}
 			for (int z = -r + 1; z < r - 1; z++) {
-				builder.add(PreparedChunk.create(0, 1, -r, 0, z, 0));
-				builder.add(PreparedChunk.create(0, 1, r - 1, 0, z, 0));
+				int westMask = noOuterOcclusion ? PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE) : 0;
+				int eastMask = noOuterOcclusion ? PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE) : 0;
+				builder.add(PreparedChunk.create(0, 1, -r, 0, z, westMask));
+				builder.add(PreparedChunk.create(0, 1, r - 1, 0, z, eastMask));
 				primaryChunkCount += 2;
 			}
 		}
@@ -44,12 +60,13 @@ public class LevelOfDetailConfig {
 			int chunkCount = 0;
 			int lodLevel = i + 1;
 			for (int deltaR = 1; deltaR <= config.spread(); deltaR++) {
-				boolean noOcclusion = deltaR == 1;
+				boolean noInnerOcclusion = deltaR == 1;
+				boolean noOuterOcclusion = i < this.lods.length - 1 && deltaR == config.spread();
 				int r = currentRadius / config.chunkScale() + deltaR;
 				for (int x = -r; x < r; x++) {
 					int northMask = 0;
 					int southMask = 0;
-					if (noOcclusion) {
+					if (noInnerOcclusion) {
 						northMask = PreparedChunk.sideMask(PreparedChunk.POS_Z_SIDE);
 						southMask = PreparedChunk.sideMask(PreparedChunk.NEG_Z_SIDE);
 						if (x == -r) {
@@ -60,15 +77,30 @@ public class LevelOfDetailConfig {
 							southMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
 						}
 					}
+					if (noOuterOcclusion) {
+						northMask |= PreparedChunk.sideMask(PreparedChunk.NEG_Z_SIDE);
+						southMask |= PreparedChunk.sideMask(PreparedChunk.POS_Z_SIDE);
+						if (x == -r) {
+							northMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
+							southMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
+						} else if (x == r - 1) {
+							northMask |= PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE);
+							southMask |= PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE);
+						}
+					}
 					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), x, 0, -r, northMask));
 					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), x, 0, r - 1, southMask));
 					chunkCount += 2;
 				}
 				for (int z = -r + 1; z < r - 1; z++) {
-					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), -r, 0, z,
-							noOcclusion ? PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE) : 0));
-					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), r - 1, 0, z,
-							noOcclusion ? PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE) : 0));
+					int westMask = noInnerOcclusion ? PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE) : 0;
+					int eastMask = noInnerOcclusion ? PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE) : 0;
+					if (noOuterOcclusion) {
+						westMask |= PreparedChunk.sideMask(PreparedChunk.NEG_X_SIDE);
+						eastMask |= PreparedChunk.sideMask(PreparedChunk.POS_X_SIDE);
+					}
+					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), -r, 0, z, westMask));
+					builder.add(PreparedChunk.create(lodLevel, config.chunkScale(), r - 1, 0, z, eastMask));
 					chunkCount += 2;
 				}
 			}

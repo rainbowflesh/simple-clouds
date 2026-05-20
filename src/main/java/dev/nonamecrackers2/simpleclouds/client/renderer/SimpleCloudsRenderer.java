@@ -138,6 +138,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private @Nullable RendererInitializeResult initialInitializationResult;
 	private final Matrix4f inverseProjMatrix = new Matrix4f();
 	private final Matrix4f inverseModelViewMatrix = new Matrix4f();
+	private final float[] cloudColorScratch = new float[3];
 
 	private SimpleCloudsRenderer(CloudsRendererSettings settings, Minecraft mc) {
 		this.settings = settings;
@@ -919,10 +920,10 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		float skyFlashFactor = Math.max(0.0F, ((float) this.mc.level.getSkyFlashTime() - partialTick)
 				* SimpleCloudsConstants.LIGHTNING_FLASH_STRENGTH);
 		factor += skyFlashFactor;
-		float r = Mth.clamp(rBase * factor, 0.0F, 1.0F);
-		float g = Mth.clamp(gBase * factor, 0.0F, 1.0F);
-		float b = Mth.clamp(bBase * factor, 0.0F, 1.0F);
-		return new float[] { r, g, b };
+		this.cloudColorScratch[0] = Mth.clamp(rBase * factor, 0.0F, 1.0F);
+		this.cloudColorScratch[1] = Mth.clamp(gBase * factor, 0.0F, 1.0F);
+		this.cloudColorScratch[2] = Mth.clamp(bBase * factor, 0.0F, 1.0F);
+		return this.cloudColorScratch;
 	}
 
 	public void translateClouds(PoseStack stack, double camX, double camY, double camZ) {
@@ -993,6 +994,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		}
 
 		this.meshGenerator.setCullDistance(this.fogEnd / (float) SimpleCloudsConstants.CLOUD_SCALE);
+		this.meshGenerator.setFrustumCullingTransform((float) SimpleCloudsConstants.CLOUD_SCALE,
+				(float) this.cloudManager.getCloudHeight());
 
 		this.mc.getProfiler().push("simple_clouds_prepare");
 
@@ -1001,7 +1004,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		double originX = camX / scale;
 		double originY = (camY - (double) this.cloudManager.getCloudHeight()) / scale;
 		double originZ = camZ / scale;
-		this.cullFrustum.prepare(originX, originY, originZ);
+		this.cullFrustum.prepare(camX, camY, camZ);
 
 		ProfilerFiller p = this.mc.getProfiler();
 

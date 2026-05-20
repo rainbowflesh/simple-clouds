@@ -34,9 +34,11 @@ import net.neoforged.neoforge.common.NeoForge;
 public class SimpleCloudsMod {
 	public static final String MODID = "simpleclouds";
 	private static final String DH_MODID = "distanthorizons";
+	private static final String SODIUM_MODID = "sodium";
 	private static final String VOXY_MODID = "voxy";
 	private static ArtifactVersion version;
 	private static boolean dhLoaded;
+	private static boolean sodiumLoaded;
 	private static boolean voxyLoaded;
 
 	public SimpleCloudsMod(IEventBus modBus, ModContainer container) {
@@ -72,6 +74,7 @@ public class SimpleCloudsMod {
 		forgeBus.register(SimpleCloudsEvents.class);
 		SimpleCloudsConfigListeners.registerListener();
 		dhLoaded = ModList.get().isLoaded(DH_MODID);
+		sodiumLoaded = ModList.get().isLoaded(SODIUM_MODID);
 		voxyLoaded = ModList.get().isLoaded(VOXY_MODID);
 	}
 
@@ -111,5 +114,9 @@ public class SimpleCloudsMod {
 
 	public static boolean voxyLoaded() {
 		return voxyLoaded;
+	}
+
+	public static boolean sodiumLoaded() {
+		return sodiumLoaded;
 	}
 }

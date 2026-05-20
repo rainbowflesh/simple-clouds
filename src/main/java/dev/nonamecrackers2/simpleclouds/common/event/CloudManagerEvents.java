@@ -1,5 +1,6 @@
 package dev.nonamecrackers2.simpleclouds.common.event;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -121,16 +122,27 @@ public class CloudManagerEvents {
 
 	private static void sendCloudRegionDeltaToPlayer(ServerPlayer player) {
 		List<CloudRegion> formationsForPlayer = getCloudsForPlayer(player);
-		Set<Integer> currentCloudIds = collectCloudIds(formationsForPlayer);
 		Set<Integer> previousCloudIds = SYNCHED_CLOUDS_BY_PLAYER.get(player.getUUID());
 		if (previousCloudIds == null) {
 			sendFullCloudRegionsToPlayer(player);
 			return;
 		}
 
-		List<CloudRegion> addedClouds = formationsForPlayer.stream()
-				.filter(region -> !previousCloudIds.contains(region.getSyncId())).toList();
-		List<Integer> removedCloudIds = previousCloudIds.stream().filter(id -> !currentCloudIds.contains(id)).toList();
+		Set<Integer> currentCloudIds = new HashSet<>(formationsForPlayer.size());
+		List<CloudRegion> addedClouds = new ArrayList<>();
+		for (CloudRegion region : formationsForPlayer) {
+			int syncId = region.getSyncId();
+			currentCloudIds.add(syncId);
+			if (!previousCloudIds.contains(syncId))
+				addedClouds.add(region);
+		}
+
+		List<Integer> removedCloudIds = new ArrayList<>();
+		for (int syncId : previousCloudIds) {
+			if (!currentCloudIds.contains(syncId))
+				removedCloudIds.add(syncId);
+		}
+
 		if (!addedClouds.isEmpty() || !removedCloudIds.isEmpty())
 			PacketDistributor.sendToPlayer(player, new UpdateCloudRegionsPayload(addedClouds, removedCloudIds));
 
@@ -145,7 +157,7 @@ public class CloudManagerEvents {
 	}
 
 	private static Set<Integer> collectCloudIds(List<CloudRegion> clouds) {
-		Set<Integer> cloudIds = new HashSet<>();
+		Set<Integer> cloudIds = new HashSet<>(clouds.size());
 		for (CloudRegion region : clouds)
 			cloudIds.add(region.getSyncId());
 		return cloudIds;

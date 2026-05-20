@@ -80,6 +80,7 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		float cloudR = cloudCol[0];
 		float cloudG = cloudCol[1];
 		float cloudB = cloudCol[2];
+		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 
 		// -- Volumetric cloud geometry --------------------------------------
 		p.push("clouds");
@@ -97,11 +98,10 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		renderer.copyDepthFromMainToClouds();
 		cloudTarget.bindWrite(false);
 		CloudMeshGenerator generator = renderer.getMeshGenerator();
-		SimpleCloudsRenderer.renderCloudsOpaque(
-				generator, cloudStack, projMat,
-				renderer.getFogStart(), renderer.getFogEnd(),
-				partialTick, cloudR, cloudG, cloudB,
-				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+		SimpleCloudsRenderer.renderCloudsOpaque(generator, cloudStack, projMat, renderer.getFogStart(),
+				renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
+				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, viewMat, cloudWorldMat, camX, camY,
+				camZ);
 		renderer.copyDepthFromCloudsToMain();
 
 		p.popPush("clouds_transparent");
@@ -110,11 +110,10 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		if (generator.transparencyEnabled()) {
 			renderer.copyDepthFromCloudsToTransparency();
 			transparencyTarget.bindWrite(false);
-			SimpleCloudsRenderer.renderCloudsTransparency(
-					generator, cloudStack, projMat,
-					renderer.getFogStart(), renderer.getFogEnd(),
-					partialTick, cloudR, cloudG, cloudB,
-					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null);
+			SimpleCloudsRenderer.renderCloudsTransparency(generator, cloudStack, projMat,
+					renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
+					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, viewMat, cloudWorldMat, camX,
+					camY, camZ);
 		}
 		p.pop();
 

@@ -22,6 +22,8 @@ public enum CloudColorMode {
     }
 
     public static CloudColorMode byName(String name) {
+        if ("rainbow_cloud".equals(name) || "roygbiv".equals(name))
+            return RAINBOW;
         for (CloudColorMode mode : values()) {
             if (mode.serializedName.equals(name))
                 return mode;

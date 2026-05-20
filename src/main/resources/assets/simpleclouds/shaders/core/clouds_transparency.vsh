@@ -48,7 +48,7 @@ void main()
 	}
 	vec4 modelPos = ViewMat * vec4(cameraRelativePos, 1.0);
     gl_Position = ProjMat * modelPos;
-	vec3 tint = vec3(info.tintR, info.tintG, info.tintB);
+	vec3 tint = mix(vec3(1.0), vec3(info.tintR, info.tintG, info.tintB), 0.45);
 	vertexColor = vec4(tint * mix(DarknessColorModifier, vec3(1.0), info.brightness), info.alpha);
 	fogDistance = length(modelPos.xz);
 	vertexDistance = length(modelPos.xyz);
