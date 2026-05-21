@@ -44,7 +44,6 @@ import dev.nonamecrackers2.simpleclouds.api.client.event.ModifyCloudRenderDistan
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.CloudMode;
 import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
-import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.client.event.impl.DetermineCloudRenderPipelineEvent;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.ShadowMapBuffer;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
@@ -276,7 +275,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 	private int getAdaptiveStormFogResolutionDivisor(float partialTick) {
 		int divisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
-		if (SimpleCloudsMod.dhLoaded() && SimpleCloudsDhCompatHandler.shouldUseDhRendering())
+		if (SimpleCloudsMod.isDhActive())
 			return 1;
 		float storminess = this.worldEffectsManager.getStorminessSmoothed(partialTick);
 		if (storminess >= 0.8F)
@@ -363,7 +362,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 		// --- Render Targets ---
 
-		boolean highPrecisionDepth = SimpleCloudsMod.dhLoaded() && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+		boolean highPrecisionDepth = SimpleCloudsMod.isDhActive();
 
 		RenderTarget main = SimpleCloudsCompatHelper.getMainRenderTarget();
 		if (main == null) {
@@ -523,10 +522,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			return;
 
 		if (this.stormFogResolutionDivisor <= 0)
-			this.stormFogResolutionDivisor = SimpleCloudsMod.dhLoaded()
-					&& SimpleCloudsDhCompatHandler.shouldUseDhRendering()
-							? 1
-							: SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
+			this.stormFogResolutionDivisor = SimpleCloudsMod.isDhActive() ? 1
+					: SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
 		this.postProcessing.resizeTargets(main, this.stormFogResolutionDivisor);
 		this.atmosphericClouds.onResize(width, height);
 	}
@@ -938,7 +935,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void renderWeather(LightTexture texture, float partialTick, double camX, double camY, double camZ) {
-		if (!SimpleCloudsMod.dhLoaded() || !SimpleCloudsDhCompatHandler.shouldUseDhRendering())
+		if (!SimpleCloudsMod.isDhActive())
 			this.worldEffectsManager.renderLightning(partialTick, camX, camY, camZ);
 	}
 
@@ -993,7 +990,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			}
 		}
 
-		boolean useDhRendering = SimpleCloudsMod.dhLoaded() && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+		boolean useDhRendering = SimpleCloudsMod.isDhActive();
 		if (useDhRendering)
 			this.meshGenerator.disableCullDistance();
 		else
@@ -1175,7 +1172,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			effect.safeGetUniform("FogEnd").set(this.fogEnd);
 			effect.safeGetUniform("ColorModulator").set(r, g, b, 1.0F);
 			float factor = this.worldEffectsManager.getDarkenFactor(partialTick);
-			boolean useDhRendering = SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+			boolean useDhRendering = SimpleCloudsMod.isDhActive();
 			effect.safeGetUniform("CutoffDistance").set(1000.0F * factor);
 			effect.safeGetUniform("LightTransmittenceDistance").set(
 					useDhRendering ? 900.0F : 500.0F);
@@ -1268,9 +1265,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	private static float resolveEarthCurvatureRadius() {
-		if (!SimpleCloudsMod.dhLoaded() || !SimpleCloudsDhCompatHandler.shouldUseDhRendering())
-			return 0.0F;
-		return SimpleCloudsDhCompatHandler.getEarthCurvatureRadius();
+		return SimpleCloudsMod.getDhEarthCurvatureRadiusOrZero();
 	}
 
 	public void copyDepthFromCloudsToMain() {

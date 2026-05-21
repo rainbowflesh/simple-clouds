@@ -112,6 +112,14 @@ public class SimpleCloudsMod {
 		return dhLoaded;
 	}
 
+	public static boolean isDhActive() {
+		return dhLoaded && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+	}
+
+	public static float getDhEarthCurvatureRadiusOrZero() {
+		return isDhActive() ? SimpleCloudsDhCompatHandler.getEarthCurvatureRadius() : 0.0F;
+	}
+
 	public static boolean voxyLoaded() {
 		return voxyLoaded;
 	}
