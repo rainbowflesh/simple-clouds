@@ -123,7 +123,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		p.pop();
 
 		p.push("clouds_composite");
-		renderer.doFinalCompositePass(modelViewMat, partialTick, projMat);
+		renderer.doFinalCompositePass(modelViewMat, partialTick, projMat,
+				() -> renderer.getCloudTransparencyTarget().getDepthTextureId());
 		p.pop();
 
 		p.pop();

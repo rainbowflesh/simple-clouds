@@ -10,7 +10,7 @@
 #define CLOUD_LAYER_SPEED_REDUCTION ${CLOUD_LAYER_SPEED_REDUCTION}
 
 #define SHADE_DIRECTION normalize(vec3(0.5, 0.5, 0.5))
-#define MIN_TRANSPARENT_ALPHA 0.02
+#define MIN_TRANSPARENT_ALPHA 0.0
 
 #define TILE_PERIOD vec3(32.0, 64.0, 32.0)
 
@@ -408,18 +408,6 @@ vec3 getCloudTint(LayerGroup group, vec3 pos)
 	return getRainbowTint(pos);
 }
 
-#if TRANSPARENCY == 1
-bool isTransparentCubeVisible(float x, float y, float z)
-{
-	return !isTransparentPosValid(x, y - Scale, z, 0, 0) || shouldNotOcclude(2)
-		|| !isTransparentPosValid(x, y + Scale, z, 0, 0) || shouldNotOcclude(3)
-		|| !isTransparentPosValid(x - Scale, y, z, -1, 0) || shouldNotOcclude(0)
-		|| !isTransparentPosValid(x + Scale, y, z, 1, 0) || shouldNotOcclude(1)
-		|| !isTransparentPosValid(x, y, z - Scale, 0, -1) || shouldNotOcclude(4)
-		|| !isTransparentPosValid(x, y, z + Scale, 0, 1) || shouldNotOcclude(5);
-}
-#endif
-
 // ----- Opaque -----
 
 void createFace(vec3 center, float cubeRadius, int index, float brightness, vec3 tint)
@@ -551,7 +539,7 @@ void main()
 				float alpha = 1.0 / group.TransparencyFade * (noise + group.TransparencyFade);
 				alpha *= getTransparentAlphaFactor(y);
 	    		vec3 tint = getCloudTint(group, vec3(x, y, z) + Scale / 2.0);
-	    		if (alpha >= MIN_TRANSPARENT_ALPHA && isTransparentCubeVisible(x, y, z))
+	    		if (alpha >= MIN_TRANSPARENT_ALPHA)
 	    			createTransparentCube(x, y, z, Scale / 2.0, brightness, alpha, tint);
    		}
     }

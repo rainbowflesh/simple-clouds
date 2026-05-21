@@ -1117,8 +1117,15 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat) {
-		this.postProcessing.doFinalCompositePass(partialTick,
-				effect -> effect.safeGetUniform("UseSceneDepthOcclusion").set(1));
+		this.doFinalCompositePass(camMat, partialTick, projMat, this.mc.getMainRenderTarget()::getDepthTextureId);
+	}
+
+	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
+			java.util.function.IntSupplier mainDepthSampler) {
+		this.postProcessing.doFinalCompositePass(partialTick, effect -> {
+			effect.setSampler("MainDepthSampler", mainDepthSampler);
+			effect.safeGetUniform("UseSceneDepthOcclusion").set(1);
+		});
 	}
 
 	public void doStormPostProcessing(Matrix4f camMat, float partialTick, Matrix4f projMat, double camX, double camY,
