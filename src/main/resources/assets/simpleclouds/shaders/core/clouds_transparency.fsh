@@ -17,8 +17,8 @@ in float vertexDistance;
 layout(location = 0) out vec4 accumColor;
 layout(location = 1) out float revealage;
 
-const float WALL_TRANSITION_DISTANCE = 96.0;
-const float WALL_TRANSITION_MIN_OPACITY = 0.85;
+const float WALL_TRANSITION_DISTANCE = 64.0;
+const float WALL_TRANSITION_MIN_OPACITY = 0.5;
 
 float getWallTransitionFactor(float distanceToCamera)
 {

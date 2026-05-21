@@ -108,11 +108,14 @@ vec4 cylinderVerticalIntersect(in vec3 ro, in vec3 rd, float he, float ra)
 }
 //---------------------------------------------
 
-float getNearestLightningBoltColorModifier(vec3 position)
+float getNearestLightningBoltColorModifier(vec3 position, float rayDepth)
 {
 	for (int i = 0; i < TotalLightningBolts; i++)
 	{
 		Lightning bolt = lightning.data[i];
+		float boltDepth = distance(CameraPos, bolt.Position);
+		if (rayDepth < boltDepth)
+			continue;
 		float dist = distance(bolt.Position.xz, position.xz);
 		if (dist < 2000.0)
 		{
@@ -194,7 +197,7 @@ void main()
 	finalCol.a *= mix(DistantDensityMultiplier, 1.0, distantFogFactor);
     
     // This is technically not correct but looks ok
-    float lightningMul = getNearestLightningBoltColorModifier(point);
+	float lightningMul = getNearestLightningBoltColorModifier(point, rayDepth);
 	finalCol.rgb *= lightningMul;
 
 	fragColor = finalCol;

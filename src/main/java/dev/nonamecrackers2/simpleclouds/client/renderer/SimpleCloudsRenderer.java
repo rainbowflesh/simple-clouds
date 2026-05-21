@@ -993,7 +993,11 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			}
 		}
 
-		this.meshGenerator.setCullDistance(this.fogEnd / (float) SimpleCloudsConstants.CLOUD_SCALE);
+		boolean useDhRendering = SimpleCloudsMod.dhLoaded() && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+		if (useDhRendering)
+			this.meshGenerator.disableCullDistance();
+		else
+			this.meshGenerator.setCullDistance(this.fogEnd / (float) SimpleCloudsConstants.CLOUD_SCALE);
 		this.meshGenerator.setFrustumCullingTransform((float) SimpleCloudsConstants.CLOUD_SCALE,
 				(float) this.cloudManager.getCloudHeight());
 
@@ -1012,7 +1016,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			p.push("mesh_generation");
 			this.prepareMeshGenerator(partialTick, camX, camZ);
 			this.meshGenerator.genTick(originX, originY, originZ,
-					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? this.cullFrustum : null, partialTick);
+					SimpleCloudsConfig.CLIENT.frustumCulling.get() && !useDhRendering ? this.cullFrustum : null,
+					partialTick);
 			p.pop();
 		}
 
@@ -1122,9 +1127,14 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
 			java.util.function.IntSupplier mainDepthSampler) {
+		this.doFinalCompositePass(camMat, partialTick, projMat, mainDepthSampler, true);
+	}
+
+	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
+			java.util.function.IntSupplier mainDepthSampler, boolean useSceneDepthOcclusion) {
 		this.postProcessing.doFinalCompositePass(partialTick, effect -> {
 			effect.setSampler("MainDepthSampler", mainDepthSampler);
-			effect.safeGetUniform("UseSceneDepthOcclusion").set(1);
+			effect.safeGetUniform("UseSceneDepthOcclusion").set(useSceneDepthOcclusion ? 1 : 0);
 		});
 	}
 
