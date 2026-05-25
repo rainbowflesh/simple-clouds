@@ -1055,15 +1055,26 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
 			java.util.function.IntSupplier mainDepthSampler) {
-		this.doFinalCompositePass(camMat, partialTick, projMat, mainDepthSampler, true);
+		this.doFinalCompositePass(camMat, partialTick, projMat, mainDepthSampler, true, 0.0F);
 	}
 
 	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
 			java.util.function.IntSupplier mainDepthSampler, boolean useSceneDepthOcclusion) {
+		this.doFinalCompositePass(camMat, partialTick, projMat, mainDepthSampler, useSceneDepthOcclusion, 0.0F);
+	}
+
+	public void doFinalCompositePass(Matrix4f camMat, float partialTick, Matrix4f projMat,
+			java.util.function.IntSupplier mainDepthSampler, boolean useSceneDepthOcclusion,
+			float sceneOcclusionAlphaFloor) {
 		this.postProcessing.doFinalCompositePass(partialTick, effect -> {
 			effect.setSampler("MainDepthSampler", mainDepthSampler);
 			effect.safeGetUniform("UseSceneDepthOcclusion").set(useSceneDepthOcclusion ? 1 : 0);
+			effect.safeGetUniform("SceneOcclusionAlphaFloor").set(sceneOcclusionAlphaFloor);
 		});
+	}
+
+	public boolean shouldUseSceneDepthOcclusion(double camX, double camY, double camZ) {
+		return !this.worldEffectsManager.isInsideCloudVolume(camX, camY, camZ);
 	}
 
 	public void doStormPostProcessing(Matrix4f camMat, float partialTick, Matrix4f projMat, double camX, double camY,
@@ -1184,11 +1195,16 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		shader.safeGetUniform("CloudWorldMat").set(cloudWorldMat);
 		shader.safeGetUniform("CameraPos").set((float) camX, (float) camY, (float) camZ);
 		shader.safeGetUniform("EarthRadius").set(resolveEarthCurvatureRadius());
+		float insideCloudFactor = 0.0F;
 
 		boolean useNormals = SimpleCloudsConfig.CLIENT.cubeNormals.get();
 		SimpleCloudsRenderer renderer = instance;
-		if (renderer != null && renderer.meshFaceCullingActive)
-			useNormals = false;
+		if (renderer != null) {
+			insideCloudFactor = renderer.worldEffectsManager.getCloudEnvelopmentFactor(camX, camY, camZ);
+			if (renderer.meshFaceCullingActive)
+				useNormals = false;
+		}
+		shader.safeGetUniform("InsideCloudFactor").set(insideCloudFactor);
 		shader.safeGetUniform("UseNormals").set(useNormals ? 1 : 0);
 
 		RenderSystem.setShaderLights(DIFFUSE_LIGHT_0, DIFFUSE_LIGHT_1);

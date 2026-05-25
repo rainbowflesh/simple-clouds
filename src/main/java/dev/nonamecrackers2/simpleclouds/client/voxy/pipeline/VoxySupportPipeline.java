@@ -94,7 +94,9 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		p.push("clouds_opaque");
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
-		renderer.copyDepthFromMainToClouds();
+		boolean useSceneDepthOcclusion = renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ);
+		if (useSceneDepthOcclusion)
+			renderer.copyDepthFromMainToClouds();
 		cloudTarget.bindWrite(false);
 		CloudMeshGenerator generator = renderer.getMeshGenerator();
 		SimpleCloudsRenderer.renderCloudsOpaque(generator, cloudStack, projMat, renderer.getFogStart(),
@@ -105,7 +107,8 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 
 		// doFinalCompositePass takes Matrix4f in 1.21.1, NOT PoseStack
 		p.push("clouds_composite");
-		renderer.doFinalCompositePass(viewMat, partialTick, projMat);
+		renderer.doFinalCompositePass(viewMat, partialTick, projMat,
+				mc.getMainRenderTarget()::getDepthTextureId, useSceneDepthOcclusion);
 		p.pop();
 
 		p.pop(); // "clouds"

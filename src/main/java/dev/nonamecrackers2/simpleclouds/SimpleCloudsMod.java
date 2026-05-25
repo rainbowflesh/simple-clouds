@@ -6,7 +6,6 @@ import dev.nonamecrackers2.simpleclouds.client.SimpleCloudsModClient;
 import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.client.voxy.event.SimpleCloudsVoxyForgeEvents;
 import dev.nonamecrackers2.simpleclouds.client.event.SimpleCloudsClientEvents;
-import dev.nonamecrackers2.simpleclouds.client.gui.SimpleCloudsConfigScreen;
 import dev.nonamecrackers2.simpleclouds.client.keybind.SimpleCloudsKeybinds;
 import dev.nonamecrackers2.simpleclouds.client.shader.SimpleCloudsShaders;
 import dev.nonamecrackers2.simpleclouds.common.api.SimpleCloudsAPIImpl;
@@ -29,7 +28,6 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
 //TODO: Change API path from forge to neoforge
 @Mod(SimpleCloudsMod.MODID)
@@ -55,8 +53,7 @@ public class SimpleCloudsMod {
 		container.registerConfig(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC);
 		container.registerConfig(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC);
 		if (FMLEnvironment.dist.isClient())
-			container.registerExtensionPoint(IConfigScreenFactory.class,
-					(IConfigScreenFactory) (modContainer, modListScreen) -> new SimpleCloudsConfigScreen(modListScreen));
+			SimpleCloudsModClient.registerConfigScreen(container);
 		SimpleCloudsAPIImpl.bootstrap();
 	}
 

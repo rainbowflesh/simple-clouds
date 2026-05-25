@@ -7,6 +7,7 @@ uniform float DitherScale;
 uniform float FogStart;
 uniform float FogEnd;
 uniform vec4 FogColor;
+uniform float InsideCloudFactor;
 
 in vec4 vertexColor;
 in float fogDistance;
@@ -19,7 +20,8 @@ const float WALL_TRANSITION_MIN_OPACITY = 0.5;
 
 float getWallTransitionOpacity(float distanceToCamera)
 {
-	return mix(WALL_TRANSITION_MIN_OPACITY, 1.0, smoothstep(0.0, WALL_TRANSITION_DISTANCE, distanceToCamera));
+	float baseOpacity = mix(WALL_TRANSITION_MIN_OPACITY, 1.0, smoothstep(0.0, WALL_TRANSITION_DISTANCE, distanceToCamera));
+	return mix(baseOpacity, 1.0, clamp(InsideCloudFactor, 0.0, 1.0));
 }
 
 void main() 

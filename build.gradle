@@ -120,7 +120,7 @@ tasks.withType(ProcessResources).configureEach {
 }
 
 tasks.register('prepareVsCodeModClasses', Sync) {
-    dependsOn tasks.named('compileJava'), tasks.named('processResources')
+    dependsOn tasks.named('compileJava'), tasks.named('processResources'), tasks.named('writeMinecraftClasspathClient'), tasks.named('writeMinecraftClasspathData'), tasks.named('writeMinecraftClasspathGameTestServer'), tasks.named('writeMinecraftClasspathJunit'), tasks.named('writeMinecraftClasspathServer')
     from(sourceSets.main.output)
     into(layout.buildDirectory.dir('vscode-mod/main'))
 }

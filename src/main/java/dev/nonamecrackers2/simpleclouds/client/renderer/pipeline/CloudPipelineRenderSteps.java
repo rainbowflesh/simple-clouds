@@ -25,6 +25,7 @@ public final class CloudPipelineRenderSteps {
     public static void renderCloudGeometry(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat,
             Matrix4f projMat, float partialTick, double camX, double camY, double camZ, @Nullable Frustum frustum,
             CloudColor cloudColor, ProfilerFiller profiler, boolean clearTargets, boolean copyDepthFromMain) {
+        boolean useSceneDepthOcclusion = renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ);
         Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
         PoseStack stack = new PoseStack();
         stack.mulPose(camMat);
@@ -35,7 +36,7 @@ public final class CloudPipelineRenderSteps {
         RenderTarget cloudTarget = renderer.getCloudTarget();
         if (clearTargets)
             cloudTarget.clear(Minecraft.ON_OSX);
-        if (copyDepthFromMain)
+        if (copyDepthFromMain && useSceneDepthOcclusion)
             renderer.copyDepthFromMainToClouds();
         cloudTarget.bindWrite(false);
 

@@ -50,7 +50,9 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 		p.pop();
 
 		p.push("clouds_composite");
-		renderer.doFinalCompositePass(camMat, partialTick, projMat);
+		renderer.doFinalCompositePass(camMat, partialTick, projMat,
+				mc.getMainRenderTarget()::getDepthTextureId,
+				renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ));
 		p.pop();
 
 		mc.getMainRenderTarget().bindWrite(false);

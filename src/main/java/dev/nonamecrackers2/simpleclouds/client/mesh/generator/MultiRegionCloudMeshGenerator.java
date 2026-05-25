@@ -432,7 +432,11 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	}
 
 	private boolean intersectsChunkBounds(CloudRegion region, float minX, float minZ, float maxX, float maxZ) {
-		float extent = region.getRadius() * Math.max(1.0F, region.getStretch());
+		// The region texture shader keeps sampling through the edge-fade band, so the
+		// chunk-level skip test must include that padding or it will clear out valid
+		// cloud coverage in chunk-sized holes near region boundaries.
+		float edgeFadePadding = 1.0F / SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR;
+		float extent = (region.getRadius() + edgeFadePadding) * Math.max(1.0F, region.getStretch());
 		float clampedX = Math.max(minX, Math.min(region.getPosX(), maxX));
 		float clampedZ = Math.max(minZ, Math.min(region.getPosZ(), maxZ));
 		float dx = region.getPosX() - clampedX;

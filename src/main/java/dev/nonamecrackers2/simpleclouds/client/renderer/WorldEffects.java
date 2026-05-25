@@ -260,9 +260,7 @@ public class WorldEffects {
 		return result.getRight() < 1.0F && camY >= cloudBottom && camY <= cloudTop;
 	}
 
-	public float getInsideCloudFactor(double camX, double camY, double camZ) {
-		if (!SimpleCloudsConfig.CLIENT.insideCloudFog.get())
-			return 0.0F;
+	public float getCloudEnvelopmentFactor(double camX, double camY, double camZ) {
 		if (this.mc.level == null)
 			return 0.0F;
 
@@ -284,9 +282,17 @@ public class WorldEffects {
 				+ (float) type.noiseConfig().getStartHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
 		float cloudTop = manager.getCloudHeight()
 				+ (float) type.noiseConfig().getEndHeight() * (float) SimpleCloudsConstants.CLOUD_SCALE;
+		if (result.getRight() >= 1.0F || camY < cloudBottom || camY > cloudTop)
+			return 0.0F;
 		float verticalFactor = bandLerp((float) camY, cloudBottom, cloudTop,
 				SimpleCloudsConfig.CLIENT.insideCloudFogVerticalFadeDistance.get().floatValue());
 		return horizontalFactor * verticalFactor;
+	}
+
+	public float getInsideCloudFactor(double camX, double camY, double camZ) {
+		if (!SimpleCloudsConfig.CLIENT.insideCloudFog.get())
+			return 0.0F;
+		return this.getCloudEnvelopmentFactor(camX, camY, camZ);
 	}
 
 	public static float getInsideCloudMaxVisibility() {

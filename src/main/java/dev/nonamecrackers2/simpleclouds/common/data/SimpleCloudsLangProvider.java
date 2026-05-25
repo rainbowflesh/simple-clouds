@@ -1,12 +1,19 @@
 package dev.nonamecrackers2.simpleclouds.common.data;
 
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
+import dev.nonamecrackers2.simpleclouds.common.config.util.ConfigHelper;
 import dev.nonamecrackers2.simpleclouds.common.noise.AbstractNoiseSettings;
 import net.minecraft.data.PackOutput;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
 public class SimpleCloudsLangProvider extends LanguageProvider {
@@ -16,6 +23,9 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 
 	@Override
 	protected void addTranslations() {
+		this.addConfigTranslations("client", SimpleCloudsConfig.CLIENT_SPEC);
+		this.addConfigTranslations("server", SimpleCloudsConfig.SERVER_SPEC);
+
 		this.add("gui.simpleclouds.cloud_previewer.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.add_layer.title", "Add Layer");
@@ -33,17 +43,18 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 				splitted[i] = StringUtils.capitalize(splitted[i]);
 			this.add(key, StringUtils.join(splitted, " "));
 		}
+		this.add("simpleclouds.config.preset.high", "High");
+		this.add("simpleclouds.config.preset.high.description",
+				"Restores the fuller Simple Clouds presentation with high detail, distant cloud coverage, storm fog, and terrain shadows enabled.");
 		this.add("simpleclouds.config.preset.medium", "Medium");
 		this.add("simpleclouds.config.preset.medium.description",
-				"For more medium-end systems that can't handle high. Lowers the level of detail and makes the cloud mesh generate a bit slower.");
+				"Balances visuals and performance by lowering level of detail slightly and slowing mesh generation a bit.");
 		this.add("simpleclouds.config.preset.low", "Low");
 		this.add("simpleclouds.config.preset.low.description",
-				"For systems that are struggling a bit running this mod. Sets the level of detail to the lowest and makes the cloud mesh generate a bit slower.");
-		this.add("simpleclouds.config.preset.ultra_low", "Ultra Low");
-		this.add("simpleclouds.config.preset.ultra_low.description",
-				"If your system is REALLY struggling. Lowest level of detail and disables storm fog.");
-		this.add("simpleclouds.config.preset.classic_style", "Classic Style");
-		this.add("simpleclouds.config.preset.classic_style.description", "The classic Simple Clouds style");
+				"Cuts distant cloud coverage and some extra visual features for weaker systems while keeping clouds visible.");
+		this.add("simpleclouds.config.preset.off", "Off");
+		this.add("simpleclouds.config.preset.off.description",
+				"Disables Simple Clouds visuals for this player, including cloud rendering, storm fog, and atmospheric cloud layers.");
 		this.add("gui.simpleclouds.noise_settings.param.range", "Range: %s - %s");
 		this.add("gui.simpleclouds.cloud_previewer.button.previous_layer.title", "Previous layer");
 		this.add("gui.simpleclouds.cloud_previewer.button.next_layer.title", "Next layer");
@@ -121,5 +132,68 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 		this.add("gui.simpleclouds.notice.close.title", "Close");
 		this.add("gui.simpleclouds.notice.vivecraft",
 				"Vivecraft support is experimental. Please expect lower framerates, instability, and glitches/visual artifacts. Report bugs and issues on the official GitHub issue tracker.");
+	}
+
+	private void addConfigTranslations(String scope, ModConfigSpec spec) {
+		Set<String> categories = new LinkedHashSet<>();
+		categories.add("general");
+		for (var entry : ConfigHelper.getAllSpecs(spec).entrySet()) {
+			String path = entry.getKey();
+			var valueSpec = entry.getValue();
+			this.add("gui." + SimpleCloudsMod.MODID + ".config." + scope + ".option." + path + ".name",
+					humanizeOptionName(path));
+			String comment = valueSpec.getComment();
+			if (comment != null && !comment.isBlank()) {
+				this.add("gui." + SimpleCloudsMod.MODID + ".config." + scope + ".option." + path + ".description",
+						comment);
+			}
+			categories.add(categoryPathOf(path));
+		}
+		for (String category : categories) {
+			this.add("gui." + SimpleCloudsMod.MODID + ".config." + scope + ".category." + category,
+					humanizeCategoryPath(category));
+		}
+	}
+
+	private static String categoryPathOf(String path) {
+		int split = path.lastIndexOf('.');
+		return split < 0 ? "general" : path.substring(0, split);
+	}
+
+	private static String humanizeCategoryPath(String path) {
+		if (path.equals("general"))
+			return "General";
+		return Arrays.stream(path.split("\\."))
+				.map(SimpleCloudsLangProvider::humanizeToken)
+				.reduce((left, right) -> left + " / " + right)
+				.orElse(path);
+	}
+
+	private static String humanizePath(String path) {
+		return Arrays.stream(path.split("\\."))
+				.map(SimpleCloudsLangProvider::humanizeToken)
+				.reduce((left, right) -> left + " / " + right)
+				.orElse(path);
+	}
+
+	private static String humanizeOptionName(String path) {
+		int split = path.lastIndexOf('.');
+		return humanizeToken(split < 0 ? path : path.substring(split + 1));
+	}
+
+	private static String humanizeToken(String token) {
+		String spaced = token.replace('_', ' ').replaceAll("([a-z])([A-Z])", "$1 $2");
+		String[] words = spaced.split(" ");
+		StringBuilder builder = new StringBuilder();
+		for (String word : words) {
+			if (word.isBlank())
+				continue;
+			if (!builder.isEmpty())
+				builder.append(' ');
+			builder.append(word.substring(0, 1).toUpperCase(Locale.ROOT));
+			if (word.length() > 1)
+				builder.append(word.substring(1));
+		}
+		return builder.toString();
 	}
 }

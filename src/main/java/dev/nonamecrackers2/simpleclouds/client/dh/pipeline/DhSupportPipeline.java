@@ -23,7 +23,6 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRe
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
 import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
-import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinRenderTargetAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -44,19 +43,6 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		GL30.glBlitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height,
 				GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
 		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
-	}
-
-	private static int getDepthTextureFromFramebuffer(int sourceFramebuffer) {
-		int previousFramebuffer = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
-		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
-		int objectType = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-				GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
-		int objectName = objectType == GL11.GL_TEXTURE
-				? GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
-						GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME)
-				: 0;
-		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, previousFramebuffer);
-		return objectName;
 	}
 
 	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
@@ -111,10 +97,6 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
-		if (dhFbo > 0)
-			copyDepthFromFramebuffer(dhFbo, cloudTarget);
-		else
-			renderer.copyDepthFromMainToClouds();
 
 		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 		PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
@@ -123,7 +105,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		cloudTarget.bindWrite(false);
 		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), cloudStack, projMat,
 				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
-				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, modelViewMat,
+				null, modelViewMat,
 				cloudWorldMat, camX, camY, camZ);
 	}
 
@@ -131,9 +113,9 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	public void afterDistantHorizonsRender(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
 			Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum, int dhFbo) {
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-		int dhDepthTextureId = getDepthTextureFromFramebuffer(dhFbo);
-		int sceneDepthTextureId = dhDepthTextureId > 0 ? dhDepthTextureId
-				: mc.getMainRenderTarget().getDepthTextureId();
+		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
+		int sceneDepthTextureId = mc.getMainRenderTarget().getDepthTextureId();
+		boolean useSceneDepthOcclusion = renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ);
 		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler._getMcProjMat();
 		Matrix4f mcModelViewMat = SimpleCloudsDhCompatHandler._getMcModelViewMat();
 
@@ -147,12 +129,10 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(modelViewMat, partialTick, projMat,
-				() -> sceneDepthTextureId);
+				() -> sceneDepthTextureId, useSceneDepthOcclusion, 0.85F);
 		p.pop();
 
 		p.pop();
-
-		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 
 		Matrix4f oldMcProjMat = RenderSystem.getProjectionMatrix();
 
