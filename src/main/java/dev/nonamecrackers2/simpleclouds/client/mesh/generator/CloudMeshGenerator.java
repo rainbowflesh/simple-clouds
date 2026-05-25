@@ -243,7 +243,7 @@ public abstract class CloudMeshGenerator {
 
 	private void updateTransparencyDistance() {
 		int requestedDistance = Mth.floor(this.transparencyDistancePercentage * (float) this.getCloudAreaMaxRadius());
-		int minimumDistance = this.fadeNearOrigin ? this.getCloudAreaMaxRadius() : Mth.ceil(this.fadeEnd);
+		int minimumDistance = this.fadeNearOrigin ? this.getCloudAreaMaxRadius() : 1;
 		this.transparencyDistance = Math.max(requestedDistance, minimumDistance);
 	}
 

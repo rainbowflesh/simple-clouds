@@ -1,6 +1,8 @@
 package dev.nonamecrackers2.simpleclouds.client.renderer.lightning;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -13,8 +15,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 
 public class LightningBolt {
 	private static final int TOTAL_TIME = 60;
@@ -24,6 +33,7 @@ public class LightningBolt {
 	private static final float FLASH_INTENSITY = 2.0F;
 	private static final float RESTRUCTURE_FADE_LIMIT = 0.1F;
 	private static final int BRANCH_SEQUENCE_FADE_DURATION = 5;
+	private static final float BRANCH_OCCLUSION_EPSILON_SQ = 0.04F;
 	public static final int MAX_DEPTH = 16;
 	public static final int MAX_BRANCHES = 8;
 	public static final float MINIMUM_PITCH_ALLOWED = 0.0F;
@@ -235,7 +245,7 @@ public class LightningBolt {
 	}
 
 	public void render(PoseStack stack, VertexConsumer consumer, float partialTick, float r, float g, float b,
-			float a) {
+			float a, @Nullable ClientLevel level, double camX, double camY, double camZ) {
 		float alpha = Mth.lerp(partialTick, this.fadeO, this.fade) * a;
 		if (alpha <= 0.01F)
 			return;
@@ -245,6 +255,8 @@ public class LightningBolt {
 		if (strikeLength <= 0.01F)
 			return;
 		strikeVector.normalize();
+		OcclusionContext occlusionContext = level == null ? null
+				: new OcclusionContext(level, new Vec3(camX, camY, camZ), new HashMap<>());
 
 		stack.pushPose();
 		stack.translate(this.startPosition.x, this.startPosition.y, this.startPosition.z);
@@ -256,7 +268,8 @@ public class LightningBolt {
 		int depth = Mth.floor((float) this.totalDepth * animFactor);
 
 		for (LightningBolt.Branch branch : this.root)
-			renderBranch(depth, 0, new Vector3f(), stack, consumer, r * this.r, g * this.g, b * this.b, alpha, branch);
+			this.renderBranch(depth, 0, new Vector3f(), stack, consumer, r * this.r, g * this.g, b * this.b, alpha,
+					branch, occlusionContext, camX, camY, camZ);
 
 		stack.popPose();
 	}
@@ -273,8 +286,9 @@ public class LightningBolt {
 		return Mth.lerp(partialTick, this.fadeO, this.fade);
 	}
 
-	private static void renderBranch(int maxDepth, int currentDepth, Vector3f offset, PoseStack stack,
-			VertexConsumer consumer, float r, float g, float b, float a, LightningBolt.Branch branch) {
+	private void renderBranch(int maxDepth, int currentDepth, Vector3f offset, PoseStack stack,
+			VertexConsumer consumer, float r, float g, float b, float a, LightningBolt.Branch branch,
+			@Nullable OcclusionContext occlusionContext, double camX, double camY, double camZ) {
 		if (currentDepth > maxDepth)
 			return;
 		stack.pushPose();
@@ -282,16 +296,23 @@ public class LightningBolt {
 		stack.mulPose(Axis.YP.rotationDegrees(branch.yaw));
 		stack.mulPose(Axis.XP.rotationDegrees(branch.pitch));
 		Matrix4f mat = stack.last().pose();
-		int layers = 4;
-		for (int i = 0; i < layers; i++) {
-			float factor = (float) i / (float) layers;
-			float width = branch.width - 4.0F * (branch.width / 4.0F) * factor;
-			if (width <= 0.05F)
-				continue;
-			float length = branch.length - factor;
-			float startingY = -factor * 0.5F;
-			float alpha = (float) (i + 1) / (float) layers * 0.5F;
-			lightningBoltSection(mat, consumer, startingY, width, length, r, g, b, alpha * a);
+		Vector3f startPos = transformPosition(mat, 0.0F, 0.0F, 0.0F);
+		startPos.add((float) camX, (float) camY, (float) camZ);
+		Vector3f endPos = transformPosition(mat, 0.0F, -branch.length, 0.0F);
+		endPos.add((float) camX, (float) camY, (float) camZ);
+		boolean occluded = occlusionContext != null && isBranchSegmentOccluded(occlusionContext, startPos, endPos);
+		if (!occluded) {
+			int layers = 4;
+			for (int i = 0; i < layers; i++) {
+				float factor = (float) i / (float) layers;
+				float width = branch.width - 4.0F * (branch.width / 4.0F) * factor;
+				if (width <= 0.05F)
+					continue;
+				float length = branch.length - factor;
+				float startingY = -factor * 0.5F;
+				float alpha = (float) (i + 1) / (float) layers * 0.5F;
+				lightningBoltSection(mat, consumer, startingY, width, length, r, g, b, alpha * a);
+			}
 		}
 		float yawRadians = branch.yaw * ((float) Math.PI / 180.0F);
 		float pitchRadians = (90.0F - branch.pitch) * ((float) Math.PI / 180.0F);
@@ -300,7 +321,50 @@ public class LightningBolt {
 				Mth.cos(yawRadians) * pitchCos).mul(-branch.length).add(offset);
 		stack.popPose();
 		for (LightningBolt.Branch child : branch.branches)
-			renderBranch(maxDepth, currentDepth + 1, end, stack, consumer, r, g, b, a, child);
+			this.renderBranch(maxDepth, currentDepth + 1, end, stack, consumer, r, g, b, a, child, occlusionContext,
+					camX, camY, camZ);
+	}
+
+	private static Vector3f transformPosition(Matrix4f matrix, float x, float y, float z) {
+		Vector3f transformed = new Vector3f(x, y, z);
+		matrix.transformPosition(transformed);
+		return transformed;
+	}
+
+	private static boolean isBranchSegmentOccluded(OcclusionContext context, Vector3f worldStart, Vector3f worldEnd) {
+		return !isPointVisible(context, worldStart) && !isPointVisible(context, worldEnd);
+	}
+
+	private static boolean isPointVisible(OcclusionContext context, Vector3f point) {
+		BlockPos blockPos = BlockPos.containing(point.x, point.y, point.z);
+		long key = blockPos.asLong();
+		Boolean cached = context.visibilityCache.get(key);
+		if (cached != null)
+			return cached;
+
+		Vec3 target = new Vec3(point.x, point.y, point.z);
+		double pointDistSq = context.cameraPos.distanceToSqr(target);
+		if (pointDistSq <= BRANCH_OCCLUSION_EPSILON_SQ) {
+			context.visibilityCache.put(key, Boolean.TRUE);
+			return true;
+		}
+
+		BlockHitResult hit = context.level.clip(
+				new ClipContext(context.cameraPos, target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+						CollisionContext.empty()));
+		boolean visible;
+		if (hit.getType() == HitResult.Type.MISS) {
+			visible = true;
+		} else {
+			double hitDistSq = context.cameraPos.distanceToSqr(hit.getLocation());
+			visible = hitDistSq + BRANCH_OCCLUSION_EPSILON_SQ >= pointDistSq;
+		}
+
+		context.visibilityCache.put(key, visible);
+		return visible;
+	}
+
+	private static record OcclusionContext(ClientLevel level, Vec3 cameraPos, Map<Long, Boolean> visibilityCache) {
 	}
 
 	private static void renderMainChannel(PoseStack stack, VertexConsumer consumer, List<Vector3f> trunkPoints,

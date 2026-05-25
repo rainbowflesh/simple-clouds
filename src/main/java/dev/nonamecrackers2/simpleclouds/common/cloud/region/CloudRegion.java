@@ -22,6 +22,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import nonamecrackers2.crackerslib.common.util.primitives.PrimitiveHelper;
 
 public class CloudRegion implements ScAPICloudRegion {
+	private static final float OFFSCREEN_LIFETIME_ACCELERATION = 4.0F;
+
 	private int syncId = -1;
 	private final ResourceLocation cloudTypeId;
 	private final float initialRadius;
@@ -208,19 +210,18 @@ public class CloudRegion implements ScAPICloudRegion {
 			scale = 1.0F - (float) (this.tickCount - this.growTicks) / (float) (this.existsForTicks - this.growTicks);
 		this.radius = this.initialRadius * scale;
 
-		this.tickCount += Math.max(1, Mth.ceil((isVisible ? 1.0F : 20.0F) * speed));
+		float lifetimeAcceleration = isVisible ? 1.0F : OFFSCREEN_LIFETIME_ACCELERATION;
+		this.tickCount += Math.max(1, Mth.ceil(lifetimeAcceleration * speed));
 
 		this.posXO = this.posX;
 		this.posZO = this.posZ;
 
-		if (isVisible) {
-			float targetVelX = Math.abs(movementDirection.x * maxSpeed);
-			float targetVelZ = Math.abs(movementDirection.y * maxSpeed);
-			this.velX = Mth.clamp(this.velX + movementDirection.x * accelerationFactor, -targetVelX, targetVelX);
-			this.velZ = Mth.clamp(this.velZ + movementDirection.y * accelerationFactor, -targetVelZ, targetVelZ);
-			this.posX += this.velX;
-			this.posZ += this.velZ;
-		}
+		float targetVelX = Math.abs(movementDirection.x * maxSpeed);
+		float targetVelZ = Math.abs(movementDirection.y * maxSpeed);
+		this.velX = Mth.clamp(this.velX + movementDirection.x * accelerationFactor, -targetVelX, targetVelX);
+		this.velZ = Mth.clamp(this.velZ + movementDirection.y * accelerationFactor, -targetVelZ, targetVelZ);
+		this.posX += this.velX;
+		this.posZ += this.velZ;
 
 		this.priorVisible = isVisible;
 	}

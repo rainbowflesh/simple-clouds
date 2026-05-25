@@ -239,10 +239,12 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 			// formations shrink and will shrink extra fast when no longer visible,
 			// making it so they will shrink farther away from the edge of a spawn region
 			// preventing this, but it is behavior to note
+			float visibilityPadding = (float) SimpleCloudsConstants.CLOUD_SCALE
+					/ SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR;
+			if (region.wasPriorVisible())
+				visibilityPadding *= 2.0F;
 			boolean isVisible = SpawnRegion.doesCircleIntersect(this.spawnRegions, region.getWorldX(),
-					region.getWorldZ(),
-					region.getWorldRadius() / region.getStretch() + (float) SimpleCloudsConstants.CLOUD_SCALE
-							/ SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR);
+					region.getWorldZ(), region.getWorldRadius() / region.getStretch() + visibilityPadding);
 			if (isVisible != region.wasPriorVisible())
 				this.onRegionVisibilityChange(region, isVisible);
 			float movementSpeedMultiplier = type != null ? type.getLayerSpeedMultiplier() : 1.0F;

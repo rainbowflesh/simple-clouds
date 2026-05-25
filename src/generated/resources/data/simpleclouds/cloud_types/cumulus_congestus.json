@@ -38,7 +38,7 @@
         "scale_x": 42,
         "scale_y": 72,
         "scale_z": 42,
-        "value_offset": -0.2,
+        "value_offset": -0.18,
         "value_scale": 1
       },
       {
@@ -62,7 +62,7 @@
         "value_scale": 0.16
       }
     ],
-    "transparency_fade": 0.02
+    "override_atmospheric_clouds": false
   },
   "weather": {
     "type": "rain",

@@ -16,14 +16,12 @@ import org.lwjgl.opengl.GL11;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.CloudRenderTarget;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinPostChain;
 import net.minecraft.ChatFormatting;
@@ -47,7 +45,6 @@ public class CloudImageRenderer implements AutoCloseable {
 	private @Nullable PostChain finalComposite;
 	private @Nullable RenderTarget finalTarget;
 	private @Nullable RenderTarget cloudsTarget;
-	private @Nullable WeightedBlendingTarget transparencyTarget;
 	private int oldWindowHeight = -1;
 	private int oldWindowWidth = -1;
 	private float rotX;
@@ -110,27 +107,16 @@ public class CloudImageRenderer implements AutoCloseable {
 		this.cloudsTarget.setClearColor(this.r, this.g, this.b, 1.0F);
 		this.cloudsTarget.clear(Minecraft.ON_OSX);
 
-		if (this.generator.transparencyEnabled())
-			this.transparencyTarget = new WeightedBlendingTarget(DEFAULT_WIDTH, DEFAULT_HEIGHT, Minecraft.ON_OSX,
-					false);
-		;
-
 		this.finalTarget = new TextureTarget(DEFAULT_WIDTH, DEFAULT_HEIGHT, true, Minecraft.ON_OSX);
 		this.finalTarget.setClearColor(0.0F, 0.0F, 0.0F, 1.0F);
 		this.finalTarget.clear(Minecraft.ON_OSX);
 
-		ResourceLocation finalComLoc = this.generator.transparencyEnabled() ? SimpleCloudsRenderer.FINAL_COMPOSITE_LOC
-				: SimpleCloudsRenderer.FINAL_COMPOSITE_NO_TRANSPARENCY_LOC;
 		try {
 			this.finalComposite = new PostChain(this.mc.getTextureManager(), this.mc.getResourceManager(),
-					this.finalTarget, finalComLoc);
+					this.finalTarget, SimpleCloudsRenderer.FINAL_COMPOSITE_LOC);
 			this.finalComposite.resize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
 			for (PostPass pass : ((MixinPostChain) this.finalComposite).simpleclouds$getPostPasses()) {
 				EffectInstance effect = pass.getEffect();
-				if (this.generator.transparencyEnabled()) {
-					effect.setSampler("AccumTexture", () -> this.transparencyTarget.getColorTextureId());
-					effect.setSampler("RevealageTexture", () -> this.transparencyTarget.getRevealageTextureId());
-				}
 				effect.setSampler("CloudsTexture", () -> this.cloudsTarget.getColorTextureId());
 				effect.setSampler("CloudsDepthTexture", () -> this.cloudsTarget.getDepthTextureId());
 			}
@@ -147,8 +133,6 @@ public class CloudImageRenderer implements AutoCloseable {
 		Objects.requireNonNull(this.finalComposite, "Not properly initialized");
 		Objects.requireNonNull(this.finalTarget, "Not properly initialized");
 		Objects.requireNonNull(this.cloudsTarget, "Not properly initialized");
-		if (this.generator.transparencyEnabled())
-			Objects.requireNonNull(this.transparencyTarget, "Not properly initialized");
 		if (this.oldWindowWidth < 0 || this.oldWindowHeight < 0)
 			throw new IllegalStateException("Not properly initialized");
 	}
@@ -175,20 +159,6 @@ public class CloudImageRenderer implements AutoCloseable {
 
 		SimpleCloudsRenderer.renderCloudsOpaque(this.generator, stack, projectionMat, Float.MAX_VALUE, Float.MAX_VALUE,
 				1.0F, 1.0F, 1.0F, 1.0F, null, false);
-
-		if (this.generator.transparencyEnabled()) {
-			this.transparencyTarget.clear(Minecraft.ON_OSX);
-			this.transparencyTarget.bindWrite(true);
-			this.transparencyTarget.copyDepthFrom(this.cloudsTarget);
-
-			if (GlStateManager._getError() != GL11.GL_NO_ERROR)
-				throw new RuntimeException("Failed to copy depth buffers");
-
-			this.transparencyTarget.bindWrite(false);
-
-			SimpleCloudsRenderer.renderCloudsTransparency(this.generator, stack, projectionMat, Float.MAX_VALUE,
-					Float.MAX_VALUE, 1.0F, 1.0F, 1.0F, 1.0F, null, false);
-		}
 
 		this.finalTarget.clear(Minecraft.ON_OSX);
 
@@ -267,11 +237,6 @@ public class CloudImageRenderer implements AutoCloseable {
 		if (this.cloudsTarget != null) {
 			this.cloudsTarget.destroyBuffers();
 			this.cloudsTarget = null;
-		}
-
-		if (this.transparencyTarget != null) {
-			this.transparencyTarget.destroyBuffers();
-			this.transparencyTarget = null;
 		}
 
 		if (this.finalComposite != null) {

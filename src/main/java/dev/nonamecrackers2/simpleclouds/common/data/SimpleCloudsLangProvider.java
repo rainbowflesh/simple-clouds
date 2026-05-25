@@ -43,10 +43,10 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 				"For more medium-end systems that can't handle high. Lowers the level of detail and makes the cloud mesh generate a bit slower.");
 		this.add("simpleclouds.config.preset.low", "Low");
 		this.add("simpleclouds.config.preset.low.description",
-				"For systems that are struggling a bit running this mod. Sets the level of detail to the lowest, disables transparency, and makes the cloud mesh generate a bit slower.");
+				"For systems that are struggling a bit running this mod. Sets the level of detail to the lowest and makes the cloud mesh generate a bit slower.");
 		this.add("simpleclouds.config.preset.ultra_low", "Ultra Low");
 		this.add("simpleclouds.config.preset.ultra_low.description",
-				"If your system is REALLY struggling. Lowest level of detail, no transparency, and disables storm fog.");
+				"If your system is REALLY struggling. Lowest level of detail and disables storm fog.");
 		this.add("simpleclouds.config.preset.classic_style", "Classic Style");
 		this.add("simpleclouds.config.preset.classic_style.description", "The classic Simple Clouds style");
 		this.add("gui.simpleclouds.noise_settings.param.range", "Range: %s - %s");
@@ -57,7 +57,6 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 		this.add("gui.simpleclouds.cloud_previewer.storminess.title", "Storminess");
 		this.add("gui.simpleclouds.cloud_previewer.storm_start.title", "Storm Start Level");
 		this.add("gui.simpleclouds.cloud_previewer.storm_fade_distance.title", "Storm Fade Distance");
-		this.add("gui.simpleclouds.cloud_previewer.transparency_fade.title", "Transparency Fade");
 		this.add("gui.simpleclouds.cloud_previewer.load.title", "Load");
 		this.add("gui.simpleclouds.cloud_previewer.export.title", "Export");
 		this.add("gui.simpleclouds.cloud_previewer.popup.select.cloud_type", "Select a cloud type:");

@@ -26,7 +26,6 @@ public class SimpleCloudsClientConfigListeners {
 		ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
-				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.atmosphericClouds, (o, n) -> reloadResources())
 				.addListener(SimpleCloudsConfig.CLIENT.levelOfDetail, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.distantShadows, (o, n) -> requestReload(false))

@@ -1,63 +1,63 @@
 {
-  "visual": {
-    "noise_settings": [
-      {
-        "fade_distance": 10,
-        "height": 32,
-        "height_offset": 0,
-        "scale_x": 500,
-        "scale_y": 30,
-        "scale_z": 100,
-        "value_offset": 1,
-        "value_scale": 1
-      },
-      {
-        "fade_distance": 10,
-        "height": 32,
-        "height_offset": 0,
-        "scale_x": 10,
-        "scale_y": 10,
-        "scale_z": 10,
-        "value_offset": 0,
-        "value_scale": 0.5
-      }
-    ],
-    "transparency_fade": 0
-  },
-  "weather": {
-    "type": "rain",
-    "storminess": 0.4,
-    "storm_start": 0,
-    "storm_fade_distance": 32
-  },
-  "spawning": {
-    "exist_ticks": {
-      "type": "minecraft:biased_to_bottom",
-      "max_inclusive": 72000,
-      "min_inclusive": 48000
-    },
-    "grow_ticks": {
-      "type": "minecraft:uniform",
-      "max_inclusive": 2400,
-      "min_inclusive": 1200
-    },
-    "moves_to_player": true,
-    "order_weight": 800,
-    "radius": {
-      "type": "minecraft:biased_to_bottom",
-      "max_inclusive": 8000,
-      "min_inclusive": 5000
-    },
-    "speed": {
-      "type": "minecraft:uniform",
-      "max_exclusive": 0.1,
-      "min_inclusive": 0.03
-    },
-    "stretch_factor": {
-      "type": "minecraft:uniform",
-      "max_exclusive": 0.45,
-      "min_inclusive": 0.25
-    },
-    "weight": 4
-  }
+    "visual":  {
+                   "noise_settings":  [
+                                          {
+                                              "fade_distance":  10,
+                                              "height":  32,
+                                              "height_offset":  0,
+                                              "scale_x":  500,
+                                              "scale_y":  30,
+                                              "scale_z":  100,
+                                              "value_offset":  1,
+                                              "value_scale":  1
+                                          },
+                                          {
+                                              "fade_distance":  10,
+                                              "height":  32,
+                                              "height_offset":  0,
+                                              "scale_x":  10,
+                                              "scale_y":  10,
+                                              "scale_z":  10,
+                                              "value_offset":  0,
+                                              "value_scale":  0.5
+                                          }
+                                      ],
+                   "override_atmospheric_clouds":  false
+               },
+    "weather":  {
+                    "type":  "rain",
+                    "storminess":  0.4,
+                    "storm_start":  0,
+                    "storm_fade_distance":  32
+                },
+    "spawning":  {
+                     "exist_ticks":  {
+                                         "type":  "minecraft:biased_to_bottom",
+                                         "max_inclusive":  72000,
+                                         "min_inclusive":  48000
+                                     },
+                     "grow_ticks":  {
+                                        "type":  "minecraft:uniform",
+                                        "max_inclusive":  2400,
+                                        "min_inclusive":  1200
+                                    },
+                     "moves_to_player":  true,
+                     "order_weight":  800,
+                     "radius":  {
+                                    "type":  "minecraft:biased_to_bottom",
+                                    "max_inclusive":  8000,
+                                    "min_inclusive":  5000
+                                },
+                     "speed":  {
+                                   "type":  "minecraft:uniform",
+                                   "max_exclusive":  0.1,
+                                   "min_inclusive":  0.03
+                               },
+                     "stretch_factor":  {
+                                            "type":  "minecraft:uniform",
+                                            "max_exclusive":  0.45,
+                                            "min_inclusive":  0.25
+                                        },
+                     "weight":  4
+                 }
 }

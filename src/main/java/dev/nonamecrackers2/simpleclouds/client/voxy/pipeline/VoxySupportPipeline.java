@@ -9,7 +9,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexSorting;
 
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
@@ -103,19 +102,6 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, viewMat, cloudWorldMat, camX, camY,
 				camZ);
 		renderer.copyDepthFromCloudsToMain();
-
-		p.popPush("clouds_transparent");
-		WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
-		transparencyTarget.clear(Minecraft.ON_OSX);
-		if (generator.transparencyEnabled()) {
-			renderer.copyDepthFromCloudsToTransparency();
-			transparencyTarget.bindWrite(false);
-			SimpleCloudsRenderer.renderCloudsTransparency(generator, cloudStack, projMat,
-					renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
-					SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, viewMat, cloudWorldMat, camX,
-					camY, camZ);
-		}
-		p.pop();
 
 		// doFinalCompositePass takes Matrix4f in 1.21.1, NOT PoseStack
 		p.push("clouds_composite");

@@ -37,7 +37,6 @@
   "gui.simpleclouds.cloud_previewer.storm_start.title": "Уровень начала шторма",
   "gui.simpleclouds.cloud_previewer.storminess.title": "Грозовость",
   "gui.simpleclouds.cloud_previewer.title": "Предпросмотр облаков",
-  "gui.simpleclouds.cloud_previewer.transparency_fade.title": "Затухание прозрачности",
   "gui.simpleclouds.cloud_previewer.warning.too_many_cubes": "Предупреждение: слишком много кубов",
   "gui.simpleclouds.cloud_previewer.weather_type.title": "Тип погоды",
   "gui.simpleclouds.config.category.debug.title": "Отладка",

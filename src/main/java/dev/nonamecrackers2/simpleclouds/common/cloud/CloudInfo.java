@@ -14,15 +14,11 @@ import dev.nonamecrackers2.simpleclouds.common.noise.NoiseSettings;
 import net.minecraft.util.Mth;
 
 public interface CloudInfo {
-	public static final int BYTES_PER_TYPE = 40;
+	public static final int BYTES_PER_TYPE = 36;
 	public static final float STORMINESS_MAX = 1.0F;
 	public static final float STORM_START_MAX = CloudMeshGenerator.LOCAL_SIZE * CloudMeshGenerator.WORK_SIZE
 			* CloudMeshGenerator.VERTICAL_CHUNK_SPAN;
 	public static final float STORM_FADE_DISTANCE_MAX = 1600.0F;
-	public static final float TRANSPARENCY_FADE_MAX = 32.0F;
-	public static final int HIGH_ATMOSPHERIC_CLOUD_BASE = 120;
-	public static final int HIGH_LEVEL_CLOUD_BASE = 96;
-	public static final int HIGH_LEVEL_FLAT_RANGE = 64;
 
 	NoiseSettings noiseConfig();
 
@@ -34,8 +30,6 @@ public interface CloudInfo {
 
 	float stormFadeDistance();
 
-	float transparencyFade();
-
 	default boolean atmospheric() {
 		return false;
 	}
@@ -45,10 +39,7 @@ public interface CloudInfo {
 	}
 
 	default boolean suppressesAtmosphericClouds() {
-		int cloudBase = this.noiseConfig().getStartHeight();
-		int cloudHeightRange = this.noiseConfig().getHeightRange();
-		return this.overrideAtmosphericClouds() || cloudBase >= HIGH_ATMOSPHERIC_CLOUD_BASE
-				|| (cloudBase >= HIGH_LEVEL_CLOUD_BASE && cloudHeightRange <= HIGH_LEVEL_FLAT_RANGE);
+		return this.overrideAtmosphericClouds();
 	}
 
 	default CloudColorMode colorMode() {
@@ -96,9 +87,7 @@ public interface CloudInfo {
 				NoiseSettings.CODEC.encodeStart(JsonOps.INSTANCE, this.noiseConfig()).resultOrPartial(error -> {
 					throw new JsonSyntaxException(error);
 				}).orElseThrow());
-		visual.addProperty("transparency_fade", Mth.clamp(this.transparencyFade(), 0.0F, TRANSPARENCY_FADE_MAX));
-		if (this.overrideAtmosphericClouds())
-			visual.addProperty("override_atmospheric_clouds", true);
+		visual.addProperty("override_atmospheric_clouds", this.overrideAtmosphericClouds());
 		if (this.colorMode() != CloudColorMode.DEFAULT)
 			visual.addProperty("color_mode", this.colorMode().getSerializedName());
 		if (this.colorMode() == CloudColorMode.FIXED) {
@@ -126,7 +115,6 @@ public interface CloudInfo {
 		b.putFloat(this.storminess());
 		b.putFloat(this.getStormStartRelativeToCloudBase());
 		b.putFloat(this.stormFadeDistance());
-		b.putFloat(this.transparencyFade());
 		b.putFloat(this.colorMode().getShaderValue());
 		b.putFloat(this.tintRed());
 		b.putFloat(this.tintGreen());

@@ -33,10 +33,10 @@
       "scale_x": 30,
       "scale_y": 10,
       "scale_z": 30,
-      "value_offset": -0.5,
+      "value_offset": -0.4,
       "value_scale": 1
     },
-    "transparency_fade": 0.1
+    "override_atmospheric_clouds": false
   },
   "weather": {
     "type": "none",

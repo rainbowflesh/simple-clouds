@@ -46,7 +46,6 @@ import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
 import dev.nonamecrackers2.simpleclouds.client.event.impl.DetermineCloudRenderPipelineEvent;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.ShadowMapBuffer;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.mesh.RendererInitializeResult;
 import dev.nonamecrackers2.simpleclouds.client.mesh.chunk.MeshChunk;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
@@ -101,8 +100,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private static final Vector3f DIFFUSE_LIGHT_0 = (new Vector3f(0.2F, 1.0F, -0.7F)).normalize();
 	private static final Vector3f DIFFUSE_LIGHT_1 = (new Vector3f(-0.2F, 1.0F, 0.7F)).normalize();
 	private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
-	public static final ResourceLocation FINAL_COMPOSITE_LOC = SimpleCloudsMod.id("shaders/post/final_composite.json");
-	public static final ResourceLocation FINAL_COMPOSITE_NO_TRANSPARENCY_LOC = SimpleCloudsMod
+	public static final ResourceLocation FINAL_COMPOSITE_LOC = SimpleCloudsMod
 			.id("shaders/post/final_composite_no_transparency.json");
 	private static final ResourceLocation DITHER_TEXTURE = SimpleCloudsMod.id("textures/shader/bayer_matrix.png");
 	private static final ArtifactVersion REQUIRED_OPENGL_VERSION = new DefaultArtifactVersion("4.3");
@@ -199,10 +197,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		return this.postProcessing.getCloudTarget();
 	}
 
-	public WeightedBlendingTarget getCloudTransparencyTarget() {
-		return this.postProcessing.getCloudTransparencyTarget();
-	}
-
 	public float getFogStart() {
 		return this.fogStart;
 	}
@@ -247,12 +241,36 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	private @Nullable CloudType resolveAtmosphericOverrideCloudType(double camX, double camZ) {
-		if (this.cloudManager != null && this.mc.level != null)
-			return this.cloudManager.getCloudTypeAtWorldPos((float) camX, (float) camZ).getLeft();
 		if (this.meshGenerator instanceof SingleRegionCloudMeshGenerator generator
 				&& generator.getCloudType() instanceof CloudType type)
 			return type;
+		if (this.cloudManager != null && this.mc.level != null)
+			return this.resolveAtmosphericOverrideCloudTypeForNormalMode((float) camX, (float) camZ);
 		return null;
+	}
+
+	private CloudType resolveAtmosphericOverrideCloudTypeForNormalMode(float camX, float camZ) {
+		CloudType overrideType = null;
+		float bestOverrideFade = Float.MAX_VALUE;
+
+		for (int layer = 1; layer <= CloudType.MAX_CLOUD_LAYERS; layer++) {
+			var selection = this.cloudManager.getCloudTypeAtWorldPosForLayer(camX, camZ, layer);
+			CloudType type = selection.getLeft();
+			if (type == null || type == SimpleCloudsConstants.EMPTY || !type.suppressesAtmosphericClouds())
+				continue;
+
+			float fade = selection.getRight();
+			if (fade < bestOverrideFade) {
+				overrideType = type;
+				bestOverrideFade = fade;
+			}
+		}
+
+		if (overrideType != null)
+			return overrideType;
+
+		CloudType sampledType = this.cloudManager.getCloudTypeAtWorldPos(camX, camZ).getLeft();
+		return sampledType != null ? sampledType : SimpleCloudsConstants.EMPTY;
 	}
 
 	public @Nullable CloudType getCurrentCloudType(double camX, double camZ) {
@@ -276,7 +294,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private int getAdaptiveStormFogResolutionDivisor(float partialTick) {
 		int divisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
 		if (SimpleCloudsMod.isDhActive())
-			return 1;
+			return divisor;
 		float storminess = this.worldEffectsManager.getStorminessSmoothed(partialTick);
 		if (storminess >= 0.8F)
 			return Math.max(divisor, 16);
@@ -373,8 +391,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			return;
 		}
 
-		int stormFogResolutionDivisor = highPrecisionDepth ? 1
-				: SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
+		int stormFogResolutionDivisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
 		this.stormFogResolutionDivisor = stormFogResolutionDivisor;
 
 		// --- Mesh Generator ---
@@ -470,7 +487,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			boolean isAmbientMode = mode == CloudMode.AMBIENT;
 			boolean useMultiRegion = isAmbientMode || mode == CloudMode.DEFAULT;
 			boolean shadedClouds = this.settings.shadedClouds();
-			boolean useTransparency = this.settings.useTransparency();
+			boolean useTransparency = false;
 			LevelOfDetailConfig lod = this.settings.getCurrentLod().getConfig();
 
 			var builder = CloudMeshGenerator.builder()
@@ -522,8 +539,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			return;
 
 		if (this.stormFogResolutionDivisor <= 0)
-			this.stormFogResolutionDivisor = SimpleCloudsMod.isDhActive() ? 1
-					: SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
+			this.stormFogResolutionDivisor = SimpleCloudsCompatHelper.getStormFogResolutionDivisor();
 		this.postProcessing.resizeTargets(main, this.stormFogResolutionDivisor);
 		this.atmosphericClouds.onResize(width, height);
 	}
@@ -638,91 +654,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.enableCull();
-	}
-
-	public static void renderCloudsTransparency(CloudMeshGenerator generator, PoseStack stack, Matrix4f projMat,
-			float fogStart, float fogEnd, float partialTick, float r, float g, float b, @Nullable Frustum frustum) {
-		renderCloudsTransparency(generator, stack, projMat, fogStart, fogEnd, partialTick, r, g, b, frustum, false,
-				stack.last().pose(), IDENTITY_MATRIX, 0.0D, 0.0D, 0.0D);
-	}
-
-	public static void renderCloudsTransparency(CloudMeshGenerator generator, PoseStack stack, Matrix4f projMat,
-			float fogStart, float fogEnd, float partialTick, float r, float g, float b, @Nullable Frustum frustum,
-			boolean ditherFade) {
-		renderCloudsTransparency(generator, stack, projMat, fogStart, fogEnd, partialTick, r, g, b, frustum,
-				ditherFade, stack.last().pose(), IDENTITY_MATRIX, 0.0D, 0.0D, 0.0D);
-	}
-
-	public static void renderCloudsTransparency(CloudMeshGenerator generator, PoseStack stack, Matrix4f projMat,
-			float fogStart, float fogEnd, float partialTick, float r, float g, float b, @Nullable Frustum frustum,
-			Matrix4f viewMat, Matrix4f cloudWorldMat, double camX, double camY, double camZ) {
-		renderCloudsTransparency(generator, stack, projMat, fogStart, fogEnd, partialTick, r, g, b, frustum,
-				false, viewMat, cloudWorldMat, camX, camY, camZ);
-	}
-
-	private static void renderCloudsTransparency(CloudMeshGenerator generator, PoseStack stack, Matrix4f projMat,
-			float fogStart, float fogEnd, float partialTick, float r, float g, float b, @Nullable Frustum frustum,
-			boolean ditherFade, Matrix4f viewMat, Matrix4f cloudWorldMat, double camX, double camY, double camZ) {
-		RenderSystem.assertOnRenderThread();
-
-		BufferUploader.reset();
-
-		if (!generator.canRender() || !generator.transparencyEnabled())
-			return;
-
-		RenderSystem.colorMask(true, true, true, true);
-		RenderSystem.enableDepthTest();
-		RenderSystem.depthMask(false);
-
-		SingleSSBOShaderInstance shader = SimpleCloudsShaders.getCloudsTransparencyShader();
-		RenderSystem.setShader(() -> shader);
-		RenderSystem.setShaderColor(r, g, b, 1.0F);
-
-		TextureManager manager = Minecraft.getInstance().getTextureManager();
-		AbstractTexture ditherTexture = manager.getTexture(DITHER_TEXTURE);
-		shader.setSampler("BayerMatrixSampler", ditherTexture);
-		shader.safeGetUniform("DitherScale").set(DITHER_SCALE);
-
-		SimpleCloudsRenderer.prepareShader(shader, stack.last().pose(), projMat, fogStart, fogEnd, viewMat,
-				cloudWorldMat, camX, camY, camZ);
-
-		shader.apply();
-
-		GL30.glEnablei(GL11.GL_BLEND, 0);
-		GL30.glEnablei(GL11.GL_BLEND, 1);
-		GL40.glBlendEquationi(0, GL14.GL_FUNC_ADD);
-		GL40.glBlendEquationi(1, GL14.GL_FUNC_ADD);
-		GL40.glBlendFunci(0, GL11.GL_ONE, GL11.GL_ONE);
-		GL40.glBlendFunci(1, GL11.GL_ZERO, GL11.GL_ONE_MINUS_SRC_COLOR);
-
-		generator.forRenderableMeshChunks(frustum, c -> c.getTransparentBuffers().get(),
-				(chunk, transparentBuffers) -> {
-					if (!SimpleCloudsConfig.CLIENT.renderLodClouds.get() && chunk.getChunkInfo().lodLevel() > 0)
-						return;
-					if (ditherFade) {
-						RenderSystem.setShaderColor(r, g, b, chunk.getAlpha(partialTick));
-						shader.COLOR_MODULATOR.set(RenderSystem.getShaderColor());
-						shader.COLOR_MODULATOR.upload();
-					}
-
-					GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, shader.getShaderStorageBinding(),
-							transparentBuffers.getBufferId());
-					generator.getCubeMesh().drawInstanced(transparentBuffers.getElementCount());
-				}, ditherFade);
-		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, shader.getShaderStorageBinding(), 0);
-
-		shader.clear();
-
-		GL30.glDisablei(GL11.GL_BLEND, 0);
-		GL30.glDisablei(GL11.GL_BLEND, 1);
-		GL40.glBlendFuncSeparatei(0, GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-		GL40.glBlendFuncSeparatei(1, GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
-
-		GL30.glBindVertexArray(0);
-
-		RenderSystem.depthMask(true);
-
-		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 	}
 
 	private Matrix4f createShadowMapMatrix(ShadowMapBuffer shadowMap, double camX, double camY, double camZ,
@@ -1177,7 +1108,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			effect.safeGetUniform("LightTransmittenceDistance").set(
 					useDhRendering ? 900.0F : 500.0F);
 			effect.safeGetUniform("DistantDensityMultiplier")
-					.set(useDhRendering ? 0.4F : 1.0F);
+					.set(useDhRendering ? 0.1F : 1.0F);
 			effect.safeGetUniform("NearFadeStart").set(useDhRendering ? this.fogEnd * 0.18F : 0.0F);
 			effect.safeGetUniform("NearFadeEnd").set(useDhRendering ? this.fogEnd * 0.4F : 0.0F);
 			effect.safeGetUniform("TotalLightningBolts").set(size.getValue());
@@ -1276,10 +1207,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		this._copyDepthSafe(this.getCloudTarget(), this.mc.getMainRenderTarget());
 	}
 
-	public void copyDepthFromCloudsToTransparency() {
-		this._copyDepthSafe(this.getCloudTransparencyTarget(), this.getCloudTarget());
-	}
-
 	private void _copyDepthSafe(RenderTarget to, RenderTarget from) {
 		RenderSystem.assertOnRenderThread();
 		GlStateManager._getError(); // Clear old error
@@ -1320,7 +1247,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		category.setDetail("Cloud Target Available", this.postProcessing.hasCloudTarget());
 		category.setDetail("Storm Fog Target Active", this.postProcessing.hasStormFogTarget());
 		category.setDetail("Blur Target Active", this.postProcessing.hasBlurTarget());
-		category.setDetail("Transparency Target Active", this.postProcessing.hasTransparencyTarget());
 		category.setDetail("Post Chains", this.postProcessing.describePostChains());
 		category.setDetail("Lightning Bolt SSBO", this.lightningBoltPositions);
 		category.setDetail("Clouds Shadow Map", this.stormFogShadowMap);

@@ -26,7 +26,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.GsonHelper;
 
 public record CloudType(ResourceLocation id, WeatherType weatherType, float storminess, float stormStart,
-		float stormFadeDistance, float transparencyFade, List<Integer> cloudLayers, NoiseSettings noiseConfig,
+		float stormFadeDistance, List<Integer> cloudLayers, NoiseSettings noiseConfig,
 		boolean overrideAtmosphericClouds, CloudColorMode colorMode, float tintRed, float tintGreen, float tintBlue)
 		implements CloudInfo, ScAPICloudType {
 	public static final int MAX_CLOUD_LAYERS = 1;
@@ -34,6 +34,12 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 	public static final int DEFAULT_LAYER_SEPARATION = 256;
 	@Deprecated(forRemoval = false)
 	public static final int LAYER_HEIGHT = DEFAULT_LAYER_SEPARATION;
+
+	@Override
+	@Deprecated(forRemoval = false)
+	public float transparencyFade() {
+		return 0.0F;
+	}
 
 	private static float getOptionalRangedParam(JsonObject object, String name, float defaultValue, float min,
 			float max) throws JsonSyntaxException {
@@ -269,10 +275,7 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 				CloudInfo.STORM_START_MAX);
 		float stormFadeDistance = getOptionalRangedParam(weather, object, "storm_fade_distance", 32.0F, 0.0F,
 				CloudInfo.STORM_FADE_DISTANCE_MAX);
-		float transparencyFade = getOptionalRangedParam(visual, object, "transparency_fade", 0.0F, 0.0F,
-				CloudInfo.TRANSPARENCY_FADE_MAX);
-
-		return new CloudType(id, weatherType, storminess, stormStart, stormFadeDistance, transparencyFade,
-				cloudLayers, settings, overrideAtmosphericClouds, colorMode, tint[0], tint[1], tint[2]);
+		return new CloudType(id, weatherType, storminess, stormStart, stormFadeDistance, cloudLayers, settings,
+				overrideAtmosphericClouds, colorMode, tint[0], tint[1], tint[2]);
 	}
 }

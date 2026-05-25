@@ -1,59 +1,59 @@
 {
-  "visual": {
-    "noise_settings": [
-      {
-        "fade_distance": 10,
-        "height": 56,
-        "height_offset": 168,
-        "scale_x": 130,
-        "scale_y": 56,
-        "scale_z": 130,
-        "value_offset": -0.15,
-        "value_scale": 1
-      },
-      {
-        "fade_distance": 10,
-        "height": 40,
-        "height_offset": 172,
-        "scale_x": 24,
-        "scale_y": 24,
-        "scale_z": 24,
-        "value_offset": 0,
-        "value_scale": 0.28
-      }
-    ],
-    "transparency_fade": 0.18
-  },
-  "weather": {
-    "type": "none",
-    "storminess": 0.25,
-    "storm_start": 24,
-    "storm_fade_distance": 32
-  },
-  "spawning": {
-    "exist_ticks": {
-      "type": "minecraft:biased_to_bottom",
-      "max_inclusive": 48000,
-      "min_inclusive": 30000
-    },
-    "grow_ticks": {
-      "type": "minecraft:uniform",
-      "max_inclusive": 2800,
-      "min_inclusive": 1600
-    },
-    "moves_to_player": false,
-    "order_weight": 650,
-    "radius": {
-      "type": "minecraft:uniform",
-      "max_inclusive": 9000,
-      "min_inclusive": 5000
-    },
-    "speed": {
-      "type": "minecraft:uniform",
-      "max_exclusive": 0.18,
-      "min_inclusive": 0.08
-    },
-    "stretch_factor": 1,
-    "weight": 8
-  }
+    "visual":  {
+                   "noise_settings":  [
+                                          {
+                                              "fade_distance":  10,
+                                              "height":  56,
+                                              "height_offset":  168,
+                                              "scale_x":  130,
+                                              "scale_y":  56,
+                                              "scale_z":  130,
+                                              "value_offset":  0.03,
+                                              "value_scale":  1
+                                          },
+                                          {
+                                              "fade_distance":  10,
+                                              "height":  40,
+                                              "height_offset":  172,
+                                              "scale_x":  24,
+                                              "scale_y":  24,
+                                              "scale_z":  24,
+                                              "value_offset":  0,
+                                              "value_scale":  0.28
+                                          }
+                                      ],
+                   "override_atmospheric_clouds":  true
+               },
+    "weather":  {
+                    "type":  "none",
+                    "storminess":  0.25,
+                    "storm_start":  24,
+                    "storm_fade_distance":  32
+                },
+    "spawning":  {
+                     "exist_ticks":  {
+                                         "type":  "minecraft:biased_to_bottom",
+                                         "max_inclusive":  48000,
+                                         "min_inclusive":  30000
+                                     },
+                     "grow_ticks":  {
+                                        "type":  "minecraft:uniform",
+                                        "max_inclusive":  2800,
+                                        "min_inclusive":  1600
+                                    },
+                     "moves_to_player":  false,
+                     "order_weight":  650,
+                     "radius":  {
+                                    "type":  "minecraft:uniform",
+                                    "max_inclusive":  9000,
+                                    "min_inclusive":  5000
+                                },
+                     "speed":  {
+                                   "type":  "minecraft:uniform",
+                                   "max_exclusive":  0.18,
+                                   "min_inclusive":  0.08
+                               },
+                     "stretch_factor":  1,
+                     "weight":  8
+                 }
 }

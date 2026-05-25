@@ -30,13 +30,13 @@
       "fade_distance": 10,
       "height": 32,
       "height_offset": 0,
-      "scale_x": 30,
-      "scale_y": 10,
-      "scale_z": 30,
-      "value_offset": -0.8,
+      "scale_x": 44,
+      "scale_y": 14,
+      "scale_z": 44,
+      "value_offset": -0.52,
       "value_scale": 1
     },
-    "transparency_fade": 0.2
+    "override_atmospheric_clouds": false
   },
   "weather": {
     "type": "none",

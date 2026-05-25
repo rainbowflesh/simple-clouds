@@ -26,7 +26,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.weather.WeatherType;
 import dev.nonamecrackers2.simpleclouds.client.cloud.ClientSideCloudTypeManager;
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.gui.widget.LayerEditor;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.SingleRegionCloudMeshGenerator;
@@ -78,8 +77,6 @@ public class CloudPreviewerScreen extends Screen3D {
 			.translatable("gui.simpleclouds.cloud_previewer.storm_start.title");
 	private static final Component STORM_FADE_DISTANCE_TITLE = Component
 			.translatable("gui.simpleclouds.cloud_previewer.storm_fade_distance.title");
-	private static final Component TRANSPARENCY_FADE_TITLE = Component
-			.translatable("gui.simpleclouds.cloud_previewer.transparency_fade.title");
 	private static final Component LOAD = Component.translatable("gui.simpleclouds.cloud_previewer.load.title");
 	private static final Component EXPORT = Component.translatable("gui.simpleclouds.cloud_previewer.export.title");
 	private static final Component SELECT_A_CLOUD_TYPE = Component
@@ -100,7 +97,6 @@ public class CloudPreviewerScreen extends Screen3D {
 	private float storminess = 0.0F;
 	private float stormStart = 16.0F;
 	private float stormFadeDistance = 32.0F;
-	private float transparencyFade = 0.0F;
 	private final CloudInfo cloudType = new CloudInfo() {
 		@Override
 		public WeatherType weatherType() {
@@ -139,10 +135,6 @@ public class CloudPreviewerScreen extends Screen3D {
 			return CloudPreviewerScreen.this.cloudLayers;
 		}
 
-		@Override
-		public float transparencyFade() {
-			return CloudPreviewerScreen.this.transparencyFade;
-		}
 	};
 	private final File directory;
 	private final File cloudTypeDirectory;
@@ -153,7 +145,6 @@ public class CloudPreviewerScreen extends Screen3D {
 	private EditBox storminessBox;
 	private EditBox stormStartBox;
 	private EditBox stormFadeDistanceBox;
-	private EditBox transparencyFadeBox;
 	private Button exportButton;
 
 	public static void addCloudMeshListener(RegisterClientReloadListenersEvent event) {
@@ -172,7 +163,7 @@ public class CloudPreviewerScreen extends Screen3D {
 	public CloudPreviewerScreen(Screen prev) {
 		super(Component.translatable("gui.simpleclouds.cloud_previewer.title"), 0.25F, 5000.0F);
 		if (generator == null) {
-			generator = CloudMeshGenerator.builder().testFacesFacingAway(true)
+			generator = CloudMeshGenerator.builder().testFacesFacingAway(true).useTransparency(false)
 					.createSingleRegion(SimpleCloudsConstants.EMPTY);
 			generator.init(Minecraft.getInstance().getResourceManager());
 		}
@@ -258,8 +249,6 @@ public class CloudPreviewerScreen extends Screen3D {
 			this.stormStartBox.setValue(String.valueOf(this.stormStart));
 			this.stormFadeDistance = type.stormFadeDistance();
 			this.stormFadeDistanceBox.setValue(String.valueOf(this.stormFadeDistance));
-			this.transparencyFade = type.transparencyFade();
-			this.transparencyFadeBox.setValue(String.valueOf(this.transparencyFade));
 		}, 400, 100, SELECT_A_CLOUD_TYPE);
 	}
 
@@ -441,9 +430,6 @@ public class CloudPreviewerScreen extends Screen3D {
 		this.stormFadeDistanceBox = this.valueEditor(this.stormFadeDistance,
 				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
 				f -> this.stormFadeDistance = f, 0.0F, CloudInfo.STORM_FADE_DISTANCE_MAX);
-		this.transparencyFadeBox = this.valueEditor(this.transparencyFade,
-				cloudTypeOptionsRow.addChild(new EditBox(this.font, 0, 0, 100, 20, CommonComponents.EMPTY)),
-				f -> this.transparencyFade = f, 0.0F, CloudInfo.TRANSPARENCY_FADE_MAX);
 		cloudTypeOptions.arrangeElements();
 		FrameLayout.alignInRectangle(cloudTypeOptions, 10, 10 + this.font.lineHeight, this.width - 20,
 				this.height - 20 - this.font.lineHeight * 2, 1.0F, 0.0F);
@@ -500,8 +486,6 @@ public class CloudPreviewerScreen extends Screen3D {
 				this.stormStartBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
 		stack.drawString(this.font, STORM_FADE_DISTANCE_TITLE, this.stormFadeDistanceBox.getX(),
 				this.stormFadeDistanceBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
-		stack.drawString(this.font, TRANSPARENCY_FADE_TITLE, this.transparencyFadeBox.getX(),
-				this.transparencyFadeBox.getY() - this.font.lineHeight - 2, 0xFFFFFFFF);
 	}
 
 	@Override
@@ -517,17 +501,6 @@ public class CloudPreviewerScreen extends Screen3D {
 
 		SimpleCloudsRenderer.renderCloudsOpaque(generator, stack, RenderSystem.getProjectionMatrix(), Float.MAX_VALUE,
 				Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
-
-		WeightedBlendingTarget target = renderer.getCloudTransparencyTarget();
-		target.clear(Minecraft.ON_OSX);
-
-		if (generator.transparencyEnabled()) {
-			renderer.copyDepthFromCloudsToTransparency();
-			target.bindWrite(false);
-
-			SimpleCloudsRenderer.renderCloudsTransparency(generator, stack, RenderSystem.getProjectionMatrix(),
-					Float.MAX_VALUE, Float.MAX_VALUE, partialTick, 1.0F, 1.0F, 1.0F, null, false);
-		}
 
 		renderer.doFinalCompositePass(stack.last().pose(), partialTick, RenderSystem.getProjectionMatrix());
 

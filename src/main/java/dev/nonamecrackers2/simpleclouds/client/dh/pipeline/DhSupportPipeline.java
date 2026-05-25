@@ -46,6 +46,19 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
 	}
 
+	private static int getDepthTextureFromFramebuffer(int sourceFramebuffer) {
+		int previousFramebuffer = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
+		int objectType = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+				GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
+		int objectName = objectType == GL11.GL_TEXTURE
+				? GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT,
+						GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME)
+				: 0;
+		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, previousFramebuffer);
+		return objectName;
+	}
+
 	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
 		PoseStack stack = new PoseStack();
 		stack.last().pose().set(mat);
@@ -98,8 +111,10 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
-		RenderTarget transparencyTarget = renderer.getCloudTransparencyTarget();
-		transparencyTarget.clear(Minecraft.ON_OSX);
+		if (dhFbo > 0)
+			copyDepthFromFramebuffer(dhFbo, cloudTarget);
+		else
+			renderer.copyDepthFromMainToClouds();
 
 		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 		PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
@@ -107,7 +122,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		cloudTarget.bindWrite(false);
 		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), cloudStack, projMat,
-				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(), null, modelViewMat,
+				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
+				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, modelViewMat,
 				cloudWorldMat, camX, camY, camZ);
 	}
 
@@ -115,38 +131,23 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	public void afterDistantHorizonsRender(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
 			Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum, int dhFbo) {
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-		float fogEnd = getDhGeometryFogEnd(renderer);
-		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
+		int dhDepthTextureId = getDepthTextureFromFramebuffer(dhFbo);
+		int sceneDepthTextureId = dhDepthTextureId > 0 ? dhDepthTextureId
+				: mc.getMainRenderTarget().getDepthTextureId();
 		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler._getMcProjMat();
 		Matrix4f mcModelViewMat = SimpleCloudsDhCompatHandler._getMcModelViewMat();
-		Frustum renderFrustum = null;
 
 		ProfilerFiller p = mc.getProfiler();
 
 		p.push("clouds");
-		p.push("clouds_transparent");
-		if (renderer.getMeshGenerator().transparencyEnabled()) {
-			Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
-			PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
-			renderer.translateClouds(cloudStack, camX, camY, camZ);
-			renderer.copyDepthFromCloudsToTransparency();
-			renderer.getCloudTransparencyTarget().bindWrite(false);
-			SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), cloudStack, projMat,
-					fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(),
-					cloudColor.b(), renderFrustum, modelViewMat, cloudWorldMat, camX, camY, camZ);
-		}
-		p.pop();
-
-		copyDepthFromFramebuffer(dhFbo, renderer.getCloudTransparencyTarget());
-
 		p.push("cloud_shadows");
 		renderer.doCloudShadowProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ,
-				renderer.getCloudTransparencyTarget().getDepthTextureId());
+				sceneDepthTextureId);
 		p.pop();
 
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(modelViewMat, partialTick, projMat,
-				() -> renderer.getCloudTransparencyTarget().getDepthTextureId());
+				() -> sceneDepthTextureId);
 		p.pop();
 
 		p.pop();
@@ -157,17 +158,22 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
-			renderer.doStormPostProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ, cloudColor.r(),
-					cloudColor.g(), cloudColor.b());
+			CloudPipelineRenderSteps.prepareStormFog(renderer, modelViewMat, projMat, partialTick, camX, camY, camZ,
+					cloudColor);
 			if (renderer.shouldUseScreenSpaceStormFog()) {
 				renderer.doScreenSpaceWorldFog(modelViewMat, projMat, partialTick);
 				mc.getMainRenderTarget().bindWrite(false);
 			} else {
-				renderer.renderRawStormFogOverlay();
+				renderer.renderPreparedStormFogOverlay();
 			}
 
 			p.pop();
 		}
+
+		// Storm-fog overlays can replace framebuffer attachments; refresh DH depth
+		// before
+		// drawing lightning so strikes remain terrain-occluded.
+		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 
 		mc.getMainRenderTarget().bindWrite(false);
 		RenderSystem.setProjectionMatrix(mcProjMat, VertexSorting.DISTANCE_TO_ORIGIN);
@@ -198,6 +204,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		Tesselator tesselator = Tesselator.getInstance();
 		RenderSystem.enableBlend();
 		RenderSystem.enableDepthTest();
+		RenderSystem.depthFunc(GL11.GL_LEQUAL);
 		RenderSystem.depthMask(false);
 
 		if (effects.hasLightningToRender()) {
@@ -212,7 +219,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 						(float) camZ) <= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF && bolt.getFade(partialTick) > 0.5F)
 					mc.level.setSkyFlashTime(2);
 				float dist = bolt.getPosition().distance((float) camX, (float) camY, (float) camZ);
-				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, effects.getLightningVisibility(dist));
+				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, effects.getLightningVisibility(dist),
+						mc.level, camX, camY, camZ);
 			});
 
 			MeshData data = builder.build();

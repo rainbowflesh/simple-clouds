@@ -7,7 +7,6 @@ import org.joml.Matrix4f;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.vertex.PoseStack;
 
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
@@ -44,20 +43,6 @@ public final class CloudPipelineRenderSteps {
                 renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
                 SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, camMat, cloudWorldMat, camX, camY,
                 camZ);
-
-        profiler.popPush("clouds_transparent");
-        WeightedBlendingTarget transparencyTarget = renderer.getCloudTransparencyTarget();
-        if (clearTargets)
-            transparencyTarget.clear(Minecraft.ON_OSX);
-
-        if (renderer.getMeshGenerator().transparencyEnabled()) {
-            renderer.copyDepthFromCloudsToTransparency();
-            transparencyTarget.bindWrite(false);
-            SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), stack, projMat,
-                    renderer.getFogStart(), renderer.getFogEnd(), partialTick, cloudColor.r(), cloudColor.g(),
-                    cloudColor.b(), SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, camMat,
-                    cloudWorldMat, camX, camY, camZ);
-        }
 
         profiler.pop();
         stack.popPose();

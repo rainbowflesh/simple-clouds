@@ -62,7 +62,7 @@
         "value_scale": 0.3
       }
     ],
-    "transparency_fade": 0
+    "override_atmospheric_clouds": false
   },
   "weather": {
     "type": "rain",

@@ -52,7 +52,6 @@ out vec4 fragColor;
 
 #define FOG 0 // 0 for no fog, 1 for fog
 #define STEPS 200 //Total ray steps. More smaller steps means better accuracy and less artifacts
-#define STEP_SIZE 40.0 //Size of each individual step
 #define BG_COL vec4(0.0);
 
 vec3 getRayDirection(vec2 screenUV)
@@ -79,34 +78,6 @@ vec4 shadowMapColorAt(vec3 pos)
 		return vec4(texture(ShadowMapColor, coord.xy).rgb, 1.0);
 	return vec4(0.0);
 }
-
-//---------------------------------------------
-// The MIT License
-// Copyright © 2016 Inigo Quilez
-// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// https://www.shadertoy.com/view/4lcSRn
-vec4 cylinderVerticalIntersect(in vec3 ro, in vec3 rd, float he, float ra)
-{
-    float k2 = 1.0        - rd.y*rd.y;
-    float k1 = dot(ro,rd) - ro.y*rd.y;
-    float k0 = dot(ro,ro) - ro.y*ro.y - ra*ra;
-    
-    float h = k1*k1 - k2*k0;
-    if( h<0.0 ) return vec4(-1.0);
-    h = sqrt(h);
-    float t = (-k1-h)/k2;
-
-    // body
-    float y = ro.y + t*rd.y;
-    if( y>-he && y<he ) return vec4( t, (ro + t*rd - vec3(0.0,y,0.0))/ra );
-    
-    // caps
-    t = ( ((y<0.0)?-he:he) - ro.y)/rd.y;
-    if( abs(k1+k2*t)<h ) return vec4( t, vec3(0.0,sign(y),0.0) );
-
-    return vec4(-1.0);
-}
-//---------------------------------------------
 
 float getNearestLightningBoltColorModifier(vec3 position, float rayDepth)
 {
@@ -138,19 +109,20 @@ vec3 screenToWorldPos(vec2 coord, float depth)
 void main() 
 {
 	vec3 rayDir = getRayDirection(texCoord);
-	vec4 rayStartDist = cylinderVerticalIntersect(vec3(0.0), rayDir, 500.0, CutoffDistance);
-	vec3 point = CameraPos + rayDir;// * -rayStartDist.x;
 	float sceneDepth = length(screenToWorldPos(texCoord, texture(DepthSampler, texCoord).r * 2.0 - 1.0));
-	float rayDepth = distance(point, CameraPos);
+	int maxSteps = min(STEPS, int(sqrt(max(sceneDepth, 0.0) * 5.0)) + 1);
+	vec3 point = CameraPos;
+	float rayDepth = 0.0;
 	
 	float density = 0.0;
 	vec3 colorAccum = vec3(0.0);
 	float fogSteps = 0.0;
+	vec3 fogColorScale = ColorMultiplier * ColorModulator.rgb;
 	
-    for (int i = 0; i < STEPS; i++)
+    for (int i = 0; i < maxSteps; i++)
     {
-	    	point = CameraPos + rayDir * 0.2 * pow(float(i), 2.0);
-    	rayDepth = distance(point, CameraPos);
+	    	rayDepth = 0.2 * float(i * i);
+	    	point = CameraPos + rayDir * rayDepth;
     	
     	//If at any point the ray intersects with any vertex in the scene, we stop
     	if (sceneDepth < rayDepth)
@@ -178,7 +150,7 @@ void main()
     		density += densityAdd * fadeFactor;
     		
 	    		fogSteps += 1.0;
-			colorAccum += vec3(col.rgb * ColorMultiplier * ColorModulator.rgb);
+			colorAccum += col.rgb * fogColorScale;
     	}
     	
     	if (density >= 1.0)

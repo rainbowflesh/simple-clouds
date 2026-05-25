@@ -136,7 +136,8 @@ public class WorldEffects {
 						(float) camZ) <= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF && bolt.getFade(partialTick) > 0.5F)
 					this.mc.level.setSkyFlashTime(2);
 				float dist = bolt.getPosition().distance((float) camX, (float) camY, (float) camZ);
-				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, this.getLightningVisibility(dist));
+				bolt.render(stack, builder, partialTick, 1.0F, 1.0F, 1.0F, this.getLightningVisibility(dist),
+						this.mc.level, camX, camY, camZ);
 			}
 			stack.popPose();
 			MeshData meshData = builder.build();

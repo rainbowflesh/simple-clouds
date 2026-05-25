@@ -21,6 +21,7 @@ import dev.nonamecrackers2.simpleclouds.common.world.SpawnRegion;
 import dev.nonamecrackers2.simpleclouds.common.world.SyncType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,6 +30,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class CloudManagerEvents {
+	private static final float CLOUD_SYNC_RADIUS_MULTIPLIER = 1.35F;
 	private static final Map<UUID, Set<Integer>> SYNCHED_CLOUDS_BY_PLAYER = new HashMap<>();
 	private static final Map<UUID, Long> LAST_SYNCED_PLAYER_POSITIONS = new HashMap<>();
 
@@ -151,8 +153,10 @@ public class CloudManagerEvents {
 
 	private static List<CloudRegion> getCloudsForPlayer(ServerPlayer player) {
 		CloudManager<ServerLevel> manager = CloudManager.get(player.serverLevel());
+		int syncRadius = Math.max(SimpleCloudsConstants.SPAWN_RADIUS,
+				Mth.floor((float) SimpleCloudsConstants.SPAWN_RADIUS * CLOUD_SYNC_RADIUS_MULTIPLIER));
 		SpawnRegion region = new SpawnRegion(player.getBlockX(), player.getBlockZ(),
-				SimpleCloudsConstants.SPAWN_RADIUS);
+				syncRadius);
 		return manager.getCloudGenerator().getCloudsInRegion(region);
 	}
 
@@ -164,6 +168,7 @@ public class CloudManagerEvents {
 	}
 
 	private static long getPlayerRegionKey(ServerPlayer player) {
-		return ChunkPos.asLong(player.getBlockX(), player.getBlockZ());
+		ChunkPos pos = player.chunkPosition();
+		return ChunkPos.asLong(pos.x, pos.z);
 	}
 }

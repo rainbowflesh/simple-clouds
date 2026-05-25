@@ -38,7 +38,7 @@
         "scale_x": 30,
         "scale_y": 30,
         "scale_z": 30,
-        "value_offset": 1,
+        "value_offset": 1.12,
         "value_scale": 1
       },
       {
@@ -62,7 +62,7 @@
         "value_scale": 0.1
       }
     ],
-    "transparency_fade": 0.12
+    "override_atmospheric_clouds": false
   },
   "weather": {
     "type": "thunderstorm",

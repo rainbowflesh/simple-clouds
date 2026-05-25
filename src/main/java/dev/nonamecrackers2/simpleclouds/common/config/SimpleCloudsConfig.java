@@ -144,8 +144,8 @@ public class SimpleCloudsConfig {
 			this.shadedClouds = this.createValue(true, "shadedClouds", RestartType.NONE,
 					"Specifies if minimal shading should be applied to clouds. May cause performance drops");
 
-			this.transparency = this.createValue(true, "transparency", RestartType.NONE,
-					"Specifies if transparent cubes should be generated for supported cloud types. May cause performance drops");
+			this.transparency = this.createValue(false, "transparency", RestartType.NONE,
+					"Legacy option retained for config compatibility. Transparent cloud cubes are no longer generated; cloud edges now use opaque density shading");
 
 			this.atmosphericClouds = this.createValue(true, "atmosphericClouds", RestartType.NONE,
 					"Specifies if a purely visual 2D atmospheric cloud layer should render above the scene");
@@ -199,7 +199,7 @@ public class SimpleCloudsConfig {
 
 			this.transparencyRenderDistancePercentage = this.createRangedIntValue(50, 1, 100,
 					"transparencyRenderDistancePercentage", RestartType.NONE,
-					"Specifies the maximum percentage of the total viewable distance transparent cubes can be generated in");
+					"Legacy option retained for config compatibility. The opaque-only renderer ignores transparent cube distance");
 
 			builder.pop();
 
