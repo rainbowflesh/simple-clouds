@@ -1,3 +1,15 @@
+> [!NOTE]
+> Heyya! This branch (v0.8) is a large scale refactor and rewrite of the mod and will NOT be stable for some time. Some features have broken or flat out were removed for later re-implementation. A lot of undocumented and not fully complete new features are also added (cloud coloring (ability to specifiy color of a cloud), cloud tinting based off daytime, new lightning effects, a LOT of optomizations, a ton of new cloud types, storminess dry biome override, normal biome overriding, etc.) Everything below this note is the OG readme! ~ xvr6
+
+
+
+
+
+
+
+
+
+
 ![Title](https://i.imgur.com/naWBH5p.png)
 
 # About
