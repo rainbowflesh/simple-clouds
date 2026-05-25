@@ -18,8 +18,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.fml.config.ModConfig;
-import nonamecrackers2.crackerslib.client.gui.Popup;
-import nonamecrackers2.crackerslib.common.config.listener.ConfigListener;
+import dev.nonamecrackers2.simpleclouds.client.gui.Popup;
+import dev.nonamecrackers2.simpleclouds.common.config.listener.ConfigListener;
 
 public class SimpleCloudsClientConfigListeners {
 	public static void registerListener() {

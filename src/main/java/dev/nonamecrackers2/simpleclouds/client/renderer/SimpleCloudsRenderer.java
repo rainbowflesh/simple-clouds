@@ -93,7 +93,7 @@ import net.minecraft.world.level.material.FogType;
 import net.neoforged.fml.loading.ImmediateWindowHandler;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import net.neoforged.neoforge.common.NeoForge;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsRenderer");

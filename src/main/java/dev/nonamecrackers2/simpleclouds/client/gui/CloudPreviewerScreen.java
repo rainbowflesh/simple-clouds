@@ -57,9 +57,9 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
-import nonamecrackers2.crackerslib.client.gui.Popup;
-import nonamecrackers2.crackerslib.client.gui.Screen3D;
-import nonamecrackers2.crackerslib.client.gui.widget.CyclableButton;
+import dev.nonamecrackers2.simpleclouds.client.gui.Popup;
+import dev.nonamecrackers2.simpleclouds.client.gui.Screen3D;
+import dev.nonamecrackers2.simpleclouds.client.gui.widget.CyclableButton;
 
 public class CloudPreviewerScreen extends Screen3D {
 	private static @Nullable SingleRegionCloudMeshGenerator generator;

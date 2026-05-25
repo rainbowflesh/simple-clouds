@@ -13,7 +13,7 @@ import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.ModConfigSpec.RestartType;
-import nonamecrackers2.crackerslib.common.config.ConfigHelper;
+import dev.nonamecrackers2.simpleclouds.common.config.util.ConfigHelper;
 
 public class SimpleCloudsConfig {
 	public static final ClientConfig CLIENT;

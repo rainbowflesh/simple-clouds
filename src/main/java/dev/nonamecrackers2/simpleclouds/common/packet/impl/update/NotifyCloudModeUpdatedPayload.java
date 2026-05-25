@@ -5,7 +5,7 @@ import dev.nonamecrackers2.simpleclouds.api.common.cloud.CloudMode;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import nonamecrackers2.crackerslib.common.packet.PacketHelper;
+import dev.nonamecrackers2.simpleclouds.common.packet.PacketHelper;
 
 public record NotifyCloudModeUpdatedPayload(CloudMode newMode) implements CustomPacketPayload
 {

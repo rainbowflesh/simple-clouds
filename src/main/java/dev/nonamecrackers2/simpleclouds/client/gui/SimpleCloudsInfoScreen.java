@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.neoforged.fml.loading.ImmediateWindowHandler;
-import nonamecrackers2.crackerslib.client.util.GUIUtils;
+import dev.nonamecrackers2.simpleclouds.client.util.GUIUtils;
 
 public abstract class SimpleCloudsInfoScreen extends Screen {
 	protected static final int PADDING = 20;
@@ -30,7 +30,7 @@ public abstract class SimpleCloudsInfoScreen extends Screen {
 	protected abstract void generateText(List<FormattedCharSequence> text, int maxWidth);
 
 	protected void generateButtons(GridLayout.RowHelper row) {
-		row.addChild(Button.builder(Component.translatable("gui.crackerslib.screen.config.github"), b -> {
+		row.addChild(Button.builder(Component.literal("GitHub"), b -> {
 			GUIUtils.openLink("https://github.com/xvr6/simple-clouds/issues");
 		}).width(100).build());
 	}

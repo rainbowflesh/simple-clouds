@@ -11,7 +11,7 @@ import org.apache.logging.log4j.Logger;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 
 import net.minecraft.client.Minecraft;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 // Vivecraft doesn't have a seperate API lib so we use reflection
 // to not require Vivecraft as a dependency in dev

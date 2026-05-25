@@ -29,7 +29,7 @@ import net.minecraft.commands.arguments.TimeArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
-import nonamecrackers2.crackerslib.client.gui.Popup;
+import dev.nonamecrackers2.simpleclouds.client.gui.Popup;
 
 public class ProfilingCommands
 {

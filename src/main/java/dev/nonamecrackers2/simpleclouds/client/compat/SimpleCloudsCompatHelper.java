@@ -14,7 +14,7 @@ import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class SimpleCloudsCompatHelper {
 	public static ResourceManagerReloadListener getRendererReloadListener(SimpleCloudsRenderer renderer) {

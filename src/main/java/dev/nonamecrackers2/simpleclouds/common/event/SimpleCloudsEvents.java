@@ -26,15 +26,12 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent;
 import net.neoforged.neoforge.event.level.SleepFinishedTimeEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
-import nonamecrackers2.crackerslib.common.command.ConfigCommandBuilder;
 
 public class SimpleCloudsEvents {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsEvents");
 
 	@SubscribeEvent
 	public static void registerCommands(RegisterCommandsEvent event) {
-		ConfigCommandBuilder.builder(event.getDispatcher(), SimpleCloudsMod.MODID)
-				.addSpec(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC).register();
 		CloudCommands.register(event.getDispatcher(), "clouds", src -> src.hasPermission(2), CloudCommandSource.SERVER,
 				CloudTypeDataManager.getServerInstance());
 	}

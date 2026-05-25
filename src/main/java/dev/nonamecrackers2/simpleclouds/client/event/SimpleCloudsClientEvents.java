@@ -19,7 +19,6 @@ import dev.nonamecrackers2.simpleclouds.client.command.ClientCloudCommandHelper;
 import dev.nonamecrackers2.simpleclouds.client.command.profiling.ProfilingCommands;
 import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
 import dev.nonamecrackers2.simpleclouds.client.gui.CloudPreviewerScreen;
-import dev.nonamecrackers2.simpleclouds.client.gui.SimpleCloudsConfigScreen;
 import dev.nonamecrackers2.simpleclouds.client.mesh.LevelOfDetailOptions;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.GenerationInterval;
@@ -58,14 +57,6 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.event.level.LevelEvent;
-import nonamecrackers2.crackerslib.client.event.impl.AddConfigEntryToMenuEvent;
-import nonamecrackers2.crackerslib.client.event.impl.ConfigMenuButtonEvent;
-import nonamecrackers2.crackerslib.client.event.impl.RegisterConfigScreensEvent;
-import nonamecrackers2.crackerslib.client.gui.ConfigHomeScreen;
-import nonamecrackers2.crackerslib.client.gui.title.ImageTitle;
-import nonamecrackers2.crackerslib.common.command.ConfigCommandBuilder;
-import nonamecrackers2.crackerslib.common.config.preset.ConfigPreset;
-import nonamecrackers2.crackerslib.common.config.preset.RegisterConfigPresetsEvent;
 
 public class SimpleCloudsClientEvents {
 	public static void registerOverlays(RegisterGuiLayersEvent event) {
@@ -87,93 +78,10 @@ public class SimpleCloudsClientEvents {
 		CloudPreviewerScreen.addCloudMeshListener(event);
 	}
 
-	public static void registerConfigMenu(RegisterConfigScreensEvent event) {
-		event.builder(ConfigHomeScreen.builder(ImageTitle.ofMod(SimpleCloudsMod.MODID, 192, 96, 1.0F))
-				.crackersDefault("https://github.com/xvr6/simple-clouds")
-				.build(SimpleCloudsConfigScreen::new))
-				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC)
-				.addSpec(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC).register();
-	}
-
-	public static void registerConfigMenuButton(ConfigMenuButtonEvent event) {
-		event.defaultButtonWithSingleCharacter('S', 0xFFADF7FF);
-	}
-
-	public static void registerClientPresets(RegisterConfigPresetsEvent event) {
-		event.registerPreset(ModConfig.Type.CLIENT,
-				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.medium"))
-						.setDescription(Component.translatable("simpleclouds.config.preset.medium.description"))
-						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 10)
-						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.STATIC)
-						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.MEDIUM)
-						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500).build());
-		event.registerPreset(ModConfig.Type.CLIENT,
-				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.low"))
-						.setDescription(Component.translatable("simpleclouds.config.preset.low.description"))
-						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
-						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
-						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
-						.setPreset(SimpleCloudsConfig.CLIENT.renderLodClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 2500)
-						.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
-		event.registerPreset(ModConfig.Type.CLIENT,
-				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.ultra_low"))
-						.setDescription(Component.translatable("simpleclouds.config.preset.ultra_low.description"))
-						.setPreset(SimpleCloudsConfig.CLIENT.framesToGenerateMesh, 20)
-						.setPreset(SimpleCloudsConfig.CLIENT.generationInterval, GenerationInterval.DYNAMIC)
-						.setPreset(SimpleCloudsConfig.CLIENT.levelOfDetail, LevelOfDetailOptions.LOW)
-						.setPreset(SimpleCloudsConfig.CLIENT.renderLodClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.renderStormFog, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.shadowDistance, 1000)
-						.setPreset(SimpleCloudsConfig.CLIENT.distantShadows, false).build());
-		event.registerPreset(ModConfig.Type.CLIENT,
-				ConfigPreset.builder(Component.translatable("simpleclouds.config.preset.classic_style"))
-						.setDescription(Component.translatable("simpleclouds.config.preset.classic_style.description"))
-						.setPreset(SimpleCloudsConfig.CLIENT.transparency, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.cubeNormals, true)
-						.setPreset(SimpleCloudsConfig.CLIENT.shadedClouds, false)
-						.setPreset(SimpleCloudsConfig.CLIENT.atmosphericClouds, false)
-						.build());
-	}
-
 	@SubscribeEvent
 	public static void registerClientCommands(RegisterClientCommandsEvent event) {
-		ConfigCommandBuilder.builder(event.getDispatcher(), "simpleclouds")
-				.addSpec(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC).register();
 		ClientCloudCommandHelper.register(event.getDispatcher());
 		ProfilingCommands.register(event.getDispatcher());
-	}
-
-	@SubscribeEvent
-	public static void onAddConfigOptionToMenu(AddConfigEntryToMenuEvent event) {
-		if (event.getModId().equals(SimpleCloudsMod.MODID) && event.getType() == ModConfig.Type.CLIENT) {
-			if (event.isValue(SimpleCloudsConfig.CLIENT.showCloudPreviewerInfoPopup)
-					|| event.isValue(SimpleCloudsConfig.CLIENT.showVivecraftNotice))
-				event.setCanceled(true);
-			if (ClientCloudManager.isRemoteServerAvailable()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.whitelistAsBlacklist)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) {
-					event.setCanceled(true);
-				}
-			} else if (ClientCloudManager.isAvailableServerSide()) {
-				if (event.isValue(SimpleCloudsConfig.CLIENT.cloudMode)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.singleModeCloudType)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.cloudSeed)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.useSpecificSeed)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.whitelistAsBlacklist)
-						|| event.isValue(SimpleCloudsConfig.CLIENT.dimensionWhitelist)) {
-					event.setCanceled(true);
-				}
-			}
-		}
 	}
 
 	@SubscribeEvent

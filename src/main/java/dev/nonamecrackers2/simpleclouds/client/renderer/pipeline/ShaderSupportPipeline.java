@@ -9,7 +9,7 @@ import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class ShaderSupportPipeline implements CloudsRenderPipeline {
 	protected ShaderSupportPipeline() {

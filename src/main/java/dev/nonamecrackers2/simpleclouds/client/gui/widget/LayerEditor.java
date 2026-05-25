@@ -18,8 +18,8 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import nonamecrackers2.crackerslib.client.gui.widget.config.ConfigListItem;
-import nonamecrackers2.crackerslib.client.util.RenderUtil;
+import dev.nonamecrackers2.simpleclouds.client.gui.widget.config.ConfigListItem;
+import dev.nonamecrackers2.simpleclouds.client.util.RenderUtil;
 
 public class LayerEditor extends ContainerObjectSelectionList<LayerEditor.Entry> {
 	private static final int ROW_HEIGHT = 30;

@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class SimpleCloudsIrisCompatHandler {
     private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsIrisCompatHandler");

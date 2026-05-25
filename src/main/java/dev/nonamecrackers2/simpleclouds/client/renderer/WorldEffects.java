@@ -43,7 +43,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.SimpleWeightedRandomList;
 import net.minecraft.world.phys.Vec3;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class WorldEffects {
 	public static final float EFFECTS_STRENGTH_MULTIPLER = 1.2F;

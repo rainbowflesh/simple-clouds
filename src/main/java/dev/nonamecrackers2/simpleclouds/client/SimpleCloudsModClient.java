@@ -13,7 +13,6 @@ public class SimpleCloudsModClient {
 		modBus.addListener(SimpleCloudsClientEvents::registerReloadListeners);
 		modBus.addListener(SimpleCloudsKeybinds::registerKeyMappings);
 		modBus.addListener(SimpleCloudsClientEvents::registerOverlays);
-		modBus.addListener(SimpleCloudsClientEvents::registerClientPresets);
 		modBus.addListener(SimpleCloudsModClient::registerPayloads);
 	}
 

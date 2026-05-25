@@ -19,7 +19,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec2;
 import net.neoforged.neoforge.common.NeoForge;
-import nonamecrackers2.crackerslib.common.util.primitives.PrimitiveHelper;
+import dev.nonamecrackers2.simpleclouds.common.util.PrimitiveHelper;
 
 public class CloudRegion implements ScAPICloudRegion {
 	private static final float OFFSCREEN_LIFETIME_ACCELERATION = 4.0F;

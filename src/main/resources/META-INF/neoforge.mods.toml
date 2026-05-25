@@ -29,13 +29,6 @@ config = "${mod_id}.mixins.json"
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
-    
-[[dependencies.${mod_id}]]
-    modId="crackerslib"
-    mandatory=true
-    versionRange="${crackerslib_version_range}"
-    ordering="NONE"
-    side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="particlerain"

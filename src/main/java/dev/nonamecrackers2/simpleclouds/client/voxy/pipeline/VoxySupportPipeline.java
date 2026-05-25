@@ -18,7 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.material.FogType;
-import nonamecrackers2.crackerslib.common.compat.CompatHelper;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class VoxySupportPipeline implements CloudsRenderPipeline {
 

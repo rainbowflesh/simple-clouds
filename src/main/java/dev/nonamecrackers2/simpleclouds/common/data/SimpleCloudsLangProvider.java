@@ -8,7 +8,6 @@ import dev.nonamecrackers2.simpleclouds.common.noise.AbstractNoiseSettings;
 import net.minecraft.data.PackOutput;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.common.data.LanguageProvider;
-import nonamecrackers2.crackerslib.common.util.data.ConfigLangGeneratorHelper;
 
 public class SimpleCloudsLangProvider extends LanguageProvider {
 	public SimpleCloudsLangProvider(PackOutput output) {
@@ -17,10 +16,6 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 
 	@Override
 	protected void addTranslations() {
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.CLIENT_SPEC, this,
-				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
-		ConfigLangGeneratorHelper.langForSpec(SimpleCloudsMod.MODID, SimpleCloudsConfig.SERVER_SPEC, this,
-				ConfigLangGeneratorHelper.Info.ONLY_RANGE);
 		this.add("gui.simpleclouds.cloud_previewer.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.title", "Cloud Previewer");
 		this.add("gui.simpleclouds.cloud_previewer.button.add_layer.title", "Add Layer");

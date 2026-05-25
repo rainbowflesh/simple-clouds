@@ -18,7 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import nonamecrackers2.crackerslib.common.config.listener.ConfigListener;
+import dev.nonamecrackers2.simpleclouds.common.config.listener.ConfigListener;
 
 public class SimpleCloudsConfigListeners {
 	public static void registerListener() {
