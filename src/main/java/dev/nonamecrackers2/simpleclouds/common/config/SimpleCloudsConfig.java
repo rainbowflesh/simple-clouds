@@ -55,6 +55,7 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Double> insideCloudFogVerticalFadeDistance;
 		public final ModConfigSpec.ConfigValue<Double> insideCloudFogMaxVisibility;
 		public final ModConfigSpec.ConfigValue<Double> insideCloudFogColorBlend;
+		public final ModConfigSpec.ConfigValue<Double> maxStormDarkness;
 		public final ModConfigSpec.ConfigValue<Boolean> lightningColorVariation;
 		public final ModConfigSpec.ConfigValue<Double> rainAngle;
 		public final ModConfigSpec.ConfigValue<Integer> thunderAttenuationDistance;
@@ -117,6 +118,10 @@ public class SimpleCloudsConfig {
 			this.insideCloudFogColorBlend = this.createRangedDoubleValue(0.5D, 0.0D, 1.0D,
 					"insideCloudFogColorBlend", RestartType.NONE,
 					"Specifies how strongly the world fog color blends toward the cloud color when inside a cloud");
+
+			this.maxStormDarkness = this.createRangedDoubleValue(0.75D, 0.0D, 0.95D, "maxStormDarkness",
+					RestartType.NONE,
+					"Specifies the maximum amount of world darkening applied during the most intense storms. Lower values keep dense storms brighter");
 
 			this.rainAngle = this.createRangedDoubleValue(15.0D, 0.0D, 45.0D, "rainAngle", RestartType.NONE,
 					"Specifies the angle of the rain, perpendicular to the ground. Higher values makes it more horizontal");

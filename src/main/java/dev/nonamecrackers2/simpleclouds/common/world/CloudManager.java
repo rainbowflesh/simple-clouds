@@ -917,7 +917,12 @@ public abstract class CloudManager<T extends Level> implements CloudGetter, ScAP
 	}
 
 	public static boolean isValidLightning(CloudType type, float fade, RandomSource random) {
-		return type.weatherType().includesThunder() && fade < 0.8F;// && (fade > 0.7F || random.nextInt(3) == 0);
+		if (!type.weatherType().includesThunder() || fade >= 0.8F)
+			return false;
+
+		float strikeIntensity = getLightningStrikeIntensity(type, fade);
+		float chance = Mth.lerp(strikeIntensity * strikeIntensity, 0.01F, 1.0F);
+		return random.nextFloat() <= chance;
 	}
 
 	public static float getLightningStrikeIntensity(CloudType type, float fade) {

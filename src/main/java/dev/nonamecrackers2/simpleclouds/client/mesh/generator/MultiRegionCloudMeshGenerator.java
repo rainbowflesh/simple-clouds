@@ -64,6 +64,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	private int cloudRegionTextureId = -1;
 	private int cloudRegionImageBinding = -1;
 	private boolean updateCloudTypes;
+	private int currentVisibleCloudFormationCount;
+	private int currentTotalCloudFormationCount;
 	private int currentCloudFormationCount;
 	private int currentCloudFormationCapacity;
 
@@ -92,6 +94,14 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 
 	public int getCloudFormationCount() {
 		return this.currentCloudFormationCount;
+	}
+
+	public int getVisibleCloudFormationCount() {
+		return this.currentVisibleCloudFormationCount;
+	}
+
+	public int getTotalCloudFormationCount() {
+		return this.currentTotalCloudFormationCount;
 	}
 
 	public int getCloudFormationCapacity() {
@@ -129,6 +139,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 
 		// Create the compute shader
 
+		this.currentVisibleCloudFormationCount = 0;
+		this.currentTotalCloudFormationCount = 0;
 		this.currentCloudFormationCount = 0;
 		this.currentCloudFormationCapacity = 0;
 		this.requiredRegionTexSize = 0;
@@ -265,7 +277,9 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 
 		List<CloudRegion> regions = this.cloudGetter.getClouds();
 		List<SelectedRegionData> selectedRegions = new ArrayList<>(regions.size());
+		int visibleFormationCount = 0;
 		int regionDataSize = 0;
+		this.currentTotalCloudFormationCount = regions.size();
 		for (CloudRegion region : regions) {
 			CloudInfo type = this.cloudGetter.getCloudTypeForId(region.getCloudTypeId());
 			Integer typeIndex = this.cloudTypeIndices.get(type);
@@ -274,12 +288,16 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 
 			float posX = region.getPosX(partialTick);
 			float posZ = region.getPosZ(partialTick);
+			float radius = region.getRadius(partialTick);
 			float dx = posX - meshOffsetX;
 			float dz = posZ - meshOffsetZ;
-			selectedRegions.add(new SelectedRegionData(region, type, typeIndex.intValue(), posX, posZ,
-					region.getRadius(partialTick), region.createTransform(partialTick), dx * dx + dz * dz));
+			if (this.intersectsRegionTextureBounds(dx, dz, radius))
+				visibleFormationCount++;
+			selectedRegions.add(new SelectedRegionData(region, type, typeIndex.intValue(), posX, posZ, radius,
+					region.createTransform(partialTick), dx * dx + dz * dz));
 			regionDataSize += type.cloudLayers().size();
 		}
+		this.currentVisibleCloudFormationCount = visibleFormationCount;
 
 		int count = regionDataSize;
 		this.currentCloudFormationCount = regionDataSize;
@@ -382,6 +400,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		super.close();
 
 		this.currentCloudFormationCount = 0;
+		this.currentVisibleCloudFormationCount = 0;
+		this.currentTotalCloudFormationCount = 0;
 		this.currentCloudFormationCapacity = 0;
 		this.requiredRegionTexSize = 0;
 		this.updateCloudTypes = false;
@@ -409,6 +429,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		category.setDetail("Cloud Types",
 				"(" + this.cachedTypes.length + ") " + Joiner.on(", ").join(this.cachedTypes));
 		category.setDetail("Cloud Regions", this.cloudGetter.getClouds().size());
+		category.setDetail("Visible Cloud Formations", this.currentVisibleCloudFormationCount);
+		category.setDetail("Total Cloud Formations", this.currentTotalCloudFormationCount);
 		category.setDetail("Cloud Formation Capacity", this.currentCloudFormationCapacity);
 		category.setDetail("Cloud Formations", this.currentCloudFormationCount);
 		super.fillReport(category);
@@ -429,6 +451,17 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 
 	private int getTotalRegionTextureLayers() {
 		return (this.lodConfig.getLods().length + 1) * REGION_TEXTURE_BAND_COUNT;
+	}
+
+	private boolean intersectsRegionTextureBounds(float dx, float dz, float radius) {
+		float halfExtent = (float) this.requiredRegionTexSize / 2.0F;
+		float min = -halfExtent;
+		float max = halfExtent;
+		float closestX = Math.max(min, Math.min(dx, max));
+		float closestZ = Math.max(min, Math.min(dz, max));
+		float offsetX = dx - closestX;
+		float offsetZ = dz - closestZ;
+		return offsetX * offsetX + offsetZ * offsetZ <= radius * radius;
 	}
 
 	private boolean intersectsChunkBounds(CloudRegion region, float minX, float minZ, float maxX, float maxZ) {

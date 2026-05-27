@@ -7,11 +7,14 @@ import org.apache.logging.log4j.Logger;
 import org.joml.Matrix4f;
 
 import com.seibel.distanthorizons.api.DhApi;
+import com.seibel.distanthorizons.api.interfaces.config.IDhApiConfig;
 import com.seibel.distanthorizons.api.interfaces.config.IDhApiConfigValue;
 import com.seibel.distanthorizons.api.methods.events.DhApiEventRegister;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterRenderEvent;
+import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiAfterDhInitEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeApplyShaderRenderEvent;
 import com.seibel.distanthorizons.api.methods.events.abstractEvents.DhApiBeforeRenderPassEvent;
+import com.seibel.distanthorizons.api.methods.events.sharedParameterObjects.DhApiEventParam;
 import com.seibel.distanthorizons.api.objects.math.DhApiMat4f;
 
 import dev.nonamecrackers2.simpleclouds.client.dh.event.SimpleCloudsAfterDhRenderHandler;
@@ -33,6 +36,8 @@ public class SimpleCloudsDhCompatHandler {
 	private static int dhFramebufferId;
 
 	private static boolean passComplete;
+	private static boolean initHookRegistered;
+	private static boolean runtimeInitialized;
 
 	public static void _updateCachedDhState(Matrix4f mcProjMat, Matrix4f mcModelViewMat, Matrix4f dhProjMat,
 			Matrix4f dhModelViewMat) {
@@ -76,20 +81,38 @@ public class SimpleCloudsDhCompatHandler {
 		return dhFramebufferId;
 	}
 
+	private static IDhApiConfig getConfigsOrNull() {
+		return DhApi.Delayed.configs;
+	}
+
+	public static boolean isDhApiReady() {
+		return runtimeInitialized && getConfigsOrNull() != null;
+	}
+
 	public static boolean shouldUseDhRendering() {
-		if (DhApi.Delayed.configs == null)
-			return true;
-		return DhApi.Delayed.configs.graphics().renderingEnabled().getValue()
-				&& DhApi.Delayed.configs.graphics().genericRendering().renderingEnabled().getValue();
+		IDhApiConfig configs = getConfigsOrNull();
+		if (configs == null)
+			return false;
+		return configs.graphics().renderingEnabled().getValue()
+				&& configs.graphics().genericRendering().renderingEnabled().getValue();
 	}
 
 	public static float getEarthCurvatureRadius() {
-		if (DhApi.Delayed.configs == null)
+		IDhApiConfig configs = getConfigsOrNull();
+		if (configs == null)
 			return 0.0F;
-		Integer ratio = DhApi.Delayed.configs.graphics().earthCurvatureRatio().getValue();
+		Integer ratio = configs.graphics().earthCurvatureRatio().getValue();
 		if (ratio == null || ratio == 0)
 			return 0.0F;
 		return EARTH_RADIUS_BLOCKS / (float) ratio.intValue();
+	}
+
+	public static int getChunkRenderDistanceBlocksOrDefault(int defaultDistanceBlocks) {
+		IDhApiConfig configs = getConfigsOrNull();
+		if (configs == null)
+			return defaultDistanceBlocks;
+		Integer chunkRenderDistance = configs.graphics().chunkRenderDistance().getValue();
+		return chunkRenderDistance == null ? defaultDistanceBlocks : chunkRenderDistance.intValue() * 16;
 	}
 
 	private static void requestRendererReloadForDhStateChange(String source, boolean enabled) {
@@ -102,22 +125,46 @@ public class SimpleCloudsDhCompatHandler {
 	}
 
 	public static void initialize() {
-		LOGGER.debug("Distant Horizons detected");
+		if (initHookRegistered)
+			return;
+
+		initHookRegistered = true;
+		LOGGER.debug("Distant Horizons detected, waiting for DH API initialization");
+		DhApiEventRegister.on(DhApiAfterDhInitEvent.class, new DhApiAfterDhInitEvent() {
+			@Override
+			public void afterDistantHorizonsInit(DhApiEventParam<Void> input) {
+				initializeRuntime();
+			}
+		});
+	}
+
+	private static void initializeRuntime() {
+		if (runtimeInitialized)
+			return;
+
+		IDhApiConfig configs = getConfigsOrNull();
+		if (configs == null) {
+			LOGGER.warn("Distant Horizons reported init completion without exposing configs; DH compat stays disabled");
+			return;
+		}
+
+		runtimeInitialized = true;
+		LOGGER.debug("Distant Horizons API ready, registering Simple Clouds compatibility hooks");
 
 		DhApiEventRegister.on(DhApiBeforeApplyShaderRenderEvent.class, new SimpleCloudsBeforeDhRenderHandler());
 		DhApiEventRegister.on(DhApiAfterRenderEvent.class, new SimpleCloudsAfterDhRenderHandler());
 		DhApiEventRegister.on(DhApiBeforeRenderPassEvent.class, new SimpleCloudsDhSetupHandler());
 
-		IDhApiConfigValue<Boolean> val = DhApi.Delayed.configs.graphics().genericRendering().cloudRenderingEnabled();
+		IDhApiConfigValue<Boolean> val = configs.graphics().genericRendering().cloudRenderingEnabled();
 		val.setValue(false);
 		val.addChangeListener(b -> {
 			if (b)
 				val.setValue(false);
 		});
 
-		DhApi.Delayed.configs.graphics().renderingEnabled()
+		configs.graphics().renderingEnabled()
 				.addChangeListener(enabled -> requestRendererReloadForDhStateChange("rendering", enabled));
-		DhApi.Delayed.configs.graphics().genericRendering().renderingEnabled()
+		configs.graphics().genericRendering().renderingEnabled()
 				.addChangeListener(enabled -> requestRendererReloadForDhStateChange("generic rendering", enabled));
 
 		NeoForge.EVENT_BUS.register(SimpleCloudsDhForgeEvents.class);

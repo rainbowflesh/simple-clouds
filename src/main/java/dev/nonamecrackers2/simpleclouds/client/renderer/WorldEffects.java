@@ -47,8 +47,8 @@ import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class WorldEffects {
 	public static final float EFFECTS_STRENGTH_MULTIPLER = 1.2F;
-	private static final int VISUAL_LIGHTNING_INTERVAL_MIN = 12;
-	private static final int VISUAL_LIGHTNING_INTERVAL_MAX = 50;
+	private static final int VISUAL_LIGHTNING_INTERVAL_MIN = 24;
+	private static final int VISUAL_LIGHTNING_INTERVAL_MAX = 110;
 	private static final int LIGHTNING_BASE_COLOR = 0xFFFFFFFF;
 	public static final int RAIN_SCAN_WIDTH = 32;
 	public static final int RAIN_SCAN_HEIGHT = 8;
@@ -161,6 +161,13 @@ public class WorldEffects {
 	public void spawnLightning(BlockPos pos, BlockPos targetPos, boolean onlySound, int seed, int depth,
 			int branchCount,
 			float maxBranchLength, float maxWidth, float minimumPitch, float maximumPitch) {
+		this.spawnLightning(pos, targetPos, onlySound, seed, depth, branchCount, maxBranchLength, maxWidth,
+				minimumPitch, maximumPitch, false);
+	}
+
+	private void spawnLightning(BlockPos pos, BlockPos targetPos, boolean onlySound, int seed, int depth,
+			int branchCount,
+			float maxBranchLength, float maxWidth, float minimumPitch, float maximumPitch, boolean ambientVisual) {
 		Camera camera = this.mc.gameRenderer.getMainCamera();
 		Vec3 cameraPos = camera.getPosition();
 		Vector3f vec = new Vector3f((float) pos.getX() + 0.5F, (float) pos.getY() + 0.5F, (float) pos.getZ() + 0.5F);
@@ -178,12 +185,14 @@ public class WorldEffects {
 				return;
 		}
 
-		SoundEvent sound = SimpleCloudsSounds.DISTANT_THUNDER.get();
-		int attenuation = SimpleCloudsConfig.CLIENT.thunderAttenuationDistance.get();
 		float dist = vec.distance((float) cameraPos.x, (float) cameraPos.y, (float) cameraPos.z);
-		if (dist < SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF) {
-			sound = SimpleCloudsSounds.CLOSE_THUNDER.get();
-			attenuation = SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF;
+		SoundEvent sound = ambientVisual ? SimpleCloudsSounds.DISTANT_THUNDER.get()
+				: SimpleCloudsSounds.CLOSE_THUNDER.get();
+		int attenuation = ambientVisual ? SimpleCloudsConfig.CLIENT.thunderAttenuationDistance.get()
+				: SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF;
+		if (!ambientVisual && dist >= SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF) {
+			sound = SimpleCloudsSounds.DISTANT_THUNDER.get();
+			attenuation = SimpleCloudsConfig.CLIENT.thunderAttenuationDistance.get();
 		}
 		float fade = 1.0F - Math.min(Math.max(dist - (float) SimpleCloudsConstants.THUNDER_PITCH_FULL_DIST, 0.0F)
 				/ ((float) SimpleCloudsConstants.THUNDER_PITCH_MINIMUM_DIST
@@ -330,11 +339,14 @@ public class WorldEffects {
 		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
 		Camera camera = this.mc.gameRenderer.getMainCamera();
 		Vec3 cameraPos = camera.getPosition();
+		float storminess = Mth.clamp(this.storminessAtCamera, 0.0F, 1.0F);
 		int visibleRadius = Math.max(SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF + 1,
 				this.renderer.getMeshGenerator().getCloudAreaMaxRadius() * SimpleCloudsConstants.CLOUD_SCALE);
 		float strongestStrikeIntensity = 0.0F;
+		int attemptCount = Math.max(1,
+				Mth.floor(Mth.lerp(storminess, 2.0F, (float) SimpleCloudsConstants.LIGHTNING_SPAWN_ATTEMPTS)));
 
-		for (int i = 0; i < SimpleCloudsConstants.LIGHTNING_SPAWN_ATTEMPTS; i++) {
+		for (int i = 0; i < attemptCount; i++) {
 			float angle = this.random.nextFloat() * ((float) Math.PI * 2.0F);
 			float dist = Mth.lerp(Mth.sqrt(this.random.nextFloat()),
 					(float) SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF, (float) visibleRadius);
@@ -351,22 +363,31 @@ public class WorldEffects {
 			this.spawnLightning(strikePositions.getLeft(), strikePositions.getRight(), false,
 					this.random.nextInt(),
 					3, 2, 220.0F + this.random.nextFloat() * 180.0F, 16.0F + this.random.nextFloat() * 6.0F,
-					35.0F, 85.0F);
+					35.0F, 85.0F, true);
 			break;
 		}
 
-		this.nextVisualLightning = this.sampleVisualLightningInterval(strongestStrikeIntensity);
+		this.nextVisualLightning = this.sampleVisualLightningInterval(strongestStrikeIntensity, storminess);
 	}
 
-	private int sampleVisualLightningInterval(float strikeIntensity) {
+	private int sampleVisualLightningInterval(float strikeIntensity, float storminess) {
 		int sampled = Mth.randomBetweenInclusive(this.random, VISUAL_LIGHTNING_INTERVAL_MIN,
 				VISUAL_LIGHTNING_INTERVAL_MAX);
-		return Math.max(1, Mth.floor(Mth.lerp(Mth.clamp(strikeIntensity, 0.0F, 1.0F), (float) sampled,
-				(float) VISUAL_LIGHTNING_INTERVAL_MIN)));
+		float effectiveActivity = Math.max(Mth.clamp(strikeIntensity, 0.0F, 1.0F), Mth.clamp(storminess, 0.0F, 1.0F));
+		int baseInterval = Math.max(1,
+				Mth.floor(Mth.lerp(effectiveActivity, (float) sampled, (float) VISUAL_LIGHTNING_INTERVAL_MIN)));
+		if (strikeIntensity <= 0.0F)
+			baseInterval = Mth.floor(baseInterval * 1.35F);
+		return Math.max(1, baseInterval);
 	}
 
 	private Pair<BlockPos, BlockPos> createVisualLightningStrikePositions(CloudManager<ClientLevel> manager,
 			CloudType type, int x, int z) {
+		if (manager.getCloudMode() == CloudMode.AMBIENT)
+			return Pair.of(new BlockPos(x, Mth.floor(Math.max(manager.getStormStartHeight(type) + 8.0F,
+					manager.getCloudTopHeight(type) - 4.0F)), z),
+					manager.getLightningTargetPos(type, x, z));
+
 		if (type.cloudLayers().size() > 1 && this.random.nextFloat() < 0.5F) {
 			float stormStart = manager.getStormStartHeight(type);
 			float cloudTop = manager.getCloudTopHeight(type);
@@ -431,7 +452,9 @@ public class WorldEffects {
 	}
 
 	public float getDarkenFactor(float partialTick, float strength) {
-		return Mth.clamp(1.0F - this.getStorminessSmoothed(partialTick) * strength, 0.1F, 1.0F);
+		float maxStormDarkness = SimpleCloudsConfig.CLIENT.maxStormDarkness.get().floatValue();
+		float minimumBrightness = 1.0F - Mth.clamp(maxStormDarkness, 0.0F, 0.95F);
+		return Mth.clamp(1.0F - this.getStorminessSmoothed(partialTick) * strength, minimumBrightness, 1.0F);
 	}
 
 	public float getDarkenFactor(float partialTick) {

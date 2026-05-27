@@ -97,6 +97,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
 		RenderTarget cloudTarget = renderer.getCloudTarget();
 		cloudTarget.clear(Minecraft.ON_OSX);
+		copyDepthFromFramebuffer(dhFbo, cloudTarget);
 
 		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 		PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
@@ -115,7 +116,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 		int sceneDepthTextureId = mc.getMainRenderTarget().getDepthTextureId();
-		boolean useSceneDepthOcclusion = renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ);
+		boolean useSceneDepthOcclusion = true;
 		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler._getMcProjMat();
 		Matrix4f mcModelViewMat = SimpleCloudsDhCompatHandler._getMcModelViewMat();
 

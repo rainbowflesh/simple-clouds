@@ -197,9 +197,9 @@ public class SimpleCloudsClientEvents {
 						text.add("Cloud type: " + type.id());
 				} else if (generator instanceof MultiRegionCloudMeshGenerator multiRegion) {
 					text.add("Cloud types: " + ClientSideCloudTypeManager.getInstance().getCloudTypes().size());
-					int formationCount = multiRegion.getCloudFormationCount();
-					String formationText = "Cloud formations: " + formationCount + "/"
-							+ multiRegion.getCloudFormationCapacity();
+					int visibleFormations = multiRegion.getVisibleCloudFormationCount();
+					int totalFormations = multiRegion.getTotalCloudFormationCount();
+					String formationText = "Cloud formations: " + visibleFormations + "/" + totalFormations;
 					text.add(formationText);
 				}
 

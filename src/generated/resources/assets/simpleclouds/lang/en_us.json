@@ -96,6 +96,8 @@
   "gui.simpleclouds.config.client.option.preference.insideCloudFogVerticalFadeDistance.name": "Inside Cloud Fog Vertical Fade Distance",
   "gui.simpleclouds.config.client.option.preference.lightningColorVariation.description": "Specifies if lightning should have slight random color variation.\nDefault: true",
   "gui.simpleclouds.config.client.option.preference.lightningColorVariation.name": "Lightning Color Variation",
+  "gui.simpleclouds.config.client.option.preference.maxStormDarkness.description": "Specifies the maximum amount of world darkening applied during the most intense storms. Lower values keep dense storms brighter.\nDefault: 0.765\n Default: 0.765\n Range: 0.0 ~ 0.95",
+  "gui.simpleclouds.config.client.option.preference.maxStormDarkness.name": "Max Storm Darkness",
   "gui.simpleclouds.config.client.option.preference.rainAngle.description": "Specifies the angle of the rain, perpendicular to the ground. Higher values makes it more horizontal.\nDefault: 15.0\n Default: 15.0\n Range: 0.0 ~ 45.0",
   "gui.simpleclouds.config.client.option.preference.rainAngle.name": "Rain Angle",
   "gui.simpleclouds.config.client.option.preference.stormFogAngle.description": "Specifies the angle parallel to the horizon that the storm fog should be directed to.\nDefault: 80.0\n Default: 80.0\n Range: 50.0 ~ 90.0",

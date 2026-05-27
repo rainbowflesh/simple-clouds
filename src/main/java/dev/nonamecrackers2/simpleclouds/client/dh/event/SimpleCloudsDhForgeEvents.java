@@ -1,7 +1,5 @@
 package dev.nonamecrackers2.simpleclouds.client.dh.event;
 
-import com.seibel.distanthorizons.api.DhApi;
-
 import dev.nonamecrackers2.simpleclouds.api.client.event.ModifyCloudRenderDistanceEvent;
 import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.client.dh.pipeline.DhSupportPipeline;
@@ -10,7 +8,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 
 public class SimpleCloudsDhForgeEvents {
 	private static boolean shouldUseDhPipeline() {
-		return DhApi.Delayed.configs != null && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
+		return SimpleCloudsDhCompatHandler.isDhApiReady() && SimpleCloudsDhCompatHandler.shouldUseDhRendering();
 	}
 
 	@SubscribeEvent
@@ -20,7 +18,7 @@ public class SimpleCloudsDhForgeEvents {
 
 		float renderDistance = event.getRenderDistance();
 		event.setRenderDistance(Math.min(renderDistance,
-				(float) DhApi.Delayed.configs.graphics().chunkRenderDistance().getValue() * 16.0F));
+				(float) SimpleCloudsDhCompatHandler.getChunkRenderDistanceBlocksOrDefault((int) renderDistance)));
 	}
 
 	@SubscribeEvent

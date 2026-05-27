@@ -82,7 +82,7 @@ dependencies {
 	}
     implementation "nonamecrackers2:simplecloudsapi-neoforge:${api_version}"
     
-	implementation "maven.modrinth:DistantHorizonsApi:${dh_api_version}"
+    compileOnly "maven.modrinth:DistantHorizonsApi:${dh_api_version}"
 	//implementation "maven.modrinth:DistantHorizons:${dh_version}-${minecraft_version}"
 	
 	//implementation "maven.modrinth:Vivecraft:1.21.1-1.2.5-neoforge"
