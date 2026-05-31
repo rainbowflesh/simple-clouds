@@ -1,7 +1,5 @@
 package dev.nonamecrackers2.simpleclouds.common.cloud;
 
-import java.util.List;
-
 import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.weather.WeatherType;
 import dev.nonamecrackers2.simpleclouds.common.noise.StaticLayeredNoise;
@@ -9,11 +7,10 @@ import dev.nonamecrackers2.simpleclouds.common.noise.StaticLayeredNoise;
 public class SimpleCloudsConstants {
 	// General
 	public static final CloudType EMPTY = new CloudType(SimpleCloudsMod.id("empty"), WeatherType.NONE, 0.0F, 0.0F, 0.0F,
-			List.of(1), StaticLayeredNoise.EMPTY, false, CloudColorMode.DEFAULT, 1.0F, 1.0F, 1.0F);
+			StaticLayeredNoise.EMPTY, false, CloudColorMode.DEFAULT, 1.0F, 1.0F, 1.0F);
 	public static final int CLOUD_SCALE = 8;
 	public static final int CHUNK_SIZE = 32;
 	public static final float REGION_EDGE_FADE_FACTOR = 0.005F;
-	public static final float CLOUD_LAYER_SPEED_REDUCTION = 0.15F;
 	public static final int MAX_CLOUD_FORMATIONS = 8;
 	// Weather
 	public static final float RAIN_THRESHOLD = 0.7F; // higher values means you have to be further into the clouds to

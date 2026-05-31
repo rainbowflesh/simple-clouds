@@ -14,7 +14,6 @@ public interface CloudManagerInfoPayload {
 		buffer.writeFloat(this.speed());
 		buffer.writeFloat(this.scrollAngle());
 		buffer.writeVarInt(this.cloudHeight());
-		buffer.writeVarInt(this.layerSeparation());
 	}
 
 	float speed();
@@ -22,6 +21,4 @@ public interface CloudManagerInfoPayload {
 	float scrollAngle();
 
 	int cloudHeight();
-
-	int layerSeparation();
 }

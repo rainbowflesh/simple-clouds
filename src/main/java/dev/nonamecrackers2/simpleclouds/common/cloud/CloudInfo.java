@@ -1,7 +1,6 @@
 package dev.nonamecrackers2.simpleclouds.common.cloud;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -58,22 +57,12 @@ public interface CloudInfo {
 		return 1.0F;
 	}
 
-	default List<Integer> cloudLayers() {
-		return List.of(1);
-	}
-
 	default float getLayerSpeedMultiplier() {
-		List<Integer> layers = this.cloudLayers();
-		if (layers.isEmpty())
-			return 1.0F;
-		return CloudType.getLayerSpeedMultiplier(layers.getFirst());
+		return 1.0F;
 	}
 
 	default int getStormAnchorLayer() {
-		List<Integer> layers = this.cloudLayers();
-		if (layers.isEmpty())
-			return 1;
-		return layers.getLast();
+		return 1;
 	}
 
 	default float getStormStartRelativeToCloudBase() {

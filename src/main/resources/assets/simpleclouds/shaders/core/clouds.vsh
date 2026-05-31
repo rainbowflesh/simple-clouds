@@ -21,14 +21,26 @@ out vec4 vertexColor;
 out float fogDistance;
 out float vertexDistance;
 
-vec4 mixLight(vec3 lightDir0, vec3 lightDir1, vec3 normal, vec4 color) 
+// The renderer uploads normalized light directions, so the shader can reuse them directly.
+vec4 applyDirectionalLight(vec3 normal, vec4 color)
 {
-    lightDir0 = normalize(lightDir0);
-    lightDir1 = normalize(lightDir1);
-    float light0 = max(0.0, dot(lightDir0, normal));
-    float light1 = max(0.0, dot(lightDir1, normal));
-    float lightAccum = min(1.0, (light0 + light1) * LightPower + AmbientLight);
-    return vec4(vec3(color.r * lightAccum, color.g * lightAccum, color.b), color.a);
+	vec2 lightTerms = max(vec2(dot(Light0_Direction, normal), dot(Light1_Direction, normal)), 0.0);
+	float lightAccum = min(1.0, (lightTerms.x + lightTerms.y) * LightPower + AmbientLight);
+	return vec4(vec3(color.r * lightAccum, color.g * lightAccum, color.b), color.a);
+}
+
+vec3 applyEarthCurvature(vec4 worldPos)
+{
+	vec3 cameraRelativePos = worldPos.xyz - CameraPos;
+	if (EarthRadius < -1.0 || EarthRadius > 1.0)
+	{
+		float localRadius = EarthRadius + worldPos.y;
+		float phi = length(cameraRelativePos.xz) / localRadius;
+		cameraRelativePos.y += (cos(phi) - 1.0) * localRadius;
+		if (phi != 0.0)
+			cameraRelativePos.xz = cameraRelativePos.xz * sin(phi) / phi;
+	}
+	return cameraRelativePos;
 }
 
 void main() 
@@ -39,17 +51,9 @@ void main()
 	vec3 sideOffset = vec3(info.x, info.y, info.z);
 	vec4 finalPos = vec4(transformedPos.xyz * info.radius + sideOffset, 1.0);
 	vec4 worldPos = CloudWorldMat * finalPos;
-	vec3 cameraRelativePos = worldPos.xyz - CameraPos;
-	if (EarthRadius < -1.0 || EarthRadius > 1.0)
-	{
-		float localRadius = EarthRadius + worldPos.y;
-		float phi = length(cameraRelativePos.xz) / localRadius;
-		cameraRelativePos.y += (cos(phi) - 1.0) * localRadius;
-		if (phi != 0.0)
-			cameraRelativePos.xz = cameraRelativePos.xz * sin(phi) / phi;
-	}
+	vec3 cameraRelativePos = applyEarthCurvature(worldPos);
 	vec4 modelPos = ViewMat * vec4(cameraRelativePos, 1.0);
-    gl_Position = ProjMat * modelPos;
+	gl_Position = ProjMat * modelPos;
 	fogDistance = length(modelPos.xz);
 	vertexDistance = length(modelPos.xyz);
 
@@ -58,7 +62,7 @@ void main()
     if (UseNormals)
     {
 	    vec3 normal = normals[uint(info.side)];
-		vertexColor = mixLight(Light0_Direction, Light1_Direction, normal, finalCol);
+		vertexColor = applyDirectionalLight(normal, finalCol);
 	}
 	else
 	{

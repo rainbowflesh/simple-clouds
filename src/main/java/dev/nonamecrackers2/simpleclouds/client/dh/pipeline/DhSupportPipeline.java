@@ -108,6 +108,19 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
 				null, modelViewMat,
 				cloudWorldMat, camX, camY, camZ);
+
+		if (renderer.getMeshGenerator().transparencyEnabled()) {
+			RenderTarget cloudTransparencyTarget = renderer.getCloudTransparencyTarget();
+			if (cloudTransparencyTarget != null) {
+				cloudTransparencyTarget.clear(Minecraft.ON_OSX);
+				cloudTransparencyTarget.copyDepthFrom(cloudTarget);
+				cloudTransparencyTarget.bindWrite(false);
+			}
+
+			SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), cloudStack, projMat,
+					fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
+					null, modelViewMat, cloudWorldMat, camX, camY, camZ);
+		}
 	}
 
 	@Override

@@ -92,7 +92,6 @@ public class CloudPreviewerScreen extends Screen3D {
 	private final List<ModifiableNoiseSettings> layers;
 	private final List<LayerEditor> layerEditors = Lists.newArrayList();
 	private int currentLayer;
-	private List<Integer> cloudLayers = List.of(1);
 	private WeatherType weatherType = WeatherType.NONE;
 	private float storminess = 0.0F;
 	private float stormStart = 16.0F;
@@ -127,12 +126,7 @@ public class CloudPreviewerScreen extends Screen3D {
 				settings = new ModifiableLayeredNoise(CloudPreviewerScreen.this.layers);
 			else
 				settings = CloudPreviewerScreen.this.layers.get(0);
-			return CloudType.alignNoiseSettingsToLayers(settings, CloudPreviewerScreen.this.cloudLayers);
-		}
-
-		@Override
-		public List<Integer> cloudLayers() {
-			return CloudPreviewerScreen.this.cloudLayers;
+			return settings;
 		}
 
 	};
@@ -233,7 +227,6 @@ public class CloudPreviewerScreen extends Screen3D {
 			}
 		}, type -> {
 			this.clearAllLayers();
-			this.cloudLayers = List.of(1);
 			NoiseSettings normalizedNoise = type.noiseConfig();
 			if (normalizedNoise instanceof AbstractNoiseSettings<?> settings) {
 				this.addLayer(new ModifiableNoiseSettings(settings));

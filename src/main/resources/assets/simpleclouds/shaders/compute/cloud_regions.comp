@@ -1,7 +1,6 @@
 #version 430
 
 #define EFF ${EDGE_FADE_FACTOR}     // Edge Fade Factor
-#define CLOUD_BAND_COUNT ${CLOUD_BAND_COUNT}
 
 layout(local_size_x = ${LOCAL_SIZE_X}, local_size_y = ${LOCAL_SIZE_Y}, local_size_z = ${LOCAL_SIZE_Z}) in;
 
@@ -30,11 +29,8 @@ layout(rg32f) restrict writeonly uniform image2DArray regionTexture;
 uniform int TotalCloudRegions;
 uniform vec2 Offset;
 
-vec3 circle(CloudRegion region, vec2 coord, uint bandIndex)
+vec3 circle(CloudRegion region, vec2 coord)
 {
-    if (uint(region.band) != bandIndex)
-        return vec3(-1.0);
-
 	vec2 p = vec2(region.posX, region.posZ);
 	coord = region.transform * (coord - p) + p;
     float d = distance(p, coord);
@@ -71,9 +67,7 @@ vec2 composite(vec2 old, vec3 data)
 
 void main()
 {
-    uint packedLayer = gl_GlobalInvocationID.z;
-    uint lod = packedLayer / CLOUD_BAND_COUNT;
-    uint bandIndex = packedLayer % CLOUD_BAND_COUNT;
+    uint lod = gl_GlobalInvocationID.z;
 	float coordScale = lodScales.data[lod];
 	vec2 centerOffset = imageSize(regionTexture).xy / 2.0;
 	ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
@@ -82,9 +76,9 @@ void main()
 	vec2 result = vec2(0.0);
 	for (int i = 0; i < TotalCloudRegions; i++)
 	{
-        vec3 data = circle(cloudRegions.data[i], coord, bandIndex);
+        vec3 data = circle(cloudRegions.data[i], coord);
 		result = composite(result, data);
 	}
 	
-    imageStore(regionTexture, ivec3(texelCoord, int(packedLayer)), vec4(result, 0.0, 0.0));
+    imageStore(regionTexture, ivec3(texelCoord, int(lod)), vec4(result, 0.0, 0.0));
 }

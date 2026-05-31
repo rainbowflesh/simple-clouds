@@ -69,6 +69,9 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<Boolean> shadedClouds;
 		public final ModConfigSpec.ConfigValue<Boolean> transparency;
 		public final ModConfigSpec.ConfigValue<Boolean> atmosphericClouds;
+		public final ModConfigSpec.ConfigValue<Boolean> cloudEdgeTransparency;
+		public final ModConfigSpec.ConfigValue<Double> edgeTransparencyFade;
+		public final ModConfigSpec.ConfigValue<Integer> edgeTransparencySupportDepth;
 		// Terrain Shadows
 		public final ModConfigSpec.ConfigValue<Boolean> distantShadows;
 		public final ModConfigSpec.ConfigValue<Integer> shadowDistance;
@@ -154,6 +157,17 @@ public class SimpleCloudsConfig {
 
 			this.atmosphericClouds = this.createValue(true, "atmosphericClouds", RestartType.NONE,
 					"Specifies if a purely visual 2D atmospheric cloud layer should render above the scene");
+
+			this.cloudEdgeTransparency = this.createValue(false, "cloudEdgeTransparency", RestartType.NONE,
+					"Specifies if a semi-transparent shell should be rendered around cloud edges to soften their blocky appearance. Requires a renderer reload to take effect");
+
+			this.edgeTransparencyFade = this.createRangedDoubleValue(0.08D, 0.01D, 0.5D, "edgeTransparencyFade",
+					RestartType.NONE,
+					"Specifies the depth of the transparent shell around cloud edges. Higher values produce a wider, more diffuse shell");
+
+			this.edgeTransparencySupportDepth = this.createRangedIntValue(2, 1, 6, "edgeTransparencySupportDepth",
+					RestartType.NONE,
+					"Specifies the maximum ray-trace depth used to determine if a shell voxel has solid cloud support behind it. Higher values allow more edge coverage but may cost more GPU time during mesh generation");
 
 			builder.pop();
 
@@ -253,7 +267,6 @@ public class SimpleCloudsConfig {
 		public final ModConfigSpec.ConfigValue<CloudMode> cloudMode;
 		public final ModConfigSpec.ConfigValue<Double> cloudSpeed;
 		public final ModConfigSpec.ConfigValue<Integer> cloudHeight;
-		public final ModConfigSpec.ConfigValue<Integer> cloudLayerSeparation;
 		public final ModConfigSpec.ConfigValue<Boolean> allowRainInDryBiomes;
 		public final ModConfigSpec.ConfigValue<Double> dryBiomeRainMinStorminess;
 		public final ModConfigSpec.ConfigValue<List<? extends String>> dryBiomeRainTags;
@@ -289,10 +302,6 @@ public class SimpleCloudsConfig {
 			this.cloudHeight = this.createRangedIntValue(128, CloudManager.CLOUD_HEIGHT_MIN,
 					CloudManager.CLOUD_HEIGHT_MAX, "cloudHeight", RestartType.NONE,
 					"Specifies the lowest Y level any cloud may spawn at");
-
-			this.cloudLayerSeparation = this.createRangedIntValue(128, 1, 2048, "cloudLayerSeparation",
-					RestartType.WORLD,
-					"Specifies the vertical cloud band height used for cloud shaping and legacy cloud type alignment");
 
 			builder.comment("Biome Precipitation").push("biome_precipitation");
 

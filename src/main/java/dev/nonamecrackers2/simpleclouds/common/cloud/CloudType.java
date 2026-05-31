@@ -1,7 +1,5 @@
 package dev.nonamecrackers2.simpleclouds.common.cloud;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import com.google.gson.JsonElement;
@@ -10,30 +8,17 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.mojang.serialization.JsonOps;
 
-import com.google.common.collect.ImmutableMap;
-
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.ScAPICloudType;
 import dev.nonamecrackers2.simpleclouds.api.common.cloud.weather.WeatherType;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
-import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
-import dev.nonamecrackers2.simpleclouds.common.noise.AbstractLayeredNoise;
-import dev.nonamecrackers2.simpleclouds.common.noise.AbstractNoiseSettings;
 import dev.nonamecrackers2.simpleclouds.common.noise.NoiseSettings;
-import dev.nonamecrackers2.simpleclouds.common.noise.StaticLayeredNoise;
-import dev.nonamecrackers2.simpleclouds.common.noise.StaticNoiseSettings;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.util.GsonHelper;
 
 public record CloudType(ResourceLocation id, WeatherType weatherType, float storminess, float stormStart,
-		float stormFadeDistance, List<Integer> cloudLayers, NoiseSettings noiseConfig,
+		float stormFadeDistance, NoiseSettings noiseConfig,
 		boolean overrideAtmosphericClouds, CloudColorMode colorMode, float tintRed, float tintGreen, float tintBlue)
 		implements CloudInfo, ScAPICloudType {
-	public static final int MAX_CLOUD_LAYERS = 1;
-	private static final int LEGACY_MAX_CLOUD_LAYERS = 3;
-	public static final int DEFAULT_LAYER_SEPARATION = 256;
-	@Deprecated(forRemoval = false)
-	public static final int LAYER_HEIGHT = DEFAULT_LAYER_SEPARATION;
 
 	@Override
 	@Deprecated(forRemoval = false)
@@ -80,33 +65,6 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 		}
 
 		return null;
-	}
-
-	private static List<Integer> parseCloudLayers(JsonObject object) {
-		if (!object.has("cloud_layers"))
-			return List.of(1);
-
-		JsonArray array = GsonHelper.getAsJsonArray(object, "cloud_layers");
-		if (array.isEmpty())
-			throw new JsonSyntaxException("'cloud_layers' must include at least one layer");
-
-		List<Integer> layers = new ArrayList<>();
-		for (JsonElement element : array) {
-			int layer = element.getAsInt();
-			if (layer < 1 || layer > LEGACY_MAX_CLOUD_LAYERS)
-				throw new JsonSyntaxException(
-						"'cloud_layers' entries must be between 1 and " + LEGACY_MAX_CLOUD_LAYERS);
-			if (!layers.contains(layer))
-				layers.add(layer);
-		}
-
-		layers.sort(Comparator.naturalOrder());
-		for (int i = 1; i < layers.size(); i++) {
-			if (layers.get(i) != layers.get(i - 1) + 1)
-				throw new JsonSyntaxException("'cloud_layers' must be contiguous ascending layers");
-		}
-
-		return List.copyOf(layers);
 	}
 
 	private static boolean parseOverrideAtmosphericClouds(JsonObject object) {
@@ -172,82 +130,7 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 		throw new JsonSyntaxException("Unknown weather type '" + rawWeatherTypeId + "'");
 	}
 
-	public static int getConfiguredLayerSeparation() {
-		if (SimpleCloudsConfig.SERVER_SPEC.isLoaded())
-			return SimpleCloudsConfig.SERVER.cloudLayerSeparation.get();
-		return DEFAULT_LAYER_SEPARATION;
-	}
-
-	public static int getLayerBaseOffset(List<Integer> cloudLayers) {
-		return getLayerBaseOffset(cloudLayers, getConfiguredLayerSeparation());
-	}
-
-	public static int getLayerBaseOffset(List<Integer> cloudLayers, int layerSeparation) {
-		if (cloudLayers.isEmpty())
-			return 0;
-		return (cloudLayers.getFirst() - 1) * layerSeparation;
-	}
-
-	public static float getLayerSpeedMultiplier(int cloudLayer) {
-		return Mth.clamp(1.0F - (float) (cloudLayer - 1) * SimpleCloudsConstants.CLOUD_LAYER_SPEED_REDUCTION,
-				0.1F, 1.0F);
-	}
-
-	public static NoiseSettings alignNoiseSettingsToLayers(NoiseSettings settings, List<Integer> cloudLayers) {
-		return alignNoiseSettingsToLayers(settings, cloudLayers, getConfiguredLayerSeparation());
-	}
-
-	public static NoiseSettings alignNoiseSettingsToLayers(NoiseSettings settings, List<Integer> cloudLayers,
-			int layerSeparation) {
-		if (settings == NoiseSettings.EMPTY)
-			return settings;
-
-		int layerBaseOffset = getLayerBaseOffset(cloudLayers, layerSeparation);
-		return offsetNoiseSettings(settings, layerBaseOffset);
-	}
-
-	public static NoiseSettings normalizeNoiseSettingsToLayerBase(NoiseSettings settings, List<Integer> cloudLayers) {
-		return normalizeNoiseSettingsToLayerBase(settings, cloudLayers, getConfiguredLayerSeparation());
-	}
-
-	public static NoiseSettings normalizeNoiseSettingsToLayerBase(NoiseSettings settings, List<Integer> cloudLayers,
-			int layerSeparation) {
-		if (settings == NoiseSettings.EMPTY)
-			return settings;
-		return offsetNoiseSettings(settings, -getLayerBaseOffset(cloudLayers, layerSeparation));
-	}
-
-	private static NoiseSettings offsetNoiseSettings(NoiseSettings settings, int heightOffsetDelta) {
-		if (settings instanceof AbstractLayeredNoise<?> layered) {
-			List<StaticNoiseSettings> adjustedLayers = layered.getNoiseLayers().stream()
-					.map(layer -> translateNoiseLayer((AbstractNoiseSettings<?>) layer, heightOffsetDelta))
-					.toList();
-			return new StaticLayeredNoise(adjustedLayers);
-		}
-
-		if (settings instanceof AbstractNoiseSettings<?> noise)
-			return translateNoiseLayer(noise, heightOffsetDelta);
-
-		throw new JsonSyntaxException("Unsupported noise settings type '" + settings.getClass().getName() + "'");
-	}
-
-	private static StaticNoiseSettings translateNoiseLayer(AbstractNoiseSettings<?> layer, int heightOffsetDelta) {
-		ImmutableMap.Builder<AbstractNoiseSettings.Param, Float> builder = ImmutableMap.builder();
-		for (AbstractNoiseSettings.Param param : AbstractNoiseSettings.Param.values()) {
-			float value = layer.getParam(param);
-			if (param == AbstractNoiseSettings.Param.HEIGHT_OFFSET)
-				value += (float) heightOffsetDelta;
-			builder.put(param, value);
-		}
-		return new StaticNoiseSettings(builder.build());
-	}
-
 	public static CloudType readFromJson(ResourceLocation id, JsonObject object) throws JsonSyntaxException {
-		return readFromJson(id, object, getConfiguredLayerSeparation());
-	}
-
-	public static CloudType readFromJson(ResourceLocation id, JsonObject object, int layerSeparation)
-			throws JsonSyntaxException {
 		JsonObject visual = getOptionalSection(object, "visual");
 		JsonObject weather = getOptionalSection(object, "weather");
 		JsonElement element = getFirstPresent(visual, object, "noise_settings", "noise_layers");
@@ -256,12 +139,9 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 		NoiseSettings settings = NoiseSettings.CODEC.parse(JsonOps.INSTANCE, element).resultOrPartial(error -> {
 			throw new JsonSyntaxException(error);
 		}).orElseThrow();
-		List<Integer> legacyLayers = parseCloudLayers(object);
-		settings = alignNoiseSettingsToLayers(settings, legacyLayers, layerSeparation);
 		boolean overrideAtmosphericClouds = parseOverrideAtmosphericClouds(visual, object);
 		CloudColorMode colorMode = parseColorMode(visual, object);
 		float[] tint = parseTintColor(visual, object);
-		List<Integer> cloudLayers = List.of(1);
 
 		if (settings.layerCount() > CloudMeshGenerator.MAX_NOISE_LAYERS)
 			throw new JsonSyntaxException("Too many noise layers. Maximum amount of layers allowed is "
@@ -275,7 +155,7 @@ public record CloudType(ResourceLocation id, WeatherType weatherType, float stor
 				CloudInfo.STORM_START_MAX);
 		float stormFadeDistance = getOptionalRangedParam(weather, object, "storm_fade_distance", 32.0F, 0.0F,
 				CloudInfo.STORM_FADE_DISTANCE_MAX);
-		return new CloudType(id, weatherType, storminess, stormStart, stormFadeDistance, cloudLayers, settings,
+		return new CloudType(id, weatherType, storminess, stormStart, stormFadeDistance, settings,
 				overrideAtmosphericClouds, colorMode, tint[0], tint[1], tint[2]);
 	}
 }

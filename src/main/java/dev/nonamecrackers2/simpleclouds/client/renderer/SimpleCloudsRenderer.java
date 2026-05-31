@@ -102,6 +102,8 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	private static final Matrix4f IDENTITY_MATRIX = new Matrix4f();
 	public static final ResourceLocation FINAL_COMPOSITE_LOC = SimpleCloudsMod
 			.id("shaders/post/final_composite_no_transparency.json");
+	public static final ResourceLocation FINAL_COMPOSITE_TRANSPARENCY_LOC = SimpleCloudsMod
+			.id("shaders/post/final_composite_transparency.json");
 	private static final ResourceLocation DITHER_TEXTURE = SimpleCloudsMod.id("textures/shader/bayer_matrix.png");
 	private static final ArtifactVersion REQUIRED_OPENGL_VERSION = new DefaultArtifactVersion("4.3");
 	public static final int SHADOW_MAP_SIZE = 1024;
@@ -197,6 +199,10 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		return this.postProcessing.getCloudTarget();
 	}
 
+	public @Nullable RenderTarget getCloudTransparencyTarget() {
+		return this.postProcessing.getCloudTransparencyTarget();
+	}
+
 	public float getFogStart() {
 		return this.fogStart;
 	}
@@ -232,7 +238,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 					cameraPos.z);
 			if (insideCloudVolume)
 				testFacesFacingAway = true;
-			this.meshGenerator.setCloudBandHeight(this.cloudManager.getCloudLayerSeparation());
 			this.meshGenerator.setScroll(this.cloudManager.getScrollX(partialTicks),
 					this.cloudManager.getScrollY(partialTicks), this.cloudManager.getScrollZ(partialTicks));
 		}
@@ -250,26 +255,10 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	private CloudType resolveAtmosphericOverrideCloudTypeForNormalMode(float camX, float camZ) {
-		CloudType overrideType = null;
-		float bestOverrideFade = Float.MAX_VALUE;
-
-		for (int layer = 1; layer <= CloudType.MAX_CLOUD_LAYERS; layer++) {
-			var selection = this.cloudManager.getCloudTypeAtWorldPosForLayer(camX, camZ, layer);
-			CloudType type = selection.getLeft();
-			if (type == null || type == SimpleCloudsConstants.EMPTY || !type.suppressesAtmosphericClouds())
-				continue;
-
-			float fade = selection.getRight();
-			if (fade < bestOverrideFade) {
-				overrideType = type;
-				bestOverrideFade = fade;
-			}
-		}
-
-		if (overrideType != null)
-			return overrideType;
-
 		CloudType sampledType = this.cloudManager.getCloudTypeAtWorldPos(camX, camZ).getLeft();
+		if (sampledType != null && sampledType != SimpleCloudsConstants.EMPTY
+				&& sampledType.suppressesAtmosphericClouds())
+			return sampledType;
 		return sampledType != null ? sampledType : SimpleCloudsConstants.EMPTY;
 	}
 
@@ -487,7 +476,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			boolean isAmbientMode = mode == CloudMode.AMBIENT;
 			boolean useMultiRegion = isAmbientMode || mode == CloudMode.DEFAULT;
 			boolean shadedClouds = this.settings.shadedClouds();
-			boolean useTransparency = false;
+			boolean useTransparency = this.settings.useTransparency();
 			LevelOfDetailConfig lod = this.settings.getCurrentLod().getConfig();
 
 			var builder = CloudMeshGenerator.builder()
@@ -654,6 +643,56 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.enableCull();
+	}
+
+	public static void renderCloudsTransparency(CloudMeshGenerator generator, PoseStack stack, Matrix4f projMat,
+			float fogStart, float fogEnd, float partialTick, float r, float g, float b, @Nullable Frustum frustum,
+			Matrix4f viewMat, Matrix4f cloudWorldMat, double camX, double camY, double camZ) {
+		RenderSystem.assertOnRenderThread();
+
+		if (!generator.canRender() || !generator.transparencyEnabled())
+			return;
+
+		BufferUploader.reset();
+
+		RenderSystem.colorMask(true, true, true, true);
+		RenderSystem.enableBlend();
+		RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+				GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+		RenderSystem.enableDepthTest();
+		RenderSystem.depthMask(false);
+		RenderSystem.disableCull();
+		GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+		GL11.glPolygonOffset(-1.0F, -1.0F);
+
+		SingleSSBOShaderInstance shader = SimpleCloudsShaders.getCloudsTransparentShader();
+		RenderSystem.setShader(() -> shader);
+		RenderSystem.setShaderColor(r, g, b, 1.0F);
+
+		SimpleCloudsRenderer.prepareShader(shader, stack.last().pose(), projMat, fogStart, fogEnd, viewMat,
+				cloudWorldMat, camX, camY, camZ);
+		shader.apply();
+
+		generator.forRenderableTransparentMeshChunks(frustum, (chunk, transparentBuffers) -> {
+			if (!SimpleCloudsConfig.CLIENT.renderLodClouds.get() && chunk.getChunkInfo().lodLevel() > 0)
+				return;
+			GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, shader.getShaderStorageBinding(),
+					transparentBuffers.getBufferId());
+			generator.getCubeMesh().drawInstanced(transparentBuffers.getElementCount());
+		});
+		GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, shader.getShaderStorageBinding(), 0);
+
+		shader.clear();
+
+		GL30.glBindVertexArray(0);
+		GL11.glPolygonOffset(0.0F, 0.0F);
+		GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
+
+		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+		RenderSystem.enableCull();
+		RenderSystem.depthMask(true);
+		RenderSystem.disableBlend();
 	}
 
 	private Matrix4f createShadowMapMatrix(ShadowMapBuffer shadowMap, double camX, double camY, double camZ,
@@ -1068,13 +1107,16 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 			float sceneOcclusionAlphaFloor) {
 		this.postProcessing.doFinalCompositePass(partialTick, effect -> {
 			effect.setSampler("MainDepthSampler", mainDepthSampler);
+			RenderTarget transparencyTarget = this.postProcessing.getCloudTransparencyTarget();
+			if (this.settings.useTransparency() && transparencyTarget != null)
+				effect.setSampler("CloudTransparencyTexture", transparencyTarget::getColorTextureId);
 			effect.safeGetUniform("UseSceneDepthOcclusion").set(useSceneDepthOcclusion ? 1 : 0);
 			effect.safeGetUniform("SceneOcclusionAlphaFloor").set(sceneOcclusionAlphaFloor);
 		});
 	}
 
 	public boolean shouldUseSceneDepthOcclusion(double camX, double camY, double camZ) {
-		return !this.worldEffectsManager.isInsideCloudVolume(camX, camY, camZ);
+		return true;
 	}
 
 	public void doStormPostProcessing(Matrix4f camMat, float partialTick, Matrix4f projMat, double camX, double camY,

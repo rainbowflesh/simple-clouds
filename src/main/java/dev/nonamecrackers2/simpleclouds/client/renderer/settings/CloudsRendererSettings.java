@@ -22,7 +22,7 @@ public abstract class CloudsRendererSettings {
 	public static final CloudsRendererSettings DEFAULT = new CloudsRendererSettings() {
 		@Override
 		public boolean useTransparency() {
-			return false;
+			return SimpleCloudsConfig.CLIENT.cloudEdgeTransparency.get();
 		}
 
 		@Override

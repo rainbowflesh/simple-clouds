@@ -18,6 +18,7 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 public class SimpleCloudsShaders {
 	private static final Logger LOGGER = LogManager.getLogger("simpleclouds/SimpleCloudsShaders");
 	private static SingleSSBOShaderInstance clouds;
+	private static SingleSSBOShaderInstance cloudsTransparent;
 	private static SingleSSBOShaderInstance stormFogShadowMap;
 	private static SingleSSBOShaderInstance cloudsShadowMap;
 	private static ShaderInstance cloudRegionTex;
@@ -30,6 +31,12 @@ public class SimpleCloudsShaders {
 			event.registerShader(new SingleSSBOShaderInstance(event.getResourceProvider(), SimpleCloudsMod.id("clouds"),
 					DefaultVertexFormat.POSITION, "SideInfoBuffer"), s -> {
 						clouds = (SingleSSBOShaderInstance) s;
+					});
+			event.registerShader(new SingleSSBOShaderInstance(event.getResourceProvider(),
+					SimpleCloudsMod.id("clouds_transparent"), DefaultVertexFormat.POSITION,
+					"TransparentCubeInfoBuffer"),
+					s -> {
+						cloudsTransparent = (SingleSSBOShaderInstance) s;
 					});
 			event.registerShader(
 					new SingleSSBOShaderInstance(event.getResourceProvider(),
@@ -64,6 +71,10 @@ public class SimpleCloudsShaders {
 
 	public static SingleSSBOShaderInstance getCloudsShader() {
 		return Objects.requireNonNull(clouds, "Clouds shader not initialized yet");
+	}
+
+	public static SingleSSBOShaderInstance getCloudsTransparentShader() {
+		return Objects.requireNonNull(cloudsTransparent, "Clouds transparent shader not initialized yet");
 	}
 
 	public static SingleSSBOShaderInstance getStormFogShadowMapShader() {

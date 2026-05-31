@@ -17,45 +17,38 @@ out vec4 fragColor;
 
 float fogDistance(vec3 pos, int shape) 
 {
-    if (shape == 0) 
-    {
-        return length(pos);
-    } 
-    else 
-    {
-        float distXZ = length(pos.xz);
-        float distY = length(pos.y);
-        return max(distXZ, distY);
-    }
+	if (shape == 0)
+		return length(pos);
+
+	float distXZ = length(pos.xz);
+	float distY = abs(pos.y);
+	return max(distXZ, distY);
 }
 
 vec3 screenToWorldPos(vec2 coord, float depth)
 {
 	vec3 ndc = vec3(coord * 2.0 - 1.0, depth);
-  	vec4 view = InverseWorldProjMat * vec4(ndc, 1.0);
-  	view.xyz /= view.w;
-  	vec3 result = (InverseModelViewMat * view).xyz;
-  	return result;
+	vec4 view = InverseWorldProjMat * vec4(ndc, 1.0);
+	view.xyz /= view.w;
+	return (InverseModelViewMat * view).xyz;
 }
 
 void main() 
 {
 	float screenDepth = texture(DiffuseDepthSampler, texCoord).x;
+	float cloudDepth = texture(CloudDepthSampler, texCoord).x;
 	vec4 col = texture(DiffuseSampler, texCoord);
-	if (screenDepth >= texture(CloudDepthSampler, texCoord).x)
+	if (screenDepth >= cloudDepth)
 	{
 		fragColor = vec4(col.rgb, 1.0);
 		return;
 	}
 	
 	vec3 pos = screenToWorldPos(texCoord, screenDepth * 2.0 - 1.0);
-	
 	float fogDist = fogDistance(pos, FogShape);
-	
-	float fogValue = fogDist < FogEnd ? smoothstep(FogStart, FogEnd, fogDist) : 1.0;
-	if (fogDist <= FogStart)
-		fogValue = 0.0;
-		
+	float fogValue = smoothstep(FogStart, FogEnd, fogDist);
+
+	// Blend the prepared storm-fog color into the world fog response.
 	vec4 stormFogCol = texture(StormFogSampler, texCoord);
 	vec3 fogCol = mix(FogColor, stormFogCol.rgb, stormFogCol.a);
 	

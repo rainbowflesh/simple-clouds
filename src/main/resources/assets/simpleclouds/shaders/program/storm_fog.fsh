@@ -53,6 +53,8 @@ out vec4 fragColor;
 #define FOG 0 // 0 for no fog, 1 for fog
 #define STEPS 200 //Total ray steps. More smaller steps means better accuracy and less artifacts
 #define BG_COL vec4(0.0);
+#define LIGHTNING_RANGE 2000.0
+#define LIGHTNING_RANGE_SQ (LIGHTNING_RANGE * LIGHTNING_RANGE)
 
 vec3 getRayDirection(vec2 screenUV)
 {
@@ -81,15 +83,20 @@ vec4 shadowMapColorAt(vec3 pos)
 
 float getNearestLightningBoltColorModifier(vec3 position, float rayDepth)
 {
+	float rayDepthSq = rayDepth * rayDepth;
 	for (int i = 0; i < TotalLightningBolts; i++)
 	{
 		Lightning bolt = lightning.data[i];
-		float boltDepth = distance(CameraPos, bolt.Position);
-		if (rayDepth < boltDepth)
+		vec3 boltToCamera = bolt.Position - CameraPos;
+		float boltDepthSq = dot(boltToCamera, boltToCamera);
+		if (rayDepthSq < boltDepthSq)
 			continue;
-		float dist = distance(bolt.Position.xz, position.xz);
-		if (dist < 2000.0)
+
+		vec2 lightningDelta = bolt.Position.xz - position.xz;
+		float distSq = dot(lightningDelta, lightningDelta);
+		if (distSq < LIGHTNING_RANGE_SQ)
 		{
+			float dist = sqrt(distSq);
 			float distMul = clamp(2.0 - dist * 0.001, 0.0, 1.0);
 			return 1.0 + bolt.Alpha * distMul;
 		}
@@ -122,11 +129,12 @@ void main()
     for (int i = 0; i < maxSteps; i++)
     {
 	    	rayDepth = 0.2 * float(i * i);
-	    	point = CameraPos + rayDir * rayDepth;
     	
     	//If at any point the ray intersects with any vertex in the scene, we stop
     	if (sceneDepth < rayDepth)
     		break;
+
+	    	point = CameraPos + rayDir * rayDepth;
     		
     	vec4 col = shadowMapColorAt(point); //Here we get the color of the shadow map at the position of the ray
     	

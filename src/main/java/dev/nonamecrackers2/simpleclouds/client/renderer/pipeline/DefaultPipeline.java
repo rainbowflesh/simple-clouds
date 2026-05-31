@@ -33,7 +33,7 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 
 		p.push("clouds");
 		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ,
-				frustum, cloudColor, p, true, false);
+				frustum, cloudColor, p, true, true);
 		p.pop();
 
 		if (renderer.shouldRenderStormFog(partialTick)) {

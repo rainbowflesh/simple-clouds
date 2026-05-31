@@ -388,21 +388,6 @@ public class WorldEffects {
 					manager.getCloudTopHeight(type) - 4.0F)), z),
 					manager.getLightningTargetPos(type, x, z));
 
-		if (type.cloudLayers().size() > 1 && this.random.nextFloat() < 0.5F) {
-			float stormStart = manager.getStormStartHeight(type);
-			float cloudTop = manager.getCloudTopHeight(type);
-			float elevatedStartMin = Mth.lerp(0.35F, stormStart, cloudTop);
-			float elevatedStartMax = cloudTop - 4.0F;
-			if (elevatedStartMax > elevatedStartMin + 2.0F) {
-				int startY = Mth.floor(Mth.lerp(this.random.nextFloat(), elevatedStartMin, elevatedStartMax));
-				float maxDrop = Math.max(10.0F, (float) startY - stormStart - 2.0F);
-				float drop = Mth.lerp(this.random.nextFloat(), 8.0F, maxDrop);
-				int targetY = Mth.floor(Math.max(stormStart + 2.0F, (float) startY - drop));
-				if (targetY < startY)
-					return Pair.of(new BlockPos(x, startY, z), new BlockPos(x, targetY, z));
-			}
-		}
-
 		return Pair.of(new BlockPos(x, (int) manager.getStormStartHeight(type), z),
 				manager.getLightningTargetPos(type, x, z));
 	}

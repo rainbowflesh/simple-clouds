@@ -45,7 +45,6 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 		manager.setScrollAngle(payload.scrollAngle());
 		manager.setCloudSpeed(payload.speed());
 		manager.setCloudHeight(payload.cloudHeight());
-		manager.setCloudLayerSeparation(payload.layerSeparation());
 		if (manager instanceof ClientCloudManager clientManager)
 			clientManager.setReceivedSync();
 	}

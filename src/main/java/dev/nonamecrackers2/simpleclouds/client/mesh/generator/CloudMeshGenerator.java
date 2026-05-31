@@ -40,6 +40,7 @@ import dev.nonamecrackers2.simpleclouds.client.shader.compute.ComputeShader;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudInfo;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
+import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinFrustumAccessor;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -120,7 +121,6 @@ public abstract class CloudMeshGenerator {
 	protected float scrollX;
 	protected float scrollY;
 	protected float scrollZ;
-	protected int cloudBandHeight = CloudType.getConfiguredLayerSeparation();
 	protected boolean testFacesFacingAway;
 	private float fadeStart;
 	private float fadeEnd;
@@ -209,11 +209,6 @@ public abstract class CloudMeshGenerator {
 	public CloudMeshGenerator setTestFacesFacingAway(boolean flag) {
 		this.testFacesFacingAway = flag;
 		return this;
-	}
-
-	public void setCloudBandHeight(int cloudBandHeight) {
-		this.cloudBandHeight = Math.max(1, cloudBandHeight);
-		this.uploadCloudBandHeight();
 	}
 
 	/**
@@ -459,10 +454,7 @@ public abstract class CloudMeshGenerator {
 				"STYLE", this.shadedClouds ? "1" : "0",
 				"TRANSPARENCY", this.useTransparency ? "1" : "0",
 				"FIXED_SECTION_SIZE", this.useFixedMeshDataSectionSize ? "1" : "0",
-				"FIXED_TRANSPARENCY_SECTION_SIZE", this.usesFixedTransparentMeshDataSectionSize() ? "1" : "0",
-				"CLOUD_BAND_COUNT", String.valueOf(CloudType.MAX_CLOUD_LAYERS),
-				"CLOUD_LAYER_SPEED_REDUCTION",
-				String.valueOf(SimpleCloudsConstants.CLOUD_LAYER_SPEED_REDUCTION));
+				"FIXED_TRANSPARENCY_SECTION_SIZE", this.usesFixedTransparentMeshDataSectionSize() ? "1" : "0");
 		return ComputeShader.loadShader(this.meshShaderLoc, manager, LOCAL_SIZE, LOCAL_SIZE, LOCAL_SIZE, parameters);
 	}
 
@@ -494,17 +486,8 @@ public abstract class CloudMeshGenerator {
 			GL41.glProgramUniform1i(id, loc, this.lodConfig.getLods().length);
 		});
 
-		this.uploadCloudBandHeight();
 		this.uploadFadeData();
-	}
-
-	private void uploadCloudBandHeight() {
-		if (this.shader == null || !this.shader.isValid())
-			return;
-
-		this.shader.forUniform("CloudBandHeight", (id, loc) -> {
-			GL41.glProgramUniform1i(id, loc, this.cloudBandHeight);
-		});
+		this.uploadShellParameters();
 	}
 
 	private void uploadFadeData() {
@@ -519,6 +502,20 @@ public abstract class CloudMeshGenerator {
 		});
 		this.shader.forUniform("FadeEnd", (id, loc) -> {
 			GL41.glProgramUniform1f(id, loc, this.fadeEnd);
+		});
+	}
+
+	private void uploadShellParameters() {
+		if (this.shader == null || !this.shader.isValid() || !this.useTransparency)
+			return;
+
+		float shellFade = (float) SimpleCloudsConfig.CLIENT.edgeTransparencyFade.get().doubleValue();
+		int shellSupportDepth = SimpleCloudsConfig.CLIENT.edgeTransparencySupportDepth.get();
+		this.shader.forUniform("ShellFade", (id, loc) -> {
+			GL41.glProgramUniform1f(id, loc, shellFade);
+		});
+		this.shader.forUniform("ShellSupportDepth", (id, loc) -> {
+			GL41.glProgramUniform1i(id, loc, shellSupportDepth);
 		});
 	}
 
@@ -757,6 +754,7 @@ public abstract class CloudMeshGenerator {
 			GL41.glProgramUniform1i(id, loc, this.testFacesFacingAway ? 1 : 0);
 		});
 		this.uploadFadeData();
+		this.uploadShellParameters();
 
 		return this.taskScheduler.prepareTasks(this.chunks.size(), genInterval,
 				i -> this.queueChunkMeshGenTaskOrClear(this.chunks.get(i), i, meshGenOffsetX, meshGenOffsetZ, frustum));
@@ -898,6 +896,13 @@ public abstract class CloudMeshGenerator {
 			Function<MeshChunk, MeshChunk.BufferSet> bufferSetFunction,
 			BiConsumer<MeshChunk, MeshChunk.BufferSet> function) {
 		this.forRenderableMeshChunks(frustum, bufferSetFunction, function, false);
+	}
+
+	public void forRenderableTransparentMeshChunks(@Nullable Frustum frustum,
+			BiConsumer<MeshChunk, MeshChunk.BufferSet> function) {
+		if (!this.useTransparency || this.chunks == null)
+			return;
+		this.forRenderableMeshChunks(frustum, c -> c.getTransparentBuffers().orElseThrow(), function);
 	}
 
 	public void forRenderableMeshChunks(@Nullable Frustum frustum,

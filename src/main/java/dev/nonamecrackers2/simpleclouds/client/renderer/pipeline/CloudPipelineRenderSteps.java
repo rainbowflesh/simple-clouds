@@ -46,6 +46,23 @@ public final class CloudPipelineRenderSteps {
                 camZ);
 
         profiler.pop();
+
+        if (renderer.getMeshGenerator().transparencyEnabled()) {
+            profiler.push("clouds_transparent");
+            RenderTarget cloudTransparencyTarget = renderer.getCloudTransparencyTarget();
+            if (cloudTransparencyTarget != null) {
+                cloudTransparencyTarget.clear(Minecraft.ON_OSX);
+                cloudTransparencyTarget.copyDepthFrom(cloudTarget);
+                cloudTransparencyTarget.bindWrite(false);
+            }
+            SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), stack, projMat,
+                    renderer.getFogStart(), renderer.getFogEnd(), partialTick,
+                    cloudColor.r(), cloudColor.g(), cloudColor.b(),
+                    SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null,
+                    camMat, cloudWorldMat, camX, camY, camZ);
+            profiler.pop();
+        }
+
         stack.popPose();
     }
 

@@ -6,8 +6,6 @@
 #define TRANSPARENCY ${TRANSPARENCY}     //0 for no transparency, 1 for transparency
 #define FIXED_SECTION_SIZE ${FIXED_SECTION_SIZE}     //0 for false, 1 for true
 #define FIXED_TRANSPARENCY_SECTION_SIZE ${FIXED_TRANSPARENCY_SECTION_SIZE}     //0 for packed transparency, 1 for fixed sections
-#define CLOUD_BAND_COUNT ${CLOUD_BAND_COUNT}
-#define CLOUD_LAYER_SPEED_REDUCTION ${CLOUD_LAYER_SPEED_REDUCTION}
 
 #define SHADE_DIRECTION normalize(vec3(0.5, 0.5, 0.5))
 #define MIN_TRANSPARENT_ALPHA 0.02
@@ -20,8 +18,6 @@
 
 #define LOCAL_SIZE vec3(${LOCAL_SIZE_X}, ${LOCAL_SIZE_Y}, ${LOCAL_SIZE_Z})
 layout(local_size_x = ${LOCAL_SIZE_X}, local_size_y = ${LOCAL_SIZE_Y}, local_size_z = ${LOCAL_SIZE_Z}) in;
-
-uniform int CloudBandHeight;
 
 #moj_import <simpleclouds:psrdnoise.glsl>
 
@@ -196,6 +192,8 @@ uniform int TransparentMeshDataOffset;
 #if TRANSPARENCY == 1
 uniform int TransparencyDistance = 300;
 uniform int TransparentMeshDataLimit = 0;
+uniform float ShellFade = 0.08;
+uniform int ShellSupportDepth = 2;
 #endif
 
 #if TYPE == 0
@@ -210,16 +208,9 @@ uniform float FadeStart;
 uniform float FadeEnd;
 #endif
 
-int getCloudBandIndex(float y)
-{
-	float bandHeight = float(CloudBandHeight);
-	return int(clamp(floor(max(y, 0.0) / bandHeight), 0.0, float(CLOUD_BAND_COUNT - 1)));
-}
-
 float getLayerScrollSpeedFactor(NoiseLayer layer)
 {
-	float layerCenter = layer.HeightOffset + layer.Height * 0.5;
-	return max(0.1, 1.0 - float(getCloudBandIndex(layerCenter)) * CLOUD_LAYER_SPEED_REDUCTION);
+	return 1.0;
 }
 
 float getNoiseForLayer(NoiseLayer layer, float x, float y, float z, out vec3 gradient)
@@ -274,7 +265,7 @@ float getNoiseForLayerGroup(LayerGroup group, float x, float y, float z, out vec
 }
 int getPackedRegionLayer(float y)
 {
-	return LodLevel * CLOUD_BAND_COUNT + getCloudBandIndex(y);
+	return LodLevel;
 }
 
 #if TYPE == 0
@@ -294,6 +285,11 @@ bool isPosValid(float x, float y, float z, LayerGroup group, float fade)
 {
 	vec3 gradient = vec3(0.0);
 	return getNoiseForLayerGroup(group, x, y, z, gradient) + fade > 0.0;
+}
+
+float getRegionFade(float visibility)
+{
+	return -5.0 * pow(1.0 - visibility, 10.0);
 }
 
 float getConservativeCellDistance(float x, float z)
@@ -319,7 +315,7 @@ bool isPosValid(float x, float y, float z, int nx, int nz)
 		return false;
     uint regionId = uint(info.r);
     LayerGroup group = layerGroupings.data[regionId];
-    float fade = -5.0 * pow(1.0 - info.g, 10.0);
+	float fade = getRegionFade(info.g);
 #if FADE_NEAR_ORIGIN == 1
 	fade = min(fade, getDistanceFadeForCell(x, z));
 #endif
@@ -333,10 +329,8 @@ bool isPosValid(float x, float y, float z, int nx, int nz)
 #if TRANSPARENCY == 1
 bool isTransparentPosValid(float x, float y, float z, LayerGroup group, float fade)
 {
-	if (group.TransparencyFade <= 0.01)
-		return false;
 	vec3 gradient = vec3(0.0);
-	return getNoiseForLayerGroup(group, x, y, z, gradient) + fade > -group.TransparencyFade;
+	return getNoiseForLayerGroup(group, x, y, z, gradient) + fade > -ShellFade;
 }
 
 bool isTransparentPosValid(float x, float y, float z, int nx, int nz)
@@ -347,7 +341,7 @@ bool isTransparentPosValid(float x, float y, float z, int nx, int nz)
 		return false;
 	uint regionId = uint(info.r);
 	LayerGroup group = layerGroupings.data[regionId];
-	float fade = -5.0 * pow(1.0 - info.g, 10.0);
+	float fade = getRegionFade(info.g);
 #if FADE_NEAR_ORIGIN == 1
 	fade = min(fade, getDistanceFadeForCell(x, z));
 #endif
@@ -360,9 +354,9 @@ bool isTransparentPosValid(float x, float y, float z, int nx, int nz)
 
 bool shouldNotOcclude(int index);
 
-int getTransparencySupportDepth(LayerGroup group)
+int getTransparencySupportDepth()
 {
-	return clamp(int(round(group.TransparencySupportDepth)), 1, 6);
+	return clamp(ShellSupportDepth, 1, 6);
 }
 
 bool isOpaqueAtTransparencyOffset(float x, float y, float z, LayerGroup group, float fade, ivec3 offset)
@@ -437,16 +431,20 @@ bool isTransparentCubeVisible(float x, float y, float z, LayerGroup group, float
 			|| shouldNotOcclude(4) || shouldNotOcclude(5))
 		return true;
 
-	int supportDepth = getTransparencySupportDepth(group);
-	if (!hasTransparentSupport(x, y, z, group, fade, supportDepth))
-		return false;
-
 	bool negYOpaque = isPosValid(x, y - Scale, z, group, fade);
 	bool posYOpaque = isPosValid(x, y + Scale, z, group, fade);
 	bool negXOpaque = isPosValid(x - Scale, y, z, -1, 0);
 	bool posXOpaque = isPosValid(x + Scale, y, z, 1, 0);
 	bool negZOpaque = isPosValid(x, y, z - Scale, 0, -1);
 	bool posZOpaque = isPosValid(x, y, z + Scale, 0, 1);
+
+	bool hasAdjacentOpaque = negYOpaque || posYOpaque || negXOpaque || posXOpaque || negZOpaque || posZOpaque;
+	if (!hasAdjacentOpaque)
+	{
+		int supportDepth = getTransparencySupportDepth();
+		if (!hasTransparentSupport(x, y, z, group, fade, supportDepth))
+			return false;
+	}
 
 	bool negYFilled = negYOpaque || isTransparentPosValid(x, y - Scale, z, group, fade);
 	bool posYFilled = posYOpaque || isTransparentPosValid(x, y + Scale, z, group, fade);
@@ -489,8 +487,7 @@ bool shouldNotOcclude(int index)
 
 float getTransparentAlphaFactor(float y)
 {
-	float bandLerp = float(getCloudBandIndex(y)) / float(max(CLOUD_BAND_COUNT - 1, 1));
-	return mix(1.0, 0.55, bandLerp);
+	return 1.0;
 }
 
 float hashCloudTint(vec3 pos)
@@ -567,7 +564,9 @@ void createFace(vec3 center, float cubeRadius, int index, float brightness, vec3
 	void createCube(float x, float y, float z, float cubeRadius, float brightness, float density, float fade, LayerGroup group)
 {
 	vec3 pos = vec3(x, y, z);
-	vec3 norm = normalize(pos - Origin);
+	vec3 norm = vec3(0.0);
+	if (!TestFacesFacingAway)
+		norm = normalize(pos - Origin);
 	vec3 center = pos + cubeRadius;
 	vec3 tint = mix(vec3(1.0), getCloudTint(group, center), mix(DENSITY_TINT_MIN, 1.0, density));
 	//-Y
@@ -621,9 +620,9 @@ void createTransparentCube(float x, float y, float z, float cubeRadius, float br
 #endif
 }
 
-float getTransparentAlphaThreshold(LayerGroup group)
+float getTransparentAlphaThreshold()
 {
-	return min(max(group.TransparencyFade * 0.25, MIN_TRANSPARENT_ALPHA), 0.05);
+	return min(max(ShellFade * 0.25, MIN_TRANSPARENT_ALPHA), 0.05);
 }
 
 #endif
@@ -643,7 +642,7 @@ void main()
 		return;
     uint regionId = uint(info.r);
     LayerGroup group = layerGroupings.data[regionId];
-    float fade = -5.0 * pow(1.0 - info.g, 10.0);
+	float fade = getRegionFade(info.g);
 #if FADE_NEAR_ORIGIN == 1
 	fade = min(fade, getDistanceFadeForCell(x, z));
 #endif
@@ -667,15 +666,16 @@ void main()
 	    	createCube(x, y, z, Scale / 2.0, brightness, density, fade, group);
     }
 #if TRANSPARENCY == 1
-    else if (group.TransparencyFade > 0.01 && noise > -group.TransparencyFade && noise < 0.0)
+    else if (noise > -ShellFade && noise < 0.0)
     {
 	   	float length = getConservativeCellDistance(x, z);
    		if (length < TransparencyDistance)
    		{
-				float alpha = 1.0 / group.TransparencyFade * (noise + group.TransparencyFade);
+				vec3 center = vec3(x, y, z) + Scale / 2.0;
+				float alpha = smoothstep(0.0, 1.0, 1.0 / ShellFade * (noise + ShellFade));
 				alpha *= getTransparentAlphaFactor(y);
-				float minTransparentAlpha = getTransparentAlphaThreshold(group);
-	    		vec3 tint = getCloudTint(group, vec3(x, y, z) + Scale / 2.0);
+				float minTransparentAlpha = getTransparentAlphaThreshold();
+	    		vec3 tint = mix(vec3(1.0), getCloudTint(group, center), DENSITY_TINT_MIN);
 	    		if (alpha >= minTransparentAlpha && isTransparentCubeVisible(x, y, z, group, fade))
 	    			createTransparentCube(x, y, z, Scale / 2.0, brightness, alpha, tint);
    		}

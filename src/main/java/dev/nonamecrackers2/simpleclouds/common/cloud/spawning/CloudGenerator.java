@@ -247,8 +247,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 					region.getWorldZ(), region.getWorldRadius() / region.getStretch() + visibilityPadding);
 			if (isVisible != region.wasPriorVisible())
 				this.onRegionVisibilityChange(region, isVisible);
-			float movementSpeedMultiplier = type != null ? type.getLayerSpeedMultiplier() : 1.0F;
-			region.tick(this.random, level, isVisible, speed, movementSpeedMultiplier);
+			region.tick(this.random, level, isVisible, speed, 1.0F);
 
 			if (!this.cloudGetter.doesCloudTypeExist(region.getCloudTypeId())) {
 				LOGGER.warn("Cloud type with id {} no longer exists, removing cloud region", region.getCloudTypeId());
@@ -464,7 +463,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 			for (int j = i + 1; j < this.clouds.size(); j++) {
 				CloudRegion second = this.clouds.get(j);
 				CloudType secondType = this.cloudGetter.getCloudTypeForId(second.getCloudTypeId());
-				if (secondType == null || !this.doCloudTypesShareLayer(firstType, secondType)
+				if (secondType == null
 						|| !this.doRegionsOverlap(first, second, false))
 					continue;
 
@@ -481,20 +480,12 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		List<CloudRegion> conflicts = Lists.newArrayList();
 		for (CloudRegion existing : this.clouds) {
 			CloudType existingType = this.cloudGetter.getCloudTypeForId(existing.getCloudTypeId());
-			if (existingType == null || !this.doCloudTypesShareLayer(candidateType, existingType)
+			if (existingType == null
 					|| !this.doRegionsOverlap(candidate, existing, useSpawnBuffer))
 				continue;
 			conflicts.add(existing);
 		}
 		return conflicts;
-	}
-
-	private boolean doCloudTypesShareLayer(CloudType first, CloudType second) {
-		for (int layer : first.cloudLayers()) {
-			if (second.cloudLayers().contains(layer))
-				return true;
-		}
-		return false;
 	}
 
 	private boolean doRegionsOverlap(CloudRegion first, CloudRegion second, boolean useSpawnBuffer) {
@@ -512,10 +503,6 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 
 	private int compareRegionDominance(CloudRegion first, CloudType firstType, CloudRegion second,
 			CloudType secondType) {
-		int layerSpanCompare = Integer.compare(firstType.cloudLayers().size(), secondType.cloudLayers().size());
-		if (layerSpanCompare != 0)
-			return layerSpanCompare;
-
 		int radiusCompare = Float.compare(first.getInitialWorldRadius(), second.getInitialWorldRadius());
 		if (radiusCompare != 0)
 			return radiusCompare;

@@ -43,8 +43,10 @@ final class CloudPostProcessing {
     private static final ResourceLocation CLOUD_SHADOWS_LOC = SimpleCloudsMod.id("shaders/post/cloud_shadows.json");
 
     private final Minecraft mc;
+    private final CloudsRendererSettings settings;
     private final List<PostChain> postChains = new ArrayList<>();
     private @Nullable RenderTarget cloudTarget;
+    private @Nullable RenderTarget cloudTransparencyTarget;
     private @Nullable RenderTarget stormFogTarget;
     private @Nullable RenderTarget blurTarget;
     private @Nullable PostChain finalComposite;
@@ -55,10 +57,15 @@ final class CloudPostProcessing {
 
     CloudPostProcessing(Minecraft mc, CloudsRendererSettings settings) {
         this.mc = mc;
+        this.settings = settings;
     }
 
     public @Nullable RenderTarget getCloudTarget() {
         return this.cloudTarget;
+    }
+
+    public @Nullable RenderTarget getCloudTransparencyTarget() {
+        return this.cloudTransparencyTarget;
     }
 
     public @Nullable RenderTarget getStormFogTarget() {
@@ -109,12 +116,18 @@ final class CloudPostProcessing {
             effect.setSampler("CloudDepthSampler", () -> this.cloudTarget.getDepthTextureId());
         });
 
-        this.finalComposite = this.createPostChain(manager, SimpleCloudsRenderer.FINAL_COMPOSITE_LOC, mainTarget,
+        ResourceLocation finalCompositeLoc = this.settings.useTransparency()
+                ? SimpleCloudsRenderer.FINAL_COMPOSITE_TRANSPARENCY_LOC
+                : SimpleCloudsRenderer.FINAL_COMPOSITE_LOC;
+        this.finalComposite = this.createPostChain(manager, finalCompositeLoc, mainTarget,
                 pass -> {
                     EffectInstance effect = pass.getEffect();
                     effect.setSampler("MainDepthSampler", mainTarget::getDepthTextureId);
                     effect.setSampler("CloudsDepthTexture", () -> this.cloudTarget.getDepthTextureId());
                     effect.setSampler("CloudsTexture", () -> this.cloudTarget.getColorTextureId());
+                    if (this.settings.useTransparency() && this.cloudTransparencyTarget != null)
+                        effect.setSampler("CloudTransparencyTexture",
+                                () -> this.cloudTransparencyTarget.getColorTextureId());
                 });
 
         if (shadowMap != null) {
@@ -136,6 +149,9 @@ final class CloudPostProcessing {
 
         if (this.cloudTarget != null)
             this.cloudTarget.resize(width, height, Minecraft.ON_OSX);
+
+        if (this.cloudTransparencyTarget != null)
+            this.cloudTransparencyTarget.resize(width, height, Minecraft.ON_OSX);
 
         if (this.stormFogTarget != null) {
             this.stormFogTarget.resize(width / stormFogResolutionDivisor, height / stormFogResolutionDivisor,
@@ -253,6 +269,10 @@ final class CloudPostProcessing {
                 highPrecisionDepth);
         this.cloudTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
 
+        this.cloudTransparencyTarget = new CloudRenderTarget(mainTarget.width, mainTarget.height, Minecraft.ON_OSX,
+                highPrecisionDepth);
+        this.cloudTransparencyTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+
         this.stormFogTarget = new TextureTarget(mainTarget.width / stormFogResolutionDivisor,
                 mainTarget.height / stormFogResolutionDivisor, false, Minecraft.ON_OSX);
         this.stormFogTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
@@ -266,12 +286,15 @@ final class CloudPostProcessing {
     private void destroyTargets() {
         if (this.cloudTarget != null)
             this.cloudTarget.destroyBuffers();
+        if (this.cloudTransparencyTarget != null)
+            this.cloudTransparencyTarget.destroyBuffers();
         if (this.stormFogTarget != null)
             this.stormFogTarget.destroyBuffers();
         if (this.blurTarget != null)
             this.blurTarget.destroyBuffers();
 
         this.cloudTarget = null;
+        this.cloudTransparencyTarget = null;
         this.stormFogTarget = null;
         this.blurTarget = null;
     }

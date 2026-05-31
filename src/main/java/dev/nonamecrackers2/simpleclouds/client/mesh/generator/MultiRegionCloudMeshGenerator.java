@@ -54,7 +54,6 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	private static final String LOD_SCALES_NAME = "LodScales";
 	private static final String CLOUD_REGIONS_NAME = "CloudRegions";
 	public static final int MAX_CLOUD_TYPES = 64;
-	private static final int REGION_TEXTURE_BAND_COUNT = CloudType.MAX_CLOUD_LAYERS;
 	private static final int BYTES_PER_REGION = 40;
 	private int requiredRegionTexSize;
 	private CloudGetter cloudGetter = CloudGetter.EMPTY;
@@ -149,8 +148,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			this.regionTextureGenerator.close();
 
 		var params = ImmutableMap.of(
-				"EDGE_FADE_FACTOR", String.valueOf(SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR),
-				"CLOUD_BAND_COUNT", String.valueOf(REGION_TEXTURE_BAND_COUNT));
+				"EDGE_FADE_FACTOR", String.valueOf(SimpleCloudsConstants.REGION_EDGE_FADE_FACTOR));
 		this.regionTextureGenerator = ComputeShader.loadShader(REGION_GENERATOR_LOC, manager, 16, 16, 1, params);
 
 		ShaderStorageBufferObject lodScales = this.regionTextureGenerator.createAndBindSSBO(LOD_SCALES_NAME,
@@ -295,7 +293,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 				visibleFormationCount++;
 			selectedRegions.add(new SelectedRegionData(region, type, typeIndex.intValue(), posX, posZ, radius,
 					region.createTransform(partialTick), dx * dx + dz * dz));
-			regionDataSize += type.cloudLayers().size();
+			regionDataSize++;
 		}
 		this.currentVisibleCloudFormationCount = visibleFormationCount;
 
@@ -310,18 +308,16 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 					.getShaderStorageBuffer(CLOUD_REGIONS_NAME);
 			regionsBuffer.writeData(b -> {
 				for (SelectedRegionData regionData : selectedRegions) {
-					for (int cloudLayer : regionData.type().cloudLayers()) {
-						b.putFloat(regionData.posX());
-						b.putFloat(regionData.posZ());
-						b.putFloat((float) regionData.typeIndex());
-						b.putFloat(regionData.radius());
-						b.putFloat((float) (cloudLayer - 1));
-						b.putFloat(0.0F);
-						b.putFloat(regionData.transform().m00);
-						b.putFloat(regionData.transform().m01);
-						b.putFloat(regionData.transform().m10);
-						b.putFloat(regionData.transform().m11);
-					}
+					b.putFloat(regionData.posX());
+					b.putFloat(regionData.posZ());
+					b.putFloat((float) regionData.typeIndex());
+					b.putFloat(regionData.radius());
+					b.putFloat(0.0F);
+					b.putFloat(0.0F);
+					b.putFloat(regionData.transform().m00);
+					b.putFloat(regionData.transform().m01);
+					b.putFloat(regionData.transform().m10);
+					b.putFloat(regionData.transform().m11);
 				}
 				b.rewind();
 			}, count * BYTES_PER_REGION, false);
@@ -450,7 +446,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	}
 
 	private int getTotalRegionTextureLayers() {
-		return (this.lodConfig.getLods().length + 1) * REGION_TEXTURE_BAND_COUNT;
+		return this.lodConfig.getLods().length + 1;
 	}
 
 	private boolean intersectsRegionTextureBounds(float dx, float dz, float radius) {
