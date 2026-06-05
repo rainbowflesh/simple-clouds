@@ -52,7 +52,8 @@
         "value_scale": 0.24
       }
     ],
-    "override_atmospheric_clouds": false
+    "override_atmospheric_clouds": false,
+    "transparency_fade": 0.08
   },
   "weather": {
     "type": "none",

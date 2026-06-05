@@ -20,6 +20,7 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRai
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyServerConfigEditResultPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.world.CloudManager;
 import net.minecraft.client.Minecraft;
@@ -122,6 +123,12 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 			IPayloadContext context) {
 		SimpleCloudsClientConfigListeners.onDryBiomeRainTagsUpdatedFromServer(packet.dryBiomeRainTags(),
 				packet.dryBiomeRainBiomes(), packet.normalRainBiomeTags(), packet.normalRainBiomeBiomes());
+	}
+
+	@Override
+	public void handleNotifyServerConfigEditResultPayload(NotifyServerConfigEditResultPayload packet,
+			IPayloadContext context) {
+		SimpleCloudsClientConfigListeners.onServerConfigEditResult(packet.success(), packet.message());
 	}
 
 	@Override

@@ -62,7 +62,8 @@
         "value_scale": 0.04
       }
     ],
-    "override_atmospheric_clouds": false
+    "override_atmospheric_clouds": false,
+    "transparency_fade": 0.08
   },
   "weather": {
     "type": "thunderstorm",

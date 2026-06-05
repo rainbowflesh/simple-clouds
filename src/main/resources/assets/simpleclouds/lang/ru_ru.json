@@ -117,7 +117,7 @@
   "gui.simpleclouds.config.thunderAttenuationDistance.title": "Дистанция затухания грома",
   "gui.simpleclouds.config.transparency.description": "Определяет, должны ли генерироваться прозрачные кубы для поддерживаемых типов облаков. Может снизить производительность.",
   "gui.simpleclouds.config.transparency.title": "Прозрачность",
-  "gui.simpleclouds.config.transparencyRenderDistancePercentage.description": "Определяет максимальный процент видимой дистанции, на которой могут генерироваться прозрачные кубы.\nДиапазон: 1 ~ 100",
+  "gui.simpleclouds.config.transparencyRenderDistancePercentage.description": "Определяет максимальный процент видимой дистанции, на которой может генерироваться прозрачная оболочка краев облаков.\nДиапазон: 1 ~ 100",
   "gui.simpleclouds.config.transparencyRenderDistancePercentage.title": "Процент дистанции отрисовки прозрачности",
   "gui.simpleclouds.config.useSpecificSeed.description": "Определяет, должен ли использоваться ключ генерации, установленный в параметре 'Ключ генерации облаков'.",
   "gui.simpleclouds.config.useSpecificSeed.title": "Использовать определённый ключ генерации",

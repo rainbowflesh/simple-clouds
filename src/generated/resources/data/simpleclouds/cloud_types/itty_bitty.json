@@ -36,7 +36,8 @@
       "value_offset": -0.52,
       "value_scale": 1
     },
-    "override_atmospheric_clouds": false
+    "override_atmospheric_clouds": false,
+    "transparency_fade": 0.2
   },
   "weather": {
     "type": "none",

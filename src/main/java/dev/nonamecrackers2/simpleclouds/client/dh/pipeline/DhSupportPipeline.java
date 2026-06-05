@@ -108,25 +108,14 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
 				null, modelViewMat,
 				cloudWorldMat, camX, camY, camZ);
-
-		if (renderer.getMeshGenerator().transparencyEnabled()) {
-			RenderTarget cloudTransparencyTarget = renderer.getCloudTransparencyTarget();
-			if (cloudTransparencyTarget != null) {
-				cloudTransparencyTarget.clear(Minecraft.ON_OSX);
-				cloudTransparencyTarget.copyDepthFrom(cloudTarget);
-				cloudTransparencyTarget.bindWrite(false);
-			}
-
-			SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), cloudStack, projMat,
-					fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
-					null, modelViewMat, cloudWorldMat, camX, camY, camZ);
-		}
 	}
 
 	@Override
 	public void afterDistantHorizonsRender(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
 			Matrix4f projMat, float partialTick, double camX, double camY, double camZ, Frustum frustum, int dhFbo) {
 		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
+		float fogEnd = getDhGeometryFogEnd(renderer);
+		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 		int sceneDepthTextureId = mc.getMainRenderTarget().getDepthTextureId();
 		boolean useSceneDepthOcclusion = true;
@@ -136,6 +125,24 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		ProfilerFiller p = mc.getProfiler();
 
 		p.push("clouds");
+		if (renderer.getMeshGenerator().transparencyEnabled()) {
+			p.push("clouds_transparent");
+			RenderTarget cloudTransparencyTarget = renderer.getCloudTransparencyTarget();
+			if (cloudTransparencyTarget != null) {
+				cloudTransparencyTarget.clear(Minecraft.ON_OSX);
+				cloudTransparencyTarget.copyDepthFrom(renderer.getCloudTarget());
+				cloudTransparencyTarget.bindWrite(false);
+
+				Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
+				PoseStack cloudStack = poseStackFromMatrix(modelViewMat);
+				renderer.translateClouds(cloudStack, camX, camY, camZ);
+				SimpleCloudsRenderer.renderCloudsTransparency(renderer.getMeshGenerator(), cloudStack, projMat,
+						fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
+						null, modelViewMat, cloudWorldMat, camX, camY, camZ);
+			}
+			p.pop();
+		}
+
 		p.push("cloud_shadows");
 		renderer.doCloudShadowProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ,
 				sceneDepthTextureId);

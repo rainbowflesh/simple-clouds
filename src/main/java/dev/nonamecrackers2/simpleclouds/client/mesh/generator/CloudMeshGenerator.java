@@ -90,7 +90,7 @@ public abstract class CloudMeshGenerator {
 	public static final String TOTAL_SIDES_NAME = "TotalSides";
 	public static final String SIDES_PER_CHUNK_NAME = "SidesPerChunk";
 	// Transparent
-	public static final int BYTES_PER_CUBE_INFO = 36;
+	public static final int BYTES_PER_CUBE_INFO = 40;
 	public static final int INITIAL_TRANSPARENT_CUBE_INFO_BUFFER_SIZE = 50331648;
 	public static final String TRANSPARENT_CUBE_INFO_BUFFER_NAME = "TransparentCubeInfoBuffer";
 	public static final String TRANSPARENT_TOTAL_CUBES_NAME = "TotalTransparentCubes";
@@ -237,8 +237,9 @@ public abstract class CloudMeshGenerator {
 	}
 
 	private void updateTransparencyDistance() {
-		int requestedDistance = Mth.floor(this.transparencyDistancePercentage * (float) this.getCloudAreaMaxRadius());
-		int minimumDistance = this.fadeNearOrigin ? this.getCloudAreaMaxRadius() : 1;
+		int requestedDistance = Mth
+				.floor(this.transparencyDistancePercentage * (float) this.getCloudAreaMaxRadius());
+		int minimumDistance = this.fadeNearOrigin ? Mth.floor(this.fadeStart) : 1;
 		this.transparencyDistance = Math.max(requestedDistance, minimumDistance);
 	}
 
@@ -509,13 +510,9 @@ public abstract class CloudMeshGenerator {
 		if (this.shader == null || !this.shader.isValid() || !this.useTransparency)
 			return;
 
-		float shellFade = (float) SimpleCloudsConfig.CLIENT.edgeTransparencyFade.get().doubleValue();
-		int shellSupportDepth = SimpleCloudsConfig.CLIENT.edgeTransparencySupportDepth.get();
-		this.shader.forUniform("ShellFade", (id, loc) -> {
-			GL41.glProgramUniform1f(id, loc, shellFade);
-		});
-		this.shader.forUniform("ShellSupportDepth", (id, loc) -> {
-			GL41.glProgramUniform1i(id, loc, shellSupportDepth);
+		float defaultTransparencyFade = (float) SimpleCloudsConfig.CLIENT.edgeTransparencyFade.get().doubleValue();
+		this.shader.forUniform("DefaultTransparencyFade", (id, loc) -> {
+			GL41.glProgramUniform1f(id, loc, defaultTransparencyFade);
 		});
 	}
 

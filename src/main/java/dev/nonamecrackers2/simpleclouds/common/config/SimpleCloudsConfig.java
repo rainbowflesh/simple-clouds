@@ -153,21 +153,21 @@ public class SimpleCloudsConfig {
 					"Specifies if minimal shading should be applied to clouds. May cause performance drops");
 
 			this.transparency = this.createValue(false, "transparency", RestartType.NONE,
-					"Legacy option retained for config compatibility. Transparent cloud cubes are no longer generated; cloud edges now use opaque density shading");
+					"Specifies if legacy transparent cubes should be generated around cloud edges. This is more expensive than opaque-only clouds but restores the original transparent cube look");
 
 			this.atmosphericClouds = this.createValue(true, "atmosphericClouds", RestartType.NONE,
 					"Specifies if a purely visual 2D atmospheric cloud layer should render above the scene");
 
 			this.cloudEdgeTransparency = this.createValue(false, "cloudEdgeTransparency", RestartType.NONE,
-					"Specifies if a semi-transparent shell should be rendered around cloud edges to soften their blocky appearance. Requires a renderer reload to take effect");
+					"Legacy compatibility alias for transparent cube rendering. Enabling this also enables legacy transparent cubes");
 
 			this.edgeTransparencyFade = this.createRangedDoubleValue(0.08D, 0.01D, 0.5D, "edgeTransparencyFade",
 					RestartType.NONE,
-					"Specifies the depth of the transparent shell around cloud edges. Higher values produce a wider, more diffuse shell");
+					"Fallback transparency fade depth for legacy transparent cubes when a cloud type does not define 'transparency_fade'. Higher values produce a thicker transparent band");
 
 			this.edgeTransparencySupportDepth = this.createRangedIntValue(2, 1, 6, "edgeTransparencySupportDepth",
 					RestartType.NONE,
-					"Specifies the maximum ray-trace depth used to determine if a shell voxel has solid cloud support behind it. Higher values allow more edge coverage but may cost more GPU time during mesh generation");
+					"Legacy edge-shell option retained for config compatibility. The transparent cube renderer ignores this setting");
 
 			builder.pop();
 
@@ -218,7 +218,7 @@ public class SimpleCloudsConfig {
 
 			this.transparencyRenderDistancePercentage = this.createRangedIntValue(50, 1, 100,
 					"transparencyRenderDistancePercentage", RestartType.NONE,
-					"Legacy option retained for config compatibility. The opaque-only renderer ignores transparent cube distance");
+					"Specifies the maximum percentage of the total cloud render distance where legacy transparent cubes can be generated. Lower values clamp transparency closer to the player to improve performance");
 
 			builder.pop();
 

@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -21,6 +22,7 @@ import dev.nonamecrackers2.simpleclouds.client.gui.widget.config.ConfigListItem;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import dev.nonamecrackers2.simpleclouds.common.config.util.ConfigHelper;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.ApplyServerConfigEditsPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -40,6 +42,7 @@ import net.minecraft.util.Mth;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.ModConfigSpec.ValueSpec;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class SimpleCloudsConfigScreen extends Screen {
 	private static final int BUTTON_WIDTH = 190;
@@ -74,7 +77,7 @@ public class SimpleCloudsConfigScreen extends Screen {
 		if (!serverButton.active) {
 			serverButton.setTooltip(Tooltip.create(
 					Component.literal(
-							"World settings can only be edited from inside an integrated singleplayer world.")));
+							"Server config can only be edited in singleplayer or by op'd players on a Simple Clouds server.")));
 		}
 		this.addRenderableWidget(serverButton);
 		y += BUTTON_HEIGHT + BUTTON_SPACING;
@@ -125,7 +128,11 @@ public class SimpleCloudsConfigScreen extends Screen {
 
 	private static boolean canEditServerConfig() {
 		Minecraft mc = Minecraft.getInstance();
-		return mc.level != null && mc.hasSingleplayerServer();
+		if (mc.level == null)
+			return false;
+		if (mc.hasSingleplayerServer())
+			return true;
+		return ClientCloudManager.isAvailableServerSide() && mc.player != null && mc.player.getPermissionLevel() >= 2;
 	}
 
 	private static Predicate<String> clientConfigFilter() {
@@ -331,8 +338,21 @@ public class SimpleCloudsConfigScreen extends Screen {
 					return;
 				}
 			}
-			this.spec.save();
+			if (this.isRemoteServerSpec()) {
+				Map<String, String> changedValues = this.allConfigEntries.stream().filter(ConfigEntry::hasChanged)
+						.collect(Collectors.toMap(ConfigEntry::getPath, ConfigEntry::serializeValue,
+								(left, right) -> right,
+								java.util.LinkedHashMap::new));
+				if (!changedValues.isEmpty())
+					PacketDistributor.sendToServer(new ApplyServerConfigEditsPayload(changedValues));
+			} else {
+				this.spec.save();
+			}
 			this.onClose();
+		}
+
+		private boolean isRemoteServerSpec() {
+			return this.spec == SimpleCloudsConfig.SERVER_SPEC && ClientCloudManager.isRemoteServerAvailable();
 		}
 
 		private void rebuildList() {
@@ -370,10 +390,11 @@ public class SimpleCloudsConfigScreen extends Screen {
 			this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 			super.render(guiGraphics, mouseX, mouseY, partialTick);
 			guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
-			guiGraphics.drawCenteredString(this.font,
-					Component.literal("Search, then edit grouped config sections. Changes write directly to disk."),
-					this.width / 2, 22,
-					0xFFA0A0A0);
+			Component subtitle = this.isRemoteServerSpec()
+					? Component.literal(
+							"Search, then edit grouped config sections. Changes are sent to the server when saved.")
+					: Component.literal("Search, then edit grouped config sections. Changes write directly to disk.");
+			guiGraphics.drawCenteredString(this.font, subtitle, this.width / 2, 22, 0xFFA0A0A0);
 		}
 
 		@Override
@@ -601,12 +622,24 @@ public class SimpleCloudsConfigScreen extends Screen {
 			return this.categoryPath;
 		}
 
+		public String getPath() {
+			return this.path;
+		}
+
 		public String getCategoryLabel() {
 			return this.localizedCategoryLabel;
 		}
 
 		public int getCategoryDepth() {
 			return this.categoryDepth;
+		}
+
+		public boolean hasChanged() {
+			return !Objects.equals(this.initialValue, this.value.get());
+		}
+
+		public String serializeValue() {
+			return stringifyValue(this.value.get());
 		}
 
 		private Object parseValue() {

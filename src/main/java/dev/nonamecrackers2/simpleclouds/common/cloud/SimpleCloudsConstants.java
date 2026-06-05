@@ -7,7 +7,7 @@ import dev.nonamecrackers2.simpleclouds.common.noise.StaticLayeredNoise;
 public class SimpleCloudsConstants {
 	// General
 	public static final CloudType EMPTY = new CloudType(SimpleCloudsMod.id("empty"), WeatherType.NONE, 0.0F, 0.0F, 0.0F,
-			StaticLayeredNoise.EMPTY, false, CloudColorMode.DEFAULT, 1.0F, 1.0F, 1.0F);
+			0.0F, StaticLayeredNoise.EMPTY, false, CloudColorMode.DEFAULT, 1.0F, 1.0F, 1.0F);
 	public static final int CLOUD_SCALE = 8;
 	public static final int CHUNK_SIZE = 32;
 	public static final float REGION_EDGE_FADE_FACTOR = 0.005F;

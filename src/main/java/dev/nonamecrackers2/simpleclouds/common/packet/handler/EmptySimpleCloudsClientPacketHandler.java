@@ -11,6 +11,7 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRai
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyServerConfigEditResultPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -56,6 +57,11 @@ public class EmptySimpleCloudsClientPacketHandler implements SimpleCloudsClientP
 
 	@Override
 	public void handleNotifyDryBiomeRainTagsUpdatedPayload(NotifyDryBiomeRainTagsUpdatedPayload packet,
+			IPayloadContext context) {
+	}
+
+	@Override
+	public void handleNotifyServerConfigEditResultPayload(NotifyServerConfigEditResultPayload packet,
 			IPayloadContext context) {
 	}
 

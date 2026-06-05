@@ -13,11 +13,12 @@ import dev.nonamecrackers2.simpleclouds.common.noise.NoiseSettings;
 import net.minecraft.util.Mth;
 
 public interface CloudInfo {
-	public static final int BYTES_PER_TYPE = 36;
+	public static final int BYTES_PER_TYPE = 40;
 	public static final float STORMINESS_MAX = 1.0F;
 	public static final float STORM_START_MAX = CloudMeshGenerator.LOCAL_SIZE * CloudMeshGenerator.WORK_SIZE
 			* CloudMeshGenerator.VERTICAL_CHUNK_SPAN;
 	public static final float STORM_FADE_DISTANCE_MAX = 1600.0F;
+	public static final float TRANSPARENCY_FADE_MAX = 32.0F;
 
 	NoiseSettings noiseConfig();
 
@@ -28,6 +29,10 @@ public interface CloudInfo {
 	float stormStart();
 
 	float stormFadeDistance();
+
+	default float transparencyFade() {
+		return 0.0F;
+	}
 
 	default boolean atmospheric() {
 		return false;
@@ -77,6 +82,9 @@ public interface CloudInfo {
 					throw new JsonSyntaxException(error);
 				}).orElseThrow());
 		visual.addProperty("override_atmospheric_clouds", this.overrideAtmosphericClouds());
+		if (this.transparencyFade() > 0.0F)
+			visual.addProperty("transparency_fade",
+					Mth.clamp(this.transparencyFade(), 0.0F, TRANSPARENCY_FADE_MAX));
 		if (this.colorMode() != CloudColorMode.DEFAULT)
 			visual.addProperty("color_mode", this.colorMode().getSerializedName());
 		if (this.colorMode() == CloudColorMode.FIXED) {
@@ -104,6 +112,7 @@ public interface CloudInfo {
 		b.putFloat(this.storminess());
 		b.putFloat(this.getStormStartRelativeToCloudBase());
 		b.putFloat(this.stormFadeDistance());
+		b.putFloat(this.transparencyFade());
 		b.putFloat(this.colorMode().getShaderValue());
 		b.putFloat(this.tintRed());
 		b.putFloat(this.tintGreen());

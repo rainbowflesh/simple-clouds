@@ -8,11 +8,14 @@ uniform vec4 FogColor;
 in vec4 vertexColor;
 in float fogDistance;
 in float vertexDistance;
+flat in int faceVisible;
 
 out vec4 fragColor;
 
 void main()
 {
+	if (faceVisible == 0)
+		discard;
 	float fogFactor = smoothstep(FogStart, FogEnd, fogDistance);
 	float horizonFade = 1.0 - fogFactor;
 	vec3 rgb = vertexColor.rgb * ColorModulator.rgb;

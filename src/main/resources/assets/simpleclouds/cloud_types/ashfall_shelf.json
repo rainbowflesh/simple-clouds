@@ -22,7 +22,8 @@
                                               "value_scale":  0.16
                                           }
                                       ],
-                   "override_atmospheric_clouds":  true
+                   "override_atmospheric_clouds":  true,
+                   "transparency_fade":  0.08
                },
     "weather":  {
                     "type":  "rain",

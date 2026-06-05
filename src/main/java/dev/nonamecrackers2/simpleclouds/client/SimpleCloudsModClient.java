@@ -6,6 +6,7 @@ import dev.nonamecrackers2.simpleclouds.client.gui.SimpleCloudsConfigScreen;
 import dev.nonamecrackers2.simpleclouds.client.keybind.SimpleCloudsKeybinds;
 import dev.nonamecrackers2.simpleclouds.client.packet.handler.SimpleCloudsClientPacketHandlerImpl;
 import dev.nonamecrackers2.simpleclouds.common.packet.SimpleCloudsPayloadRegistrar;
+import dev.nonamecrackers2.simpleclouds.common.packet.handler.EmptySimpleCloudsServerPacketHandler;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -29,6 +30,7 @@ public class SimpleCloudsModClient {
 	}
 
 	public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-		SimpleCloudsPayloadRegistrar.register(event, SimpleCloudsClientPacketHandlerImpl.INSTANCE);
+		SimpleCloudsPayloadRegistrar.register(event, SimpleCloudsClientPacketHandlerImpl.INSTANCE,
+				EmptySimpleCloudsServerPacketHandler.INSTANCE);
 	}
 }

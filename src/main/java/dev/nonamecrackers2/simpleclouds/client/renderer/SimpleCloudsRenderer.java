@@ -663,8 +663,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		RenderSystem.enableDepthTest();
 		RenderSystem.depthMask(false);
 		RenderSystem.disableCull();
-		GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
-		GL11.glPolygonOffset(-1.0F, -1.0F);
 
 		SingleSSBOShaderInstance shader = SimpleCloudsShaders.getCloudsTransparentShader();
 		RenderSystem.setShader(() -> shader);
@@ -686,8 +684,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		shader.clear();
 
 		GL30.glBindVertexArray(0);
-		GL11.glPolygonOffset(0.0F, 0.0F);
-		GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
 
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
 		RenderSystem.enableCull();

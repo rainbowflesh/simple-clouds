@@ -1,23 +1,31 @@
 package dev.nonamecrackers2.simpleclouds.common.packet;
 
 import dev.nonamecrackers2.simpleclouds.client.packet.handler.SimpleCloudsClientPacketHandler;
+import dev.nonamecrackers2.simpleclouds.common.packet.handler.SimpleCloudsServerPacketHandler;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudTypesPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudManagerPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.ApplyServerConfigEditsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyAllowRainInDryBiomesUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyCloudModeUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainMinStorminessUpdatedPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyDryBiomeRainTagsUpdatedPayload;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifyServerConfigEditResultPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.update.NotifySingleModeCloudTypeUpdatedPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class SimpleCloudsPayloadRegistrar {
-	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler) {
-		PayloadRegistrar registrar = event.registrar("1.5").optional();
+	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler,
+			SimpleCloudsServerPacketHandler serverHandler) {
+		PayloadRegistrar registrar = event.registrar("1.6").optional();
+		registrar.playToClient(
+				NotifyServerConfigEditResultPayload.TYPE,
+				NotifyServerConfigEditResultPayload.CODEC,
+				clientHandler::handleNotifyServerConfigEditResultPayload);
 		registrar.playToClient(
 				NotifyAllowRainInDryBiomesUpdatedPayload.TYPE,
 				NotifyAllowRainInDryBiomesUpdatedPayload.CODEC,
@@ -62,5 +70,9 @@ public class SimpleCloudsPayloadRegistrar {
 				UpdateCloudManagerPayload.TYPE,
 				UpdateCloudManagerPayload.CODEC,
 				clientHandler::handleUpdateCloudManagerPayload);
+		registrar.playToServer(
+				ApplyServerConfigEditsPayload.TYPE,
+				ApplyServerConfigEditsPayload.CODEC,
+				serverHandler::handleApplyServerConfigEditsPayload);
 	}
 }

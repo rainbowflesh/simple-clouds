@@ -26,9 +26,11 @@ public class SimpleCloudsClientConfigListeners {
 		ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
+				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.cloudEdgeTransparency, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.edgeTransparencyFade, (o, n) -> requestReload(false))
-				.addListener(SimpleCloudsConfig.CLIENT.edgeTransparencySupportDepth, (o, n) -> requestReload(false))
+				.addListener(SimpleCloudsConfig.CLIENT.transparencyRenderDistancePercentage,
+						(o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.atmosphericClouds, (o, n) -> reloadResources())
 				.addListener(SimpleCloudsConfig.CLIENT.levelOfDetail, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.distantShadows, (o, n) -> requestReload(false))
@@ -131,6 +133,15 @@ public class SimpleCloudsClientConfigListeners {
 			Popup.createYesNoPopup(null, () -> {
 				Minecraft.getInstance().reloadResourcePacks();
 			}, 300, Component.translatable("gui.simpleclouds.requires_reload_resource_packs.info"));
+		});
+	}
+
+	public static void onServerConfigEditResult(boolean success, String message) {
+		Minecraft.getInstance().execute(() -> {
+			if (success)
+				SimpleCloudsRenderer.getInstance().requestReload();
+			Popup.createInfoPopup(null, 300,
+					Component.literal(message).withStyle(success ? ChatFormatting.GREEN : ChatFormatting.RED));
 		});
 	}
 }

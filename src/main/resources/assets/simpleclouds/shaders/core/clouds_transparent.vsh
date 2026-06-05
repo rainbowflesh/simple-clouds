@@ -12,6 +12,7 @@ struct TransparentCubeInfo {
 	float tintR;
 	float tintG;
 	float tintB;
+	uint visibleFaceMask;
 };
 
 layout(std430) restrict readonly buffer TransparentCubeInfoBuffer {
@@ -29,6 +30,7 @@ uniform vec3 DarknessColorModifier;
 out vec4 vertexColor;
 out float fogDistance;
 out float vertexDistance;
+flat out int faceVisible;
 
 vec3 applyEarthCurvature(vec4 worldPos)
 {
@@ -47,6 +49,8 @@ vec3 applyEarthCurvature(vec4 worldPos)
 void main()
 {
 	TransparentCubeInfo info = cubes.data[gl_InstanceID];
+	int faceIndex = gl_VertexID / 4;
+	faceVisible = int((info.visibleFaceMask >> uint(faceIndex)) & 1u);
 	vec4 finalPos = vec4(Position * info.radius + vec3(info.x, info.y, info.z), 1.0);
 	vec4 worldPos = CloudWorldMat * finalPos;
 	vec3 cameraRelativePos = applyEarthCurvature(worldPos);

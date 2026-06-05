@@ -10,7 +10,8 @@
                                           "value_offset":  -0.4,
                                           "value_scale":  1
                                       },
-                   "override_atmospheric_clouds":  false
+                   "override_atmospheric_clouds":  false,
+                   "transparency_fade":  0.1
                },
     "weather":  {
                     "type":  "none",
