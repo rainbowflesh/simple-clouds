@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import dev.nonamecrackers2.simpleclouds.client.mesh.LevelOfDetailOptions;
-import dev.nonamecrackers2.simpleclouds.client.mesh.generator.GenerationInterval;
 import dev.nonamecrackers2.simpleclouds.client.gui.widget.CyclableButton;
 import dev.nonamecrackers2.simpleclouds.client.gui.widget.config.ConfigListItem;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
@@ -200,8 +199,6 @@ public class SimpleCloudsConfigScreen extends Screen {
 				SimpleCloudsConfig.CLIENT.shadedClouds.set(true);
 				SimpleCloudsConfig.CLIENT.transparency.set(false);
 				SimpleCloudsConfig.CLIENT.levelOfDetail.set(LevelOfDetailOptions.HIGH);
-				SimpleCloudsConfig.CLIENT.generationInterval.set(GenerationInterval.TARGET_FPS);
-				SimpleCloudsConfig.CLIENT.targetMeshGenFps.set(24);
 				SimpleCloudsConfig.CLIENT.shadowDistance.set(4096);
 			}
 		},
@@ -217,8 +214,6 @@ public class SimpleCloudsConfigScreen extends Screen {
 				SimpleCloudsConfig.CLIENT.distantShadows.set(true);
 				SimpleCloudsConfig.CLIENT.shadedClouds.set(true);
 				SimpleCloudsConfig.CLIENT.transparency.set(false);
-				SimpleCloudsConfig.CLIENT.framesToGenerateMesh.set(10);
-				SimpleCloudsConfig.CLIENT.generationInterval.set(GenerationInterval.STATIC);
 				SimpleCloudsConfig.CLIENT.levelOfDetail.set(LevelOfDetailOptions.MEDIUM);
 				SimpleCloudsConfig.CLIENT.shadowDistance.set(2500);
 			}
@@ -230,8 +225,6 @@ public class SimpleCloudsConfigScreen extends Screen {
 				SimpleCloudsConfig.CLIENT.renderClouds.set(true);
 				SimpleCloudsConfig.CLIENT.generateMesh.set(true);
 				SimpleCloudsConfig.CLIENT.renderStormFog.set(true);
-				SimpleCloudsConfig.CLIENT.framesToGenerateMesh.set(20);
-				SimpleCloudsConfig.CLIENT.generationInterval.set(GenerationInterval.DYNAMIC);
 				SimpleCloudsConfig.CLIENT.levelOfDetail.set(LevelOfDetailOptions.LOW);
 				SimpleCloudsConfig.CLIENT.renderLodClouds.set(false);
 				SimpleCloudsConfig.CLIENT.transparency.set(false);
@@ -331,14 +324,19 @@ public class SimpleCloudsConfigScreen extends Screen {
 		private void saveAndClose() {
 			if (this.list == null)
 				return;
+			boolean remote = this.isRemoteServerSpec();
 			for (ConfigEntry entry : this.allConfigEntries) {
-				Optional<Component> error = entry.applyValue();
+				// For remote server specs, don't commit edits to the local ConfigValue yet -
+				// the server is the source of truth and may reject the change. Committing
+				// here would let the client present an unconfirmed value as if it were
+				// already in effect, causing it to drift from the server's actual state.
+				Optional<Component> error = entry.applyValue(!remote);
 				if (error.isPresent()) {
 					Popup.createInfoPopup(this, 340, error.get()).alignLeft();
 					return;
 				}
 			}
-			if (this.isRemoteServerSpec()) {
+			if (remote) {
 				Map<String, String> changedValues = this.allConfigEntries.stream().filter(ConfigEntry::hasChanged)
 						.collect(Collectors.toMap(ConfigEntry::getPath, ConfigEntry::serializeValue,
 								(left, right) -> right,
@@ -504,6 +502,7 @@ public class SimpleCloudsConfigScreen extends Screen {
 		private final List<Component> tooltip = new ArrayList<>();
 		private final List<AbstractWidget> widgets = new ArrayList<>();
 		private final Object initialValue;
+		private @Nullable Object pendingValue;
 		private final @Nullable EditBox textBox;
 		private final @Nullable Button booleanButton;
 		private final @Nullable CyclableButton<?> enumButton;
@@ -546,6 +545,14 @@ public class SimpleCloudsConfigScreen extends Screen {
 			} else if (this.initialValue instanceof Enum<?> enumValue) {
 				CyclableButton rawButton = new CyclableButton<>(0, 0, 140,
 						Arrays.asList(enumValue.getDeclaringClass().getEnumConstants()), enumValue);
+				rawButton.setMessageFactory(enumConstant -> {
+					Enum<?> e = (Enum<?>) enumConstant;
+					String key = "gui." + SimpleCloudsConfigScreenNamespace.MODID + ".enum."
+							+ e.getDeclaringClass().getSimpleName().toLowerCase(Locale.ROOT) + "."
+							+ e.name().toLowerCase(Locale.ROOT);
+					return I18n.exists(key) ? Component.translatable(key)
+							: Component.literal(String.valueOf(enumConstant));
+				});
 				builtEnumButton = rawButton;
 				this.widgets.add(rawButton);
 			} else {
@@ -596,7 +603,17 @@ public class SimpleCloudsConfigScreen extends Screen {
 			return super.mouseClicked(mouseX, mouseY, button);
 		}
 
-		public Optional<Component> applyValue() {
+		/**
+		 * Validates and stages the entry's edited value.
+		 * <p>
+		 * When {@code commitLocally} is {@code false} (remote server config edits),
+		 * the underlying {@link ModConfigSpec.ConfigValue} is intentionally left
+		 * untouched - the client must not present a remote server's config as changed
+		 * before the server has confirmed and applied the edit. The parsed value is
+		 * still recorded as {@link #pendingValue} so {@link #hasChanged()} and
+		 * {@link #serializeValue()} can report on it for the outgoing edit packet.
+		 */
+		public Optional<Component> applyValue(boolean commitLocally) {
 			Object parsed;
 			try {
 				parsed = this.parseValue();
@@ -608,7 +625,9 @@ public class SimpleCloudsConfigScreen extends Screen {
 						.append(this.spec.getComment() == null ? CommonComponents.EMPTY
 								: Component.literal("\n\n" + this.spec.getComment()).withStyle(ChatFormatting.GRAY)));
 			}
-			this.value.set(parsed);
+			this.pendingValue = parsed;
+			if (commitLocally)
+				this.value.set(parsed);
 			return Optional.empty();
 		}
 
@@ -635,11 +654,19 @@ public class SimpleCloudsConfigScreen extends Screen {
 		}
 
 		public boolean hasChanged() {
-			return !Objects.equals(this.initialValue, this.value.get());
+			return !Objects.equals(this.initialValue, this.currentValue());
 		}
 
 		public String serializeValue() {
-			return stringifyValue(this.value.get());
+			return stringifyValue(this.currentValue());
+		}
+
+		/**
+		 * The entry's effective value - the staged edit if {@link #applyValue} has run,
+		 * otherwise whatever is currently held by the underlying config value.
+		 */
+		private Object currentValue() {
+			return this.pendingValue != null ? this.pendingValue : this.value.get();
 		}
 
 		private Object parseValue() {

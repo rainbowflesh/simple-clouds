@@ -61,12 +61,7 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 			p.push("storm_fog");
 			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
 					cloudColor);
-			if (renderer.shouldUseScreenSpaceStormFog()) {
-				renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
-				mc.getMainRenderTarget().bindWrite(false);
-			} else {
-				renderer.renderPreparedStormFogOverlay();
-			}
+			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
 
 			p.pop();
 		}

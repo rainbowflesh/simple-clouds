@@ -1,9 +1,15 @@
+// Resolves transparent clouds via weighted-blended order-independent transparency before compositing.
+// https://jcgt.org/published/0002/02/09/paper.pdf and http://casual-effects.blogspot.com/2015/03/implemented-weighted-blended-order.html
+
 #version 430
+
+#define EPSILON 0.00001
 
 uniform sampler2D DiffuseSampler;
 uniform sampler2D MainDepthSampler;
 uniform sampler2D CloudsTexture;
-uniform sampler2D CloudTransparencyTexture;
+uniform sampler2D AccumTexture;
+uniform sampler2D RevealageTexture;
 uniform sampler2D CloudsDepthTexture;
 uniform int UseSceneDepthOcclusion;
 uniform float SceneOcclusionAlphaFloor;
@@ -11,6 +17,11 @@ uniform float SceneOcclusionAlphaFloor;
 in vec2 texCoord;
 in vec2 oneTexel;
 out vec4 fragColor;
+
+float max4(vec4 col)
+{
+	return max(max(max(col.r, col.g), col.b), col.a);
+}
 
 void main()
 {
@@ -25,13 +36,23 @@ void main()
 	}
 
 	vec4 cloudCol = texture(CloudsTexture, texCoord);
-	vec4 transparentCloudCol = texture(CloudTransparencyTexture, texCoord);
 	vec3 cloudPremul = cloudCol.rgb * cloudCol.a;
 	float cloudAlpha = cloudCol.a;
-	if (transparentCloudCol.a > 0.0)
+
+	ivec2 uv = ivec2(gl_FragCoord.xy);
+	float revealage = texelFetch(RevealageTexture, uv, 0).r;
+	if (revealage < 1.0)
 	{
-		cloudPremul = transparentCloudCol.rgb + cloudPremul * (1.0 - transparentCloudCol.a);
-		cloudAlpha = transparentCloudCol.a + cloudAlpha * (1.0 - transparentCloudCol.a);
+		vec4 accum = texelFetch(AccumTexture, uv, 0);
+		if (isinf(max4(abs(accum))))
+			accum.rgb = vec3(accum.a);
+
+		vec3 avg = accum.rgb / max(accum.a, EPSILON);
+		vec3 transparentPremul = avg * (1.0 - revealage);
+		float transparentAlpha = 1.0 - revealage;
+
+		cloudPremul = transparentPremul + cloudPremul * (1.0 - transparentAlpha);
+		cloudAlpha = transparentAlpha + cloudAlpha * (1.0 - transparentAlpha);
 	}
 
 	vec3 bg = texture(DiffuseSampler, texCoord).rgb;

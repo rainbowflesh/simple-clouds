@@ -61,7 +61,7 @@ public class SimpleCloudsCompatHelper {
 		if (CompatHelper.isVivecraftLoaded())
 			return SimpleCloudsVivecraftCompatHandler.getStormFogResolutionDivisor();
 		else
-			return 4;
+			return 1;
 	}
 
 	public static @Nullable SimpleCloudsNoticeScreen createNotice() {

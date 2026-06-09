@@ -6,7 +6,8 @@
 	    { "name": "DiffuseSampler" },
         { "name": "MainDepthSampler" },
         { "name": "CloudsTexture" },
-        { "name": "CloudTransparencyTexture" },
+        { "name": "AccumTexture" },
+        { "name": "RevealageTexture" },
         { "name": "CloudsDepthTexture" }
     ],
     "uniforms": [

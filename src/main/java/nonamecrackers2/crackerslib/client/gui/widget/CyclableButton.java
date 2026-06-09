@@ -3,6 +3,7 @@ package dev.nonamecrackers2.simpleclouds.client.gui.widget;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
@@ -15,6 +16,7 @@ public class CyclableButton<T> extends AbstractButton {
 	private int index;
 	private Consumer<T> responder = value -> {
 	};
+	private Function<T, Component> messageFactory = value -> Component.literal(String.valueOf(value));
 
 	public CyclableButton(int x, int y, int width, List<T> values, T initialValue) {
 		super(x, y, width, 20, CommonComponents.EMPTY);
@@ -25,6 +27,11 @@ public class CyclableButton<T> extends AbstractButton {
 
 	public void setResponder(Consumer<T> responder) {
 		this.responder = Objects.requireNonNull(responder);
+	}
+
+	public void setMessageFactory(Function<T, Component> messageFactory) {
+		this.messageFactory = Objects.requireNonNull(messageFactory);
+		this.updateMessage();
 	}
 
 	public T getValue() {
@@ -59,6 +66,6 @@ public class CyclableButton<T> extends AbstractButton {
 	}
 
 	private void updateMessage() {
-		this.setMessage(Component.literal(String.valueOf(this.getValue())));
+		this.setMessage(this.messageFactory.apply(this.getValue()));
 	}
 }

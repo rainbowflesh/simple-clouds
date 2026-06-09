@@ -47,6 +47,7 @@ import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class WorldEffects {
 	public static final float EFFECTS_STRENGTH_MULTIPLER = 1.2F;
+	private static final int VISUAL_STORM_SAMPLE_COUNT = 8;
 	private static final int VISUAL_LIGHTNING_INTERVAL_MIN = 24;
 	private static final int VISUAL_LIGHTNING_INTERVAL_MAX = 110;
 	private static final int LIGHTNING_BASE_COLOR = 0xFFFFFFFF;
@@ -67,8 +68,14 @@ public class WorldEffects {
 	private @Nullable CloudType typeAtCamera;
 	private float fadeAtCamera;
 	private float storminessAtCamera;
+	private float visibleStorminess;
 	private float storminessSmoothed;
 	private float storminessSmoothedO;
+	private float visibleStorminessSmoothed;
+	private float visibleStorminessSmoothedO;
+	private float directionalStorminess;
+	private float directionalStorminessSmoothed;
+	private float directionalStorminessSmoothedO;
 	private int nextVisualLightning;
 	private final List<LightningBolt> lightningBolts = Lists.newArrayList();
 	private final RandomSource random = RandomSource.create();
@@ -86,15 +93,8 @@ public class WorldEffects {
 		this.typeAtCamera = type;
 		this.fadeAtCamera = weather.darkeningFade();
 
-		if (!manager.shouldUseVanillaWeather() && type.weatherType().causesDarkening()) {
-			float verticalFade = 1.0F - Mth.clamp(
-					((float) camY - manager.getStormStartHeight(type)) / SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F,
-					1.0F);
-			float factor = Mth.clamp((1.0F - weather.darkeningFade()) * 3.0F, 0.0F, 1.0F);
-			this.storminessAtCamera = type.storminess() * factor * verticalFade;
-		} else {
-			this.storminessAtCamera = 0.0F;
-		}
+		this.storminessAtCamera = this.calculateStorminess(manager, weather, (float) camY);
+		this.visibleStorminess = this.sampleVisibleStorminess(manager, (float) camX, (float) camY, (float) camZ);
 
 		if (!manager.shouldUseVanillaWeather()) {
 			this.mc.level.setRainLevel(weather.rainLevel());
@@ -325,6 +325,10 @@ public class WorldEffects {
 
 		this.storminessSmoothedO = this.storminessSmoothed;
 		this.storminessSmoothed += (this.storminessAtCamera - this.storminessSmoothed) / 25.0F;
+		this.visibleStorminessSmoothedO = this.visibleStorminessSmoothed;
+		this.visibleStorminessSmoothed += (this.visibleStorminess - this.visibleStorminessSmoothed) / 25.0F;
+		this.directionalStorminessSmoothedO = this.directionalStorminessSmoothed;
+		this.directionalStorminessSmoothed += (this.directionalStorminess - this.directionalStorminessSmoothed) / 8.0F;
 	}
 
 	private void tickVisualLightning() {
@@ -339,7 +343,7 @@ public class WorldEffects {
 		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
 		Camera camera = this.mc.gameRenderer.getMainCamera();
 		Vec3 cameraPos = camera.getPosition();
-		float storminess = Mth.clamp(this.storminessAtCamera, 0.0F, 1.0F);
+		float storminess = Mth.clamp(this.visibleStorminess, 0.0F, 1.0F);
 		int visibleRadius = Math.max(SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF + 1,
 				this.renderer.getMeshGenerator().getCloudAreaMaxRadius() * SimpleCloudsConstants.CLOUD_SCALE);
 		float strongestStrikeIntensity = 0.0F;
@@ -393,7 +397,8 @@ public class WorldEffects {
 	}
 
 	public Color calculateFogColor(float defaultR, float defaultG, float defaultB, float partialTick) {
-		float lerp = this.getDarkenFactor(partialTick);
+		// Use directional storminess so the horizon only darkens when the camera is facing toward a storm
+		float lerp = Math.min(this.getDarkenFactor(partialTick), this.getDirectionalDarkenFactor(partialTick));
 		return hsbLerp(defaultR, defaultG, defaultB, 0.68F, 0.2F, -0.05F, lerp);
 	}
 
@@ -419,8 +424,14 @@ public class WorldEffects {
 		this.typeAtCamera = null;
 		this.fadeAtCamera = 0.0F;
 		this.storminessAtCamera = 0.0F;
+		this.visibleStorminess = 0.0F;
 		this.storminessSmoothed = 0.0F;
 		this.storminessSmoothedO = 0.0F;
+		this.visibleStorminessSmoothed = 0.0F;
+		this.visibleStorminessSmoothedO = 0.0F;
+		this.directionalStorminess = 0.0F;
+		this.directionalStorminessSmoothed = 0.0F;
+		this.directionalStorminessSmoothedO = 0.0F;
 		this.nextVisualLightning = 0;
 	}
 
@@ -436,6 +447,10 @@ public class WorldEffects {
 		return Mth.lerp(partialTick, this.storminessSmoothedO, this.storminessSmoothed);
 	}
 
+	public float getVisibleStorminessSmoothed(float partialTick) {
+		return Mth.lerp(partialTick, this.visibleStorminessSmoothedO, this.visibleStorminessSmoothed);
+	}
+
 	public float getDarkenFactor(float partialTick, float strength) {
 		float maxStormDarkness = SimpleCloudsConfig.CLIENT.maxStormDarkness.get().floatValue();
 		float minimumBrightness = 1.0F - Mth.clamp(maxStormDarkness, 0.0F, 0.95F);
@@ -444,6 +459,71 @@ public class WorldEffects {
 
 	public float getDarkenFactor(float partialTick) {
 		return this.getDarkenFactor(partialTick, EFFECTS_STRENGTH_MULTIPLER);
+	}
+
+	public float getVisibleDarkenFactor(float partialTick, float strength) {
+		float maxStormDarkness = SimpleCloudsConfig.CLIENT.maxStormDarkness.get().floatValue();
+		float minimumBrightness = 1.0F - Mth.clamp(maxStormDarkness, 0.0F, 0.95F);
+		return Mth.clamp(1.0F - this.getVisibleStorminessSmoothed(partialTick) * strength, minimumBrightness, 1.0F);
+	}
+
+	public float getDirectionalDarkenFactor(float partialTick, float strength) {
+		float maxStormDarkness = SimpleCloudsConfig.CLIENT.maxStormDarkness.get().floatValue();
+		float minimumBrightness = 1.0F - Mth.clamp(maxStormDarkness, 0.0F, 0.95F);
+		float smoothed = Mth.lerp(partialTick, this.directionalStorminessSmoothedO, this.directionalStorminessSmoothed);
+		return Mth.clamp(1.0F - smoothed * strength, minimumBrightness, 1.0F);
+	}
+
+	public float getDirectionalDarkenFactor(float partialTick) {
+		return this.getDirectionalDarkenFactor(partialTick, EFFECTS_STRENGTH_MULTIPLER);
+	}
+
+	private float calculateStorminess(CloudManager<ClientLevel> manager, CloudManager.WeatherSample weather, float y) {
+		CloudType type = weather.darkeningType();
+		if (manager.shouldUseVanillaWeather() || type == null || !type.weatherType().causesDarkening())
+			return 0.0F;
+
+		float verticalFade = 1.0F - Mth.clamp((y - manager.getStormStartHeight(type))
+				/ SimpleCloudsConstants.RAIN_VERTICAL_FADE, 0.0F, 1.0F);
+		float factor = Mth.clamp((1.0F - weather.darkeningFade()) * 3.0F, 0.0F, 1.0F);
+		return type.storminess() * factor * verticalFade;
+	}
+
+	private float sampleVisibleStorminess(CloudManager<ClientLevel> manager, float camX, float camY, float camZ) {
+		float strongest = this.storminessAtCamera;
+		float sampleRadius = Math.max((float) SimpleCloudsConstants.CLOSE_THUNDER_CUTOFF,
+				this.renderer.getFogEnd() * 0.85F);
+		for (int i = 0; i < VISUAL_STORM_SAMPLE_COUNT; i++) {
+			float angle = ((float) i / (float) VISUAL_STORM_SAMPLE_COUNT) * ((float) Math.PI * 2.0F);
+			float sampleX = camX + Mth.cos(angle) * sampleRadius;
+			float sampleZ = camZ + Mth.sin(angle) * sampleRadius;
+			CloudManager.WeatherSample weather = manager.sampleWeatherAtWorldPos(sampleX, camY, sampleZ);
+			strongest = Math.max(strongest, this.calculateStorminess(manager, weather, camY));
+		}
+		return strongest;
+	}
+
+	// Called once per frame from the fog event with the camera's horizontal look direction (lookX, lookZ).
+	// Samples storminess in a +-90 degree cone ahead to drive directional fog color and gradient widening.
+	public void updateDirectionalStorminess(float camX, float camY, float camZ, float lookX, float lookZ) {
+		if (this.mc.level == null) {
+			this.directionalStorminess = 0.0F;
+			return;
+		}
+		CloudManager<ClientLevel> manager = CloudManager.get(this.mc.level);
+		// Cap radius so distant LoD storm clouds don't darken the nearby horizon fog
+		float sampleRadius = Math.min(this.renderer.getFogEnd() * 0.5F, 400.0F);
+		float strongest = this.storminessAtCamera;
+		for (int i = -2; i <= 2; i++) {
+			float a = i * ((float) Math.PI / 4.0F);
+			float cosA = Mth.cos(a);
+			float sinA = Mth.sin(a);
+			float sampleX = camX + (lookX * cosA - lookZ * sinA) * sampleRadius;
+			float sampleZ = camZ + (lookX * sinA + lookZ * cosA) * sampleRadius;
+			CloudManager.WeatherSample weather = manager.sampleWeatherAtWorldPos(sampleX, camY, sampleZ);
+			strongest = Math.max(strongest, this.calculateStorminess(manager, weather, camY));
+		}
+		this.directionalStorminess = strongest;
 	}
 
 	private static float bandLerp(float y, float minY, float maxY, float fadeDistance) {

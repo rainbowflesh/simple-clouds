@@ -11,10 +11,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
 
-public class FrameBufferUtils
-{
-	public static void blitTargetPreservingAlpha(RenderTarget target, int width, int height)
-	{
+public class FrameBufferUtils {
+	public static void blitTargetPreservingAlpha(RenderTarget target, int width, int height) {
 		RenderSystem.assertOnRenderThread();
 		GlStateManager._colorMask(true, true, true, true);
 		GlStateManager._disableDepthTest();
@@ -26,14 +24,43 @@ public class FrameBufferUtils
 		ShaderInstance shaderinstance = minecraft.gameRenderer.blitShader;
 		shaderinstance.setSampler("DiffuseSampler", target.getColorTextureId());
 		shaderinstance.apply();
-		BufferBuilder bufferbuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLIT_SCREEN);
-        bufferbuilder.addVertex(0.0F, 0.0F, 0.0F);
-        bufferbuilder.addVertex(1.0F, 0.0F, 0.0F);
-        bufferbuilder.addVertex(1.0F, 1.0F, 0.0F);
-        bufferbuilder.addVertex(0.0F, 1.0F, 0.0F);
-        BufferUploader.draw(bufferbuilder.buildOrThrow());
-        shaderinstance.clear();
-        GlStateManager._depthMask(true);
+		BufferBuilder bufferbuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS,
+				DefaultVertexFormat.BLIT_SCREEN);
+		bufferbuilder.addVertex(0.0F, 0.0F, 0.0F);
+		bufferbuilder.addVertex(1.0F, 0.0F, 0.0F);
+		bufferbuilder.addVertex(1.0F, 1.0F, 0.0F);
+		bufferbuilder.addVertex(0.0F, 1.0F, 0.0F);
+		BufferUploader.draw(bufferbuilder.buildOrThrow());
+		shaderinstance.clear();
+		GlStateManager._depthMask(true);
+		GlStateManager._depthMask(true);
+	}
+
+	public static void blendTargetIntoCurrent(RenderTarget target, int width, int height) {
+		RenderSystem.assertOnRenderThread();
+		GlStateManager._colorMask(true, true, true, true);
+		GlStateManager._disableDepthTest();
+		GlStateManager._depthMask(false);
+		GlStateManager._viewport(0, 0, width, height);
+		RenderSystem.enableBlend();
+		RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+				GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ZERO,
+				GlStateManager.DestFactor.ONE);
+
+		Minecraft minecraft = Minecraft.getInstance();
+		ShaderInstance shaderinstance = minecraft.gameRenderer.blitShader;
+		shaderinstance.setSampler("DiffuseSampler", target.getColorTextureId());
+		shaderinstance.apply();
+		BufferBuilder bufferbuilder = RenderSystem.renderThreadTesselator().begin(VertexFormat.Mode.QUADS,
+				DefaultVertexFormat.BLIT_SCREEN);
+		bufferbuilder.addVertex(0.0F, 0.0F, 0.0F);
+		bufferbuilder.addVertex(1.0F, 0.0F, 0.0F);
+		bufferbuilder.addVertex(1.0F, 1.0F, 0.0F);
+		bufferbuilder.addVertex(0.0F, 1.0F, 0.0F);
+		BufferUploader.draw(bufferbuilder.buildOrThrow());
+		shaderinstance.clear();
+		RenderSystem.disableBlend();
+		RenderSystem.defaultBlendFunc();
 		GlStateManager._depthMask(true);
 	}
 }

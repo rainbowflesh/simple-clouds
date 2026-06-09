@@ -73,6 +73,14 @@ public final class CloudPipelineRenderSteps {
         renderer.prepareStormFogBlur(partialTick);
     }
 
+    public static void prepareStormFog(SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+            float partialTick, double camX, double camY, double camZ, CloudColor cloudColor,
+            java.util.function.IntSupplier depthSampler) {
+        renderer.doStormPostProcessing(camMat, partialTick, projMat, camX, camY, camZ, cloudColor.r(),
+                cloudColor.g(), cloudColor.b(), depthSampler);
+        renderer.prepareStormFogBlur(partialTick);
+    }
+
     public static record CloudColor(float r, float g, float b) {
     }
 }

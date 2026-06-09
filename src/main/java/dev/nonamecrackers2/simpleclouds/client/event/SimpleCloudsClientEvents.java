@@ -21,7 +21,6 @@ import dev.nonamecrackers2.simpleclouds.client.compat.SimpleCloudsCompatHelper;
 import dev.nonamecrackers2.simpleclouds.client.gui.CloudPreviewerScreen;
 import dev.nonamecrackers2.simpleclouds.client.mesh.LevelOfDetailOptions;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
-import dev.nonamecrackers2.simpleclouds.client.mesh.generator.GenerationInterval;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.MultiRegionCloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.SingleRegionCloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsDebugOverlayRenderer;
@@ -30,7 +29,6 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.WorldEffects;
 import dev.nonamecrackers2.simpleclouds.client.renderer.settings.CloudsRendererSettings;
 import dev.nonamecrackers2.simpleclouds.client.shader.compute.ComputeShader;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
-import dev.nonamecrackers2.simpleclouds.client.world.FogRenderMode;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudType;
 import dev.nonamecrackers2.simpleclouds.common.cloud.CloudTypeDataManager;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
@@ -93,6 +91,7 @@ public class SimpleCloudsClientEvents {
 	@SubscribeEvent
 	public static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
 		CloudManager.get(event.getPlayer().level()).onPlayerJoin(event.getPlayer());
+		SimpleCloudsClientConfigListeners.syncSingleplayerConfig();
 		SimpleCloudsRenderer.getInstance().requestReload();
 	}
 
@@ -106,18 +105,31 @@ public class SimpleCloudsClientEvents {
 	public static void modifyFog(ViewportEvent.RenderFog event) {
 		if (event.getMode() == FogMode.FOG_TERRAIN
 				&& Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
-			if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.OFF) {
-				FogRenderer.setupNoFog();
-				return;
-			}
 			Minecraft mc = Minecraft.getInstance();
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();
 			float partialTick = (float) event.getPartialTick();
-			float storminess = Mth.sqrt(effects.getDarkenFactor(partialTick, 2.0F));
+			boolean stormFogEnabled = SimpleCloudsConfig.CLIENT.renderStormFog.get();
+
+			// Update directional storminess for this frame using the camera look direction
+			float yRotRad = mc.gameRenderer.getMainCamera().getYRot() * Mth.DEG_TO_RAD;
+			effects.updateDirectionalStorminess(
+					(float) mc.gameRenderer.getMainCamera().getPosition().x,
+					(float) mc.gameRenderer.getMainCamera().getPosition().y,
+					(float) mc.gameRenderer.getMainCamera().getPosition().z,
+					-Mth.sin(yRotRad), Mth.cos(yRotRad));
+
+			float storminess = stormFogEnabled ? Mth.sqrt(effects.getDarkenFactor(partialTick, 2.0F)) : 1.0F;
 			float insideCloudFactor = effects.getInsideCloudFactor(mc.gameRenderer.getMainCamera().getPosition().x,
 					mc.gameRenderer.getMainCamera().getPosition().y, mc.gameRenderer.getMainCamera().getPosition().z);
-			RenderSystem.setShaderFogStart(RenderSystem.getShaderFogStart() * storminess);
+			if (stormFogEnabled) {
+				RenderSystem.setShaderFogStart(RenderSystem.getShaderFogStart() * storminess);
+				// Widen the fog gradient when looking toward a storm so terrain fades gradually
+				float fogEnd = RenderSystem.getShaderFogEnd();
+				float fogStart = RenderSystem.getShaderFogStart();
+				float dirBlend = 1.0F - effects.getDirectionalDarkenFactor(partialTick, 2.0F);
+				RenderSystem.setShaderFogStart(Mth.lerp(dirBlend, fogStart, Math.min(fogStart, fogEnd * 0.35F)));
+			}
 			if (insideCloudFactor > 0.0F) {
 				RenderSystem.setShaderFogStart(Mth.lerp(insideCloudFactor, RenderSystem.getShaderFogStart(), 0.0F));
 				RenderSystem.setShaderFogEnd(Mth.lerp(insideCloudFactor, RenderSystem.getShaderFogEnd(),
@@ -128,8 +140,7 @@ public class SimpleCloudsClientEvents {
 
 	@SubscribeEvent
 	public static void modifyFogColor(ViewportEvent.ComputeFogColor event) {
-		if (SimpleCloudsConfig.CLIENT.fogMode.get() != FogRenderMode.OFF
-				&& Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
+		if (Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
 			Minecraft mc = Minecraft.getInstance();
 			SimpleCloudsRenderer renderer = SimpleCloudsRenderer.getInstance();
 			WorldEffects effects = renderer.getWorldEffectsManager();

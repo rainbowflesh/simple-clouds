@@ -1,6 +1,8 @@
 package dev.nonamecrackers2.simpleclouds.common.cloud.spawning;
 
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -12,12 +14,15 @@ import com.google.common.collect.Lists;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudGetter;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.CloudRegionRemovalReason;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.RemovedCloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.world.ServerCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.world.SpawnRegion;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import dev.nonamecrackers2.simpleclouds.api.common.event.CloudRegionRemovedEvent;
 
 public class ServerCloudGenerator extends CloudGenerator {
 	private static final Logger LOGGER = LogManager.getLogger();
@@ -26,6 +31,8 @@ public class ServerCloudGenerator extends CloudGenerator {
 	private int syncTimer = AUTO_SYNC_INTERVAL;
 	private int visibilitySyncCooldown;
 	private boolean requiresSync;
+	private boolean suppressRemovalTracking;
+	private final Map<Integer, CloudRegionRemovalReason> pendingRemovedClouds = new LinkedHashMap<>();
 
 	public ServerCloudGenerator(CloudGetter getter, Supplier<CloudSpawningConfig> config) {
 		super(getter, config);
@@ -42,6 +49,7 @@ public class ServerCloudGenerator extends CloudGenerator {
 	}
 
 	public void readTag(CompoundTag tag) {
+		this.suppressRemovalTracking = true;
 		ListTag regionsTag = tag.getList("regions", 10);
 		List<CloudRegion> regions = Lists.newArrayList();
 		for (int i = 0; i < regionsTag.size(); i++) {
@@ -55,7 +63,17 @@ public class ServerCloudGenerator extends CloudGenerator {
 		// System.out.println("what is up, reading");
 		// System.out.println(regions);
 		this.setClouds(regions);
+		this.suppressRemovalTracking = false;
+		this.pendingRemovedClouds.clear();
+		this.requiresSync = false;
 		this.ticksTillNextGen = tag.getInt("ticks_till_next_gen");
+	}
+
+	public List<RemovedCloudRegion> drainPendingRemovedClouds() {
+		List<RemovedCloudRegion> removedClouds = this.pendingRemovedClouds.entrySet().stream()
+				.map(entry -> new RemovedCloudRegion(entry.getKey(), entry.getValue())).toList();
+		this.pendingRemovedClouds.clear();
+		return removedClouds;
 	}
 
 	public boolean checkAndResetSync() {
@@ -73,6 +91,14 @@ public class ServerCloudGenerator extends CloudGenerator {
 		// (this.getTotalCloudRegions()));
 		this.requiresSync = true;
 		return true;
+	}
+
+	@Override
+	public void setClouds(java.util.Collection<CloudRegion> clouds) {
+		this.suppressRemovalTracking = true;
+		super.setClouds(clouds);
+		this.suppressRemovalTracking = false;
+		this.pendingRemovedClouds.clear();
 	}
 
 	@Override
@@ -112,7 +138,20 @@ public class ServerCloudGenerator extends CloudGenerator {
 	}
 
 	@Override
+	protected void onCloudRemoved(Level level, CloudRegion region, CloudRegionRemovedEvent.Reason reason) {
+		if (this.suppressRemovalTracking)
+			return;
+		this.pendingRemovedClouds.put(region.getSyncId(), CloudRegionRemovalReason.DELETE);
+		this.requiresSync = true;
+	}
+
+	@Override
 	protected List<SpawnRegion> determineValidSpawnRegions(RandomSource random, Level level) {
 		return ServerCloudManager.regionsFromEntities(level.players(), SimpleCloudsConstants.SPAWN_RADIUS);
+	}
+
+	@Override
+	protected float getOffscreenLifetimeAcceleration(Level level, CloudRegion region, boolean isVisible) {
+		return 1.0F;
 	}
 }

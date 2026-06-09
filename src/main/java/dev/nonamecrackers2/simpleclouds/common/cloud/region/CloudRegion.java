@@ -173,6 +173,11 @@ public class CloudRegion implements ScAPICloudRegion {
 
 	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed,
 			float movementSpeedMultiplier) {
+		this.tick(random, level, isVisible, speed, movementSpeedMultiplier, OFFSCREEN_LIFETIME_ACCELERATION);
+	}
+
+	public void tick(RandomSource random, @Nullable Level level, boolean isVisible, float speed,
+			float movementSpeedMultiplier, float offscreenLifetimeAcceleration) {
 		// if (this.cloudTypeId.toString().equals("simpleclouds:nimbostratus"))
 		// {
 		// System.out.println("------ " + this.cloudTypeId + " -------");
@@ -210,7 +215,7 @@ public class CloudRegion implements ScAPICloudRegion {
 			scale = 1.0F - (float) (this.tickCount - this.growTicks) / (float) (this.existsForTicks - this.growTicks);
 		this.radius = this.initialRadius * scale;
 
-		float lifetimeAcceleration = isVisible ? 1.0F : OFFSCREEN_LIFETIME_ACCELERATION;
+		float lifetimeAcceleration = isVisible ? 1.0F : offscreenLifetimeAcceleration;
 		this.tickCount += Math.max(1, Mth.ceil(lifetimeAcceleration * speed));
 
 		this.posXO = this.posX;
@@ -228,6 +233,8 @@ public class CloudRegion implements ScAPICloudRegion {
 
 	public void beginDissipating(int fadeOutTicks) {
 		int clampedFadeOut = Math.max(1, fadeOutTicks);
+		if (this.growTicks == 0 && this.existsForTicks <= clampedFadeOut)
+			return;
 		float currentScale = this.initialRadius <= 0.0F ? 0.0F
 				: Mth.clamp(this.radius / this.initialRadius, 0.0F, 1.0F);
 		this.growTicks = 0;

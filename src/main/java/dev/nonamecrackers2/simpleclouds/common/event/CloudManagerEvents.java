@@ -3,6 +3,7 @@ package dev.nonamecrackers2.simpleclouds.common.event;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +12,8 @@ import java.util.UUID;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfigListeners;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.CloudRegionRemovalReason;
+import dev.nonamecrackers2.simpleclouds.common.packet.impl.RemovedCloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudManagerPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.SendCloudRegionsPayload;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.UpdateCloudRegionsPayload;
@@ -31,8 +34,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 public class CloudManagerEvents {
 	private static final float CLOUD_SYNC_RADIUS_MULTIPLIER = 1.35F;
+	private static final int FULL_SYNC_BATCH_SIZE = 96;
 	private static final Map<UUID, Set<Integer>> SYNCHED_CLOUDS_BY_PLAYER = new HashMap<>();
 	private static final Map<UUID, Long> LAST_SYNCED_PLAYER_POSITIONS = new HashMap<>();
+	private static final Map<UUID, PendingCloudRegionSync> PENDING_FULL_SYNCS = new HashMap<>();
 
 	@SubscribeEvent
 	public static void onWorldTick(LevelTickEvent.Pre event) {
@@ -55,8 +60,10 @@ public class CloudManagerEvents {
 						break;
 					}
 					case CLOUD_FORMATIONS: {
+						List<RemovedCloudRegion> hardRemovedClouds = serverManager.getCloudGenerator()
+								.drainPendingRemovedClouds();
 						for (ServerPlayer player : serverLevel.players())
-							sendCloudRegionDeltaToPlayer(player);
+							sendCloudRegionDeltaToPlayer(player, hardRemovedClouds);
 						break;
 					}
 					default:
@@ -68,6 +75,7 @@ public class CloudManagerEvents {
 			}
 
 			syncCloudRegionsForMovingPlayers(serverLevel);
+			flushPendingFullCloudSyncs(serverLevel);
 		}
 	}
 
@@ -96,12 +104,14 @@ public class CloudManagerEvents {
 	public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
 		SYNCHED_CLOUDS_BY_PLAYER.remove(event.getEntity().getUUID());
 		LAST_SYNCED_PLAYER_POSITIONS.remove(event.getEntity().getUUID());
+		PENDING_FULL_SYNCS.remove(event.getEntity().getUUID());
 	}
 
 	private static void update(ServerPlayer player) {
 		PacketDistributor.sendToPlayer(player, new SendCloudManagerPayload(CloudManager.get(player.level())));
 		SimpleCloudsConfigListeners.syncDryBiomeRainSettings(player);
-		sendFullCloudRegionsToPlayer(player);
+		queueFullCloudRegionsToPlayer(player);
+		SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), collectCloudIds(getCloudsForPlayer(player)));
 		LAST_SYNCED_PLAYER_POSITIONS.put(player.getUUID(), getPlayerRegionKey(player));
 	}
 
@@ -112,21 +122,32 @@ public class CloudManagerEvents {
 			if (previousRegionKey == null || previousRegionKey.longValue() == currentRegionKey)
 				continue;
 
-			sendCloudRegionDeltaToPlayer(player);
+			sendCloudRegionDeltaToPlayer(player, List.of());
 		}
 	}
 
-	private static void sendFullCloudRegionsToPlayer(ServerPlayer player) {
-		List<CloudRegion> formationsForPlayer = getCloudsForPlayer(player);
-		SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), collectCloudIds(formationsForPlayer));
-		PacketDistributor.sendToPlayer(player, new SendCloudRegionsPayload(formationsForPlayer));
+	private static void queueFullCloudRegionsToPlayer(ServerPlayer player) {
+		CloudManager<ServerLevel> manager = CloudManager.get(player.serverLevel());
+		List<CloudRegion> allClouds = manager.getCloudGenerator().getClouds();
+		Set<Integer> nearbyCloudIds = collectCloudIds(getCloudsForPlayer(player));
+		List<CloudRegion> prioritizedClouds = new ArrayList<>(allClouds.size());
+		for (CloudRegion region : allClouds) {
+			if (nearbyCloudIds.contains(region.getSyncId()))
+				prioritizedClouds.add(region);
+		}
+		for (CloudRegion region : allClouds) {
+			if (!nearbyCloudIds.contains(region.getSyncId()))
+				prioritizedClouds.add(region);
+		}
+		PENDING_FULL_SYNCS.put(player.getUUID(), new PendingCloudRegionSync(prioritizedClouds));
 	}
 
-	private static void sendCloudRegionDeltaToPlayer(ServerPlayer player) {
+	private static void sendCloudRegionDeltaToPlayer(ServerPlayer player, List<RemovedCloudRegion> hardRemovedClouds) {
 		List<CloudRegion> formationsForPlayer = getCloudsForPlayer(player);
 		Set<Integer> previousCloudIds = SYNCHED_CLOUDS_BY_PLAYER.get(player.getUUID());
 		if (previousCloudIds == null) {
-			sendFullCloudRegionsToPlayer(player);
+			queueFullCloudRegionsToPlayer(player);
+			SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), collectCloudIds(formationsForPlayer));
 			return;
 		}
 
@@ -139,16 +160,41 @@ public class CloudManagerEvents {
 				addedClouds.add(region);
 		}
 
-		List<Integer> removedCloudIds = new ArrayList<>();
+		Set<Integer> hardRemovedIds = new LinkedHashSet<>();
+		for (RemovedCloudRegion removedCloud : hardRemovedClouds)
+			hardRemovedIds.add(removedCloud.syncId());
+
+		List<RemovedCloudRegion> removedClouds = new ArrayList<>(hardRemovedClouds);
 		for (int syncId : previousCloudIds) {
 			if (!currentCloudIds.contains(syncId))
-				removedCloudIds.add(syncId);
+				if (!hardRemovedIds.contains(syncId))
+					removedClouds.add(new RemovedCloudRegion(syncId, CloudRegionRemovalReason.OUT_OF_SYNC_RANGE));
 		}
 
-		if (!addedClouds.isEmpty() || !removedCloudIds.isEmpty())
-			PacketDistributor.sendToPlayer(player, new UpdateCloudRegionsPayload(addedClouds, removedCloudIds));
+		if (!addedClouds.isEmpty() || !removedClouds.isEmpty())
+			PacketDistributor.sendToPlayer(player, new UpdateCloudRegionsPayload(addedClouds, removedClouds));
 
 		SYNCHED_CLOUDS_BY_PLAYER.put(player.getUUID(), currentCloudIds);
+	}
+
+	private static void flushPendingFullCloudSyncs(ServerLevel level) {
+		for (ServerPlayer player : level.players()) {
+			PendingCloudRegionSync sync = PENDING_FULL_SYNCS.get(player.getUUID());
+			if (sync == null)
+				continue;
+
+			if (!sync.hasMore()) {
+				PacketDistributor.sendToPlayer(player,
+						new SendCloudRegionsPayload(List.of(), sync.markAndCheckFirstBatch()));
+				PENDING_FULL_SYNCS.remove(player.getUUID());
+				continue;
+			}
+
+			PacketDistributor.sendToPlayer(player,
+					new SendCloudRegionsPayload(sync.nextBatch(FULL_SYNC_BATCH_SIZE), sync.markAndCheckFirstBatch()));
+			if (!sync.hasMore())
+				PENDING_FULL_SYNCS.remove(player.getUUID());
+		}
 	}
 
 	private static List<CloudRegion> getCloudsForPlayer(ServerPlayer player) {
@@ -170,5 +216,32 @@ public class CloudManagerEvents {
 	private static long getPlayerRegionKey(ServerPlayer player) {
 		ChunkPos pos = player.chunkPosition();
 		return ChunkPos.asLong(pos.x, pos.z);
+	}
+
+	private static final class PendingCloudRegionSync {
+		private final List<CloudRegion> clouds;
+		private int index;
+		private boolean firstBatch = true;
+
+		private PendingCloudRegionSync(List<CloudRegion> clouds) {
+			this.clouds = clouds;
+		}
+
+		private boolean hasMore() {
+			return this.index < this.clouds.size();
+		}
+
+		private List<CloudRegion> nextBatch(int batchSize) {
+			int end = Math.min(this.index + batchSize, this.clouds.size());
+			List<CloudRegion> batch = new ArrayList<>(this.clouds.subList(this.index, end));
+			this.index = end;
+			return batch;
+		}
+
+		private boolean markAndCheckFirstBatch() {
+			boolean first = this.firstBatch;
+			this.firstBatch = false;
+			return first;
+		}
 	}
 }

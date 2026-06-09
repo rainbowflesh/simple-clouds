@@ -22,6 +22,7 @@ import dev.nonamecrackers2.simpleclouds.SimpleCloudsMod;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.CloudRenderTarget;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
 import dev.nonamecrackers2.simpleclouds.client.framebuffer.ShadowMapBuffer;
+import dev.nonamecrackers2.simpleclouds.client.framebuffer.WeightedBlendingTarget;
 import dev.nonamecrackers2.simpleclouds.client.renderer.settings.CloudsRendererSettings;
 import dev.nonamecrackers2.simpleclouds.client.shader.buffer.ShaderStorageBufferObject;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinPostChain;
@@ -46,7 +47,7 @@ final class CloudPostProcessing {
     private final CloudsRendererSettings settings;
     private final List<PostChain> postChains = new ArrayList<>();
     private @Nullable RenderTarget cloudTarget;
-    private @Nullable RenderTarget cloudTransparencyTarget;
+    private @Nullable WeightedBlendingTarget cloudTransparencyTarget;
     private @Nullable RenderTarget stormFogTarget;
     private @Nullable RenderTarget blurTarget;
     private @Nullable PostChain finalComposite;
@@ -64,7 +65,7 @@ final class CloudPostProcessing {
         return this.cloudTarget;
     }
 
-    public @Nullable RenderTarget getCloudTransparencyTarget() {
+    public @Nullable WeightedBlendingTarget getCloudTransparencyTarget() {
         return this.cloudTransparencyTarget;
     }
 
@@ -104,7 +105,6 @@ final class CloudPostProcessing {
                     EffectInstance effect = pass.getEffect();
                     effect.setSampler("ShadowMap", stormFogShadowMap::getDepthTexId);
                     effect.setSampler("ShadowMapColor", stormFogShadowMap::getColorTexId);
-                    effect.setSampler("DepthSampler", () -> this.cloudTarget.getDepthTextureId());
                     lightningBoltPositions.optionalBindToProgram("LightningBolts", effect.getId());
                 });
 
@@ -125,9 +125,11 @@ final class CloudPostProcessing {
                     effect.setSampler("MainDepthSampler", mainTarget::getDepthTextureId);
                     effect.setSampler("CloudsDepthTexture", () -> this.cloudTarget.getDepthTextureId());
                     effect.setSampler("CloudsTexture", () -> this.cloudTarget.getColorTextureId());
-                    if (this.settings.useTransparency() && this.cloudTransparencyTarget != null)
-                        effect.setSampler("CloudTransparencyTexture",
-                                () -> this.cloudTransparencyTarget.getColorTextureId());
+                    if (this.settings.useTransparency() && this.cloudTransparencyTarget != null) {
+                        effect.setSampler("AccumTexture", () -> this.cloudTransparencyTarget.getColorTextureId());
+                        effect.setSampler("RevealageTexture",
+                                () -> this.cloudTransparencyTarget.getRevealageTextureId());
+                    }
                 });
 
         if (shadowMap != null) {
@@ -199,10 +201,19 @@ final class CloudPostProcessing {
     }
 
     public void renderPreparedStormFogOverlay() {
-        if (this.blurTarget == null)
+        if (this.stormFogTarget == null)
             return;
 
-        this.renderStormFogOverlay(this.blurTarget);
+        this.renderStormFogOverlay(this.stormFogTarget);
+    }
+
+    public void renderPreparedStormFogIntoMainTarget() {
+        if (this.stormFogTarget == null)
+            return;
+
+        Window window = this.mc.getWindow();
+        this.mc.getMainRenderTarget().bindWrite(false);
+        FrameBufferUtils.blendTargetIntoCurrent(this.stormFogTarget, window.getWidth(), window.getHeight());
     }
 
     public void renderRawStormFogOverlay() {
@@ -269,8 +280,8 @@ final class CloudPostProcessing {
                 highPrecisionDepth);
         this.cloudTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
 
-        this.cloudTransparencyTarget = new CloudRenderTarget(mainTarget.width, mainTarget.height, Minecraft.ON_OSX,
-                highPrecisionDepth);
+        this.cloudTransparencyTarget = new WeightedBlendingTarget(mainTarget.width, mainTarget.height,
+                Minecraft.ON_OSX, highPrecisionDepth);
         this.cloudTransparencyTarget.setClearColor(0.0F, 0.0F, 0.0F, 0.0F);
 
         this.stormFogTarget = new TextureTarget(mainTarget.width / stormFogResolutionDivisor,

@@ -73,14 +73,17 @@ public class SimpleCloudsClientPacketHandlerImpl implements SimpleCloudsClientPa
 	public void handleSendCloudRegionsPacket(SendCloudRegionsPayload packet, IPayloadContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
-		manager.getCloudGenerator().setClouds(packet.cloudRegions());
+		if (packet.clearExisting())
+			manager.getCloudGenerator().setClouds(packet.cloudRegions());
+		else
+			manager.getCloudGenerator().applyCloudRegionDelta(packet.cloudRegions(), java.util.List.of());
 	}
 
 	@Override
 	public void handleUpdateCloudRegionsPayload(UpdateCloudRegionsPayload packet, IPayloadContext context) {
 		Minecraft mc = Minecraft.getInstance();
 		CloudManager<ClientLevel> manager = CloudManager.get(mc.level);
-		manager.getCloudGenerator().applyCloudRegionDelta(packet.addedCloudRegions(), packet.removedCloudRegionIds());
+		manager.getCloudGenerator().applyCloudRegionDelta(packet.addedCloudRegions(), packet.removedCloudRegions());
 	}
 
 	@Override

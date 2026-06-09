@@ -17,6 +17,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.neoforged.fml.config.ModConfig;
 import dev.nonamecrackers2.simpleclouds.client.gui.Popup;
 import dev.nonamecrackers2.simpleclouds.common.config.listener.ConfigListener;
@@ -27,7 +28,6 @@ public class SimpleCloudsClientConfigListeners {
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
-				.addListener(SimpleCloudsConfig.CLIENT.cloudEdgeTransparency, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.edgeTransparencyFade, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.transparencyRenderDistancePercentage,
 						(o, n) -> requestReload(false))
@@ -40,7 +40,21 @@ public class SimpleCloudsClientConfigListeners {
 				.buildAndRegister();
 	}
 
+	/**
+	 * Pushes the client's locally-configured values onto the integrated
+	 * singleplayer server's config so a singleplayer world reflects the player's
+	 * own client-side preferences without requiring them to edit the server config
+	 * separately. No-ops when connected to a remote server.
+	 */
+	public static void syncSingleplayerConfig() {
+		if (!canSyncToSingleplayerServer())
+			return;
+		syncSingleplayerCloudMode(SimpleCloudsConfig.CLIENT.cloudMode.get());
+		syncSingleplayerSingleModeCloudType(SimpleCloudsConfig.CLIENT.singleModeCloudType.get());
+	}
+
 	public static void onCloudModeUpdated(CloudMode mode) {
+		syncSingleplayerCloudMode(mode);
 		requestReload(true);
 	}
 
@@ -54,10 +68,7 @@ public class SimpleCloudsClientConfigListeners {
 	 */
 	public static void onCloudModeUpdatedFromServer(CloudMode mode) {
 		SimpleCloudsConfig.SERVER.cloudMode.set(mode);
-		Popup.createInfoPopup(null, 300, Component.translatable("gui.simpleclouds.reload_confirmation.server.info"),
-				() -> {
-					SimpleCloudsRenderer.getInstance().requestReload();
-				});
+		SimpleCloudsRenderer.getInstance().requestReload();
 	}
 
 	/**
@@ -99,6 +110,9 @@ public class SimpleCloudsClientConfigListeners {
 			if (ClientCloudManager.isRemoteServerAvailable())
 				return;
 
+			if (syncSingleplayerSingleModeCloudType(type))
+				return;
+
 			ResourceLocation loc = ResourceLocation.tryParse(type);
 			var types = ClientSideCloudTypeManager.getInstance().getCloudTypes();
 			if (loc != null && types.containsKey(loc)
@@ -121,18 +135,13 @@ public class SimpleCloudsClientConfigListeners {
 		Minecraft.getInstance().execute(() -> {
 			if (skipIfServerAvailable && ClientCloudManager.isRemoteServerAvailable())
 				return;
-			Popup.createYesNoPopup(null, () -> {
-				SimpleCloudsRenderer.getInstance().requestReload();
-			}, 300, Component.translatable("gui.simpleclouds.requires_reload.info"));
-			Popup.clearQueue();
+			SimpleCloudsRenderer.getInstance().requestReload();
 		});
 	}
 
 	public static void reloadResources() {
 		Minecraft.getInstance().execute(() -> {
-			Popup.createYesNoPopup(null, () -> {
-				Minecraft.getInstance().reloadResourcePacks();
-			}, 300, Component.translatable("gui.simpleclouds.requires_reload_resource_packs.info"));
+			Minecraft.getInstance().reloadResourcePacks();
 		});
 	}
 
@@ -143,5 +152,29 @@ public class SimpleCloudsClientConfigListeners {
 			Popup.createInfoPopup(null, 300,
 					Component.literal(message).withStyle(success ? ChatFormatting.GREEN : ChatFormatting.RED));
 		});
+	}
+
+	private static boolean syncSingleplayerCloudMode(CloudMode mode) {
+		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.cloudMode.set(mode));
+	}
+
+	private static boolean syncSingleplayerSingleModeCloudType(String type) {
+		return executeForSingleplayerServer(server -> SimpleCloudsConfig.SERVER.singleModeCloudType.set(type));
+	}
+
+	private static boolean executeForSingleplayerServer(java.util.function.Consumer<MinecraftServer> action) {
+		Minecraft mc = Minecraft.getInstance();
+		if (!canSyncToSingleplayerServer())
+			return false;
+		MinecraftServer server = mc.getSingleplayerServer();
+		if (server == null)
+			return false;
+		server.execute(() -> action.accept(server));
+		return true;
+	}
+
+	private static boolean canSyncToSingleplayerServer() {
+		Minecraft mc = Minecraft.getInstance();
+		return mc.getSingleplayerServer() != null && !ClientCloudManager.isRemoteServerAvailable();
 	}
 }

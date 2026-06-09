@@ -3,21 +3,15 @@ package dev.nonamecrackers2.simpleclouds.client.voxy.pipeline;
 import org.joml.Matrix4f;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexSorting;
 
-import dev.nonamecrackers2.simpleclouds.client.framebuffer.FrameBufferUtils;
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
-import dev.nonamecrackers2.simpleclouds.client.world.FogRenderMode;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraft.world.level.material.FogType;
 import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
 public class VoxySupportPipeline implements CloudsRenderPipeline {
@@ -60,11 +54,6 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer,
 			Matrix4f viewMat, Matrix4f projMat, float partialTick,
 			double camX, double camY, double camZ, Frustum frustum) {
-		if (SimpleCloudsConfig.CLIENT.fogMode.get() == FogRenderMode.SCREEN_SPACE
-				&& mc.gameRenderer.getMainCamera().getFluidInCamera() == FogType.NONE) {
-			renderer.doScreenSpaceWorldFog(viewMat, projMat, partialTick);
-			mc.getMainRenderTarget().bindWrite(false);
-		}
 	}
 
 	// -----------------------------------------------------------------------
@@ -116,31 +105,9 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		// -- Storm fog ------------------------------------------------------
 		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
-			// doStormPostProcessing takes Matrix4f in 1.21.1, NOT PoseStack
-			renderer.doStormPostProcessing(
-					viewMat, partialTick, projMat,
-					camX, camY, camZ, cloudR, cloudG, cloudB);
-			RenderTarget blurTarget = renderer.getBlurTarget();
-			blurTarget.clear(Minecraft.ON_OSX);
-			blurTarget.bindWrite(true);
-			FrameBufferUtils.blitTargetPreservingAlpha(
-					renderer.getStormFogTarget(),
-					mc.getWindow().getWidth(),
-					mc.getWindow().getHeight());
-			renderer.doBlurPostProcessing(partialTick);
-			mc.getMainRenderTarget().bindWrite(false);
-			RenderSystem.enableBlend();
-			RenderSystem.blendFuncSeparate(
-					GlStateManager.SourceFactor.SRC_ALPHA,
-					GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-					GlStateManager.SourceFactor.ZERO,
-					GlStateManager.DestFactor.ONE);
-			renderer.getBlurTarget().blitToScreen(
-					mc.getWindow().getWidth(),
-					mc.getWindow().getHeight(), false);
-			RenderSystem.disableBlend();
-			RenderSystem.defaultBlendFunc();
-			RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN);
+			renderer.doStormPostProcessing(viewMat, partialTick, projMat, camX, camY, camZ, cloudR, cloudG, cloudB);
+			renderer.prepareStormFogBlur(partialTick);
+			renderer.doScreenSpaceWorldFog(viewMat, projMat, partialTick);
 			p.pop();
 		}
 

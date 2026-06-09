@@ -21,7 +21,6 @@ import dev.nonamecrackers2.simpleclouds.client.renderer.WorldEffects;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps.CloudColor;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
-import dev.nonamecrackers2.simpleclouds.client.dh.SimpleCloudsDhCompatHandler;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinRenderTargetAccessor;
 import net.minecraft.client.Minecraft;
@@ -119,8 +118,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 		int sceneDepthTextureId = mc.getMainRenderTarget().getDepthTextureId();
 		boolean useSceneDepthOcclusion = true;
-		Matrix4f mcProjMat = SimpleCloudsDhCompatHandler._getMcProjMat();
-		Matrix4f mcModelViewMat = SimpleCloudsDhCompatHandler._getMcModelViewMat();
+		Matrix4f postProcessProjMat = projMat;
+		Matrix4f postProcessModelViewMat = modelViewMat;
 
 		ProfilerFiller p = mc.getProfiler();
 
@@ -144,12 +143,12 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		}
 
 		p.push("cloud_shadows");
-		renderer.doCloudShadowProcessing(modelViewMat, partialTick, projMat, camX, camY, camZ,
+		renderer.doCloudShadowProcessing(postProcessModelViewMat, partialTick, postProcessProjMat, camX, camY, camZ,
 				sceneDepthTextureId);
 		p.pop();
 
 		p.push("clouds_composite");
-		renderer.doFinalCompositePass(modelViewMat, partialTick, projMat,
+		renderer.doFinalCompositePass(postProcessModelViewMat, partialTick, postProcessProjMat,
 				() -> sceneDepthTextureId, useSceneDepthOcclusion, 0.85F);
 		p.pop();
 
@@ -159,14 +158,10 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
-			CloudPipelineRenderSteps.prepareStormFog(renderer, modelViewMat, projMat, partialTick, camX, camY, camZ,
-					cloudColor);
-			if (renderer.shouldUseScreenSpaceStormFog()) {
-				renderer.doScreenSpaceWorldFog(modelViewMat, projMat, partialTick);
-				mc.getMainRenderTarget().bindWrite(false);
-			} else {
-				renderer.renderPreparedStormFogOverlay();
-			}
+			CloudPipelineRenderSteps.prepareStormFog(renderer, postProcessModelViewMat, postProcessProjMat, partialTick,
+					camX, camY, camZ,
+					cloudColor, () -> sceneDepthTextureId);
+			renderer.doScreenSpaceWorldFog(postProcessModelViewMat, postProcessProjMat, partialTick);
 
 			p.pop();
 		}
@@ -177,12 +172,15 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 
 		mc.getMainRenderTarget().bindWrite(false);
-		RenderSystem.setProjectionMatrix(mcProjMat, VertexSorting.DISTANCE_TO_ORIGIN);
+		// The depth buffer we just copied in is DH's LOD depth, which was produced using DH's
+		// projection/model-view matrices - so lightning must be rendered with those same matrices,
+		// otherwise the depth test against that buffer will be misaligned with the bolts' positions.
+		RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN);
 
 		// We can then render whatever we want to the main MC framebuffer while using DH
 		// LOD depth
 		PoseStack stack = new PoseStack();
-		stack.mulPose(mcModelViewMat);
+		stack.mulPose(modelViewMat);
 		stack.pushPose();
 		stack.translate(-camX, -camY, -camZ);
 		renderLightning(renderer.getWorldEffectsManager(), renderer, mc, stack, partialTick, camX, camY, camZ);

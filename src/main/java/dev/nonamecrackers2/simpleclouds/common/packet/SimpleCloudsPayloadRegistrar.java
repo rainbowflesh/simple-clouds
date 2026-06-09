@@ -21,7 +21,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public class SimpleCloudsPayloadRegistrar {
 	public static void register(RegisterPayloadHandlersEvent event, SimpleCloudsClientPacketHandler clientHandler,
 			SimpleCloudsServerPacketHandler serverHandler) {
-		PayloadRegistrar registrar = event.registrar("1.6").optional();
+		PayloadRegistrar registrar = event.registrar("1.7").optional();
 		registrar.playToClient(
 				NotifyServerConfigEditResultPayload.TYPE,
 				NotifyServerConfigEditResultPayload.CODEC,

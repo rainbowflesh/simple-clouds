@@ -8,7 +8,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
-public record UpdateCloudRegionsPayload(List<CloudRegion> addedCloudRegions, List<Integer> removedCloudRegionIds)
+public record UpdateCloudRegionsPayload(List<CloudRegion> addedCloudRegions,
+        List<RemovedCloudRegion> removedCloudRegions)
         implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<UpdateCloudRegionsPayload> TYPE = new CustomPacketPayload.Type<>(
             SimpleCloudsMod.id("update_cloud_regions"));
@@ -18,12 +19,12 @@ public record UpdateCloudRegionsPayload(List<CloudRegion> addedCloudRegions, Lis
     public UpdateCloudRegionsPayload(FriendlyByteBuf buffer) {
         this(
                 buffer.readList(CloudRegion::new),
-                buffer.readList(FriendlyByteBuf::readVarInt));
+                buffer.readList(RemovedCloudRegion::new));
     }
 
     public void encode(FriendlyByteBuf buffer) {
         buffer.writeCollection(this.addedCloudRegions, (buf, cloud) -> cloud.toPacket(buf));
-        buffer.writeCollection(this.removedCloudRegionIds, FriendlyByteBuf::writeVarInt);
+        buffer.writeCollection(this.removedCloudRegions, (buf, removed) -> removed.encode(buf));
     }
 
     @Override

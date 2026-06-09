@@ -37,17 +37,19 @@ public abstract class ConfigHelper {
 
 	protected ModConfigSpec.ConfigValue<Double> createRangedDoubleValue(double value, double min, double max,
 			String name, RestartType restartType, String description) {
-		return this.defaultProperties(name, description, restartType, value).defineInRange(name, value, min, max);
+		// defineInRange already documents the default and range in its own comment, so
+		// don't pass the default here too - it would otherwise be listed twice.
+		return this.defaultProperties(name, description, restartType, null).defineInRange(name, value, min, max);
 	}
 
 	protected ModConfigSpec.ConfigValue<Integer> createRangedIntValue(int value, int min, int max, String name,
 			RestartType restartType, String description) {
-		return this.defaultProperties(name, description, restartType, value).defineInRange(name, value, min, max);
+		return this.defaultProperties(name, description, restartType, null).defineInRange(name, value, min, max);
 	}
 
 	protected ModConfigSpec.ConfigValue<Long> createRangedLongValue(long value, long min, long max, String name,
 			RestartType restartType, String description) {
-		return this.defaultProperties(name, description, restartType, value).defineInRange(name, value, min, max);
+		return this.defaultProperties(name, description, restartType, null).defineInRange(name, value, min, max);
 	}
 
 	protected <T extends Enum<T>> ModConfigSpec.ConfigValue<T> createEnumValue(T value, String name,
@@ -84,14 +86,14 @@ public abstract class ConfigHelper {
 			Supplier<List<? extends T>> value, Predicate<T> validator, String name, RestartType restartType,
 			String description, String valueDescription) {
 		return this.createListValue(valueClass, value, validator, name, restartType,
-				description + " Allowed values: " + valueDescription);
+				description + ".\nAllowed values: " + valueDescription);
 	}
 
 	protected ModConfigSpec.Builder defaultProperties(String name, String desc, RestartType restartType,
 			@Nullable Object defaultValue) {
 		if (restartType != RestartType.NONE) {
 			this.builder.worldRestart();
-			this.builder.comment(desc, "Requires restart.");
+			this.builder.comment(desc + ".", "Requires restart.");
 		} else {
 			this.builder.comment(desc + ".");
 		}

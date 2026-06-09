@@ -292,7 +292,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 			if (this.intersectsRegionTextureBounds(dx, dz, radius))
 				visibleFormationCount++;
 			selectedRegions.add(new SelectedRegionData(region, type, typeIndex.intValue(), posX, posZ, radius,
-					region.createTransform(partialTick), dx * dx + dz * dz));
+					region.createTransform(partialTick), region.getOrderWeight(), region.getSyncId()));
 			regionDataSize++;
 		}
 		this.currentVisibleCloudFormationCount = visibleFormationCount;
@@ -302,7 +302,8 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 		this.ensureCloudRegionCapacity(Math.max(1, count));
 
 		if (count > 0) {
-			selectedRegions.sort(Comparator.comparingDouble(SelectedRegionData::distanceSq));
+			selectedRegions.sort(Comparator.comparingInt(SelectedRegionData::orderWeight)
+					.thenComparingInt(SelectedRegionData::syncId));
 
 			ShaderStorageBufferObject regionsBuffer = this.regionTextureGenerator
 					.getShaderStorageBuffer(CLOUD_REGIONS_NAME);
@@ -329,7 +330,7 @@ public final class MultiRegionCloudMeshGenerator extends CloudMeshGenerator {
 	}
 
 	private static record SelectedRegionData(CloudRegion region, CloudInfo type, int typeIndex, float posX,
-			float posZ, float radius, Matrix2f transform, float distanceSq) {
+			float posZ, float radius, Matrix2f transform, int orderWeight, int syncId) {
 	}
 
 	private void uploadCloudTypeData() {

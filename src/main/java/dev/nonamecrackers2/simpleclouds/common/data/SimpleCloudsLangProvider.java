@@ -43,6 +43,9 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 				splitted[i] = StringUtils.capitalize(splitted[i]);
 			this.add(key, StringUtils.join(splitted, " "));
 		}
+		this.add("gui.simpleclouds.enum.cloudmode.default", "Simple Clouds");
+		this.add("gui.simpleclouds.enum.cloudmode.single", "Single");
+		this.add("gui.simpleclouds.enum.cloudmode.ambient", "Vanilla Fallback");
 		this.add("simpleclouds.config.preset.high", "High");
 		this.add("simpleclouds.config.preset.high.description",
 				"Restores the fuller Simple Clouds presentation with high detail, distant cloud coverage, storm fog, and terrain shadows enabled.");
@@ -74,14 +77,8 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 				"Your cloud type has been exported to %s");
 		this.add("gui.simpleclouds.cloud_previewer.info",
 				"Welcome to the cloud previewer!\n\nAdd, remove, and customize noise layers seen in the left of the screen to create custom cloud types. Use the load button in the bottom right to load existing cloud types to edit them, and use the export button to export your cloud types as JSON files.");
-		this.add("gui.simpleclouds.requires_reload.info",
-				"A config option was modified that requires the cloud renderer to be reloaded. Would you like to reload the renderer to apply the changes?");
-		this.add("gui.simpleclouds.requires_reload_resource_packs.info",
-				"A config option was modified that requires resource packs to be reloaded. Would you like to reload resources to apply the changes?");
 		this.add("gui.simpleclouds.unknown_or_invalid_client_side_cloud_type.info",
 				"Unknown or invalid cloud type '%s'. Please pick a valid cloud type. \n\nValid cloud types are as follows:\n\n%s");
-		this.add("gui.simpleclouds.reload_confirmation.server.info",
-				"A config option was modified on the server that requires the cloud renderer to be reloaded. Please press 'Continue' to continue.");
 		this.add("command.simpleclouds.scroll.get", "The current cloud scroll position is [x: %s, y: %s, z: %s]");
 		this.add("command.simpleclouds.speed.get", "The current cloud speed is %s");
 		this.add("command.simpleclouds.seed.get", "The current cloud seed is %s");
@@ -97,7 +94,7 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 		this.add("commands.simpleclouds.client.configReferal",
 				"This option is overridden by a config setting. Please use the config screen to change it.");
 		this.add("command.simpleclouds.weather.override",
-				"Simple Clouds is overriding vanilla weather, and the /weather command is disabled. To use vanilla weather, please do either of the following:\n1. Set the cloud mode in the SERVER config to AMBIENT.\n2. Set the cloud mode in the SERVER config to SINGLE, and set the single mode cloud type to a cloud type that has no weather associated with it (e.x. simpleclouds:itty_bitty)");
+				"Simple Clouds is overriding vanilla weather, and the /weather command is disabled. To use vanilla weather, please do either of the following:\n1. Set the cloud mode in the SERVER config to 'Vanilla Fallback'.\n2. Set the cloud mode in the SERVER config to 'Single', and set the single mode cloud type to a cloud type that has no weather associated with it (e.g. simpleclouds:itty_bitty)");
 		this.add("command.simpleclouds.clouds.spawn", "Spawned cloud %s at [%s, %s]");
 		this.add("command.simpleclouds.clouds.spawn.fail", "Too many cloud formations close by!");
 		this.add("command.simpleclouds.clouds.clear", "Removed %s cloud formations");
