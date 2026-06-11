@@ -15,8 +15,10 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import dev.nonamecrackers2.simpleclouds.client.config.SimpleCloudsClientConfigListeners;
 import dev.nonamecrackers2.simpleclouds.client.mesh.LevelOfDetailOptions;
 import dev.nonamecrackers2.simpleclouds.client.gui.widget.CyclableButton;
+import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfigListeners;
 import dev.nonamecrackers2.simpleclouds.client.gui.widget.config.ConfigListItem;
 import dev.nonamecrackers2.simpleclouds.client.world.ClientCloudManager;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
@@ -52,7 +54,7 @@ public class SimpleCloudsConfigScreen extends Screen {
 	private int presetTitleY;
 
 	public SimpleCloudsConfigScreen(Screen previous) {
-		super(Component.literal("Simple Clouds Config"));
+		super(Component.translatable("gui.simpleclouds.config.title"));
 		this.previous = previous;
 	}
 
@@ -62,21 +64,20 @@ public class SimpleCloudsConfigScreen extends Screen {
 		int left = this.width / 2 - BUTTON_WIDTH / 2;
 		int y = this.height / 4 + 24;
 
-		this.addRenderableWidget(Button.builder(Component.literal("Client Config"),
-				b -> this.minecraft.setScreen(new SpecScreen(this, Component.literal("Client Config"),
+		this.addRenderableWidget(Button.builder(Component.translatable("gui.simpleclouds.config.button.client"),
+				b -> this.minecraft.setScreen(new SpecScreen(this, Component.translatable("gui.simpleclouds.config.button.client"),
 						SimpleCloudsConfig.CLIENT_SPEC, "client", clientConfigFilter())))
 				.pos(left, y).size(BUTTON_WIDTH, BUTTON_HEIGHT).build());
 		y += BUTTON_HEIGHT + BUTTON_SPACING;
 
-		Button serverButton = Button.builder(Component.literal("Server Config"),
-				b -> this.minecraft.setScreen(new SpecScreen(this, Component.literal("Server Config"),
+		Button serverButton = Button.builder(Component.translatable("gui.simpleclouds.config.button.server"),
+				b -> this.minecraft.setScreen(new SpecScreen(this, Component.translatable("gui.simpleclouds.config.button.server"),
 						SimpleCloudsConfig.SERVER_SPEC, "server", path -> true)))
 				.pos(left, y).size(BUTTON_WIDTH, BUTTON_HEIGHT).build();
 		serverButton.active = canEditServerConfig();
 		if (!serverButton.active) {
 			serverButton.setTooltip(Tooltip.create(
-					Component.literal(
-							"Server config can only be edited in singleplayer or by op'd players on a Simple Clouds server.")));
+					Component.translatable("gui.simpleclouds.config.server.tooltip.disabled")));
 		}
 		this.addRenderableWidget(serverButton);
 		y += BUTTON_HEIGHT + BUTTON_SPACING;
@@ -113,11 +114,10 @@ public class SimpleCloudsConfigScreen extends Screen {
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 16, 0xFFFFFFFF);
 		guiGraphics.drawCenteredString(this.font,
-				Component.literal("Native NeoForge config access for Simple Clouds."), this.width / 2, 30,
+				Component.translatable("gui.simpleclouds.config.subtitle"), this.width / 2, 30,
 				0xFFA0A0A0);
-		guiGraphics.drawCenteredString(this.font, Component.literal("Client Presets"), this.width / 2,
-				this.presetTitleY,
-				0xFFADF7FF);
+		guiGraphics.drawCenteredString(this.font, Component.translatable("gui.simpleclouds.config.presets.title"),
+				this.width / 2, this.presetTitleY, 0xFFADF7FF);
 	}
 
 	@Override
@@ -178,10 +178,10 @@ public class SimpleCloudsConfigScreen extends Screen {
 	private void applyPreset(ClientPreset preset) {
 		preset.apply();
 		SimpleCloudsConfig.CLIENT_SPEC.save();
+		SimpleCloudsClientConfigListeners.pollNow();
 		Popup.createInfoPopup(this, 320,
-				Component.literal("Applied preset: ").append(preset.title())
-						.append(Component.literal(
-								"\n\nSome changes may require a renderer or resource reload to fully take effect.")
+				Component.translatable("gui.simpleclouds.config.preset.applied", preset.title())
+						.append(Component.translatable("gui.simpleclouds.config.preset.applied.notice")
 								.withStyle(ChatFormatting.GRAY)));
 	}
 
@@ -296,8 +296,8 @@ public class SimpleCloudsConfigScreen extends Screen {
 			this.allConfigEntries.clear();
 
 			this.searchBox = new EditBox(this.font, this.width / 2 - 140, 32, 280, 20,
-					Component.literal("Search config"));
-			this.searchBox.setHint(Component.literal("Search config"));
+					Component.translatable("gui.simpleclouds.config.search"));
+			this.searchBox.setHint(Component.translatable("gui.simpleclouds.config.search"));
 			this.searchBox.setResponder(value -> this.rebuildList());
 			this.addRenderableWidget(this.searchBox);
 
@@ -315,7 +315,7 @@ public class SimpleCloudsConfigScreen extends Screen {
 			this.rebuildList();
 			this.addRenderableWidget(this.list);
 
-			this.addRenderableWidget(Button.builder(Component.literal("Save"), b -> this.saveAndClose())
+			this.addRenderableWidget(Button.builder(Component.translatable("gui.simpleclouds.config.button.save"), b -> this.saveAndClose())
 					.pos(this.width / 2 - 104, this.height - 28).size(100, 20).build());
 			this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> this.onClose())
 					.pos(this.width / 2 + 4, this.height - 28).size(100, 20).build());
@@ -345,6 +345,10 @@ public class SimpleCloudsConfigScreen extends Screen {
 					PacketDistributor.sendToServer(new ApplyServerConfigEditsPayload(changedValues));
 			} else {
 				this.spec.save();
+				if (this.spec == SimpleCloudsConfig.CLIENT_SPEC)
+					SimpleCloudsClientConfigListeners.pollNow();
+				else if (this.spec == SimpleCloudsConfig.SERVER_SPEC)
+					SimpleCloudsConfigListeners.pollNow();
 			}
 			this.onClose();
 		}
@@ -389,9 +393,8 @@ public class SimpleCloudsConfigScreen extends Screen {
 			super.render(guiGraphics, mouseX, mouseY, partialTick);
 			guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 12, 0xFFFFFFFF);
 			Component subtitle = this.isRemoteServerSpec()
-					? Component.literal(
-							"Search, then edit grouped config sections. Changes are sent to the server when saved.")
-					: Component.literal("Search, then edit grouped config sections. Changes write directly to disk.");
+					? Component.translatable("gui.simpleclouds.config.spec.subtitle.remote")
+					: Component.translatable("gui.simpleclouds.config.spec.subtitle.local");
 			guiGraphics.drawCenteredString(this.font, subtitle, this.width / 2, 22, 0xFFA0A0A0);
 		}
 
@@ -621,7 +624,7 @@ public class SimpleCloudsConfigScreen extends Screen {
 				return Optional.of(Component.literal(e.getMessage()));
 			}
 			if (!this.spec.test(parsed)) {
-				return Optional.of(Component.literal("Invalid value for " + this.path + ".")
+				return Optional.of(Component.translatable("gui.simpleclouds.config.error.invalid_value", this.path)
 						.append(this.spec.getComment() == null ? CommonComponents.EMPTY
 								: Component.literal("\n\n" + this.spec.getComment()).withStyle(ChatFormatting.GRAY)));
 			}

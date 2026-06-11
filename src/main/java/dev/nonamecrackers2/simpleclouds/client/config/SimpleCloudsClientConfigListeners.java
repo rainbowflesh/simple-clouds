@@ -23,8 +23,10 @@ import dev.nonamecrackers2.simpleclouds.client.gui.Popup;
 import dev.nonamecrackers2.simpleclouds.common.config.listener.ConfigListener;
 
 public class SimpleCloudsClientConfigListeners {
+	private static ConfigListener listener;
+
 	public static void registerListener() {
-		ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
+		listener = ConfigListener.builder(ModConfig.Type.CLIENT, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.CLIENT.cloudMode, (o, n) -> onCloudModeUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.shadedClouds, (o, n) -> requestReload(false))
 				.addListener(SimpleCloudsConfig.CLIENT.transparency, (o, n) -> requestReload(false))
@@ -38,6 +40,16 @@ public class SimpleCloudsClientConfigListeners {
 				.addListener(SimpleCloudsConfig.CLIENT.singleModeCloudType, (o, n) -> onSingleModeCloudTypeUpdated(n))
 				.addListener(SimpleCloudsConfig.CLIENT.customRainSounds, (o, n) -> reloadResources())
 				.buildAndRegister();
+		// ModConfigEvent.Loading fires during registerConfig() in the mod constructor,
+		// before clientInit registers this listener. Seed the caches now so the first
+		// save via pollNow() detects changes rather than just initialising.
+		if (SimpleCloudsConfig.CLIENT_SPEC.isLoaded())
+			listener.poll();
+	}
+
+	public static void pollNow() {
+		if (listener != null)
+			listener.poll();
 	}
 
 	/**

@@ -660,9 +660,12 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 				cloudWorldMat, camX, camY, camZ);
 		shader.apply();
 
-		// Weighted-blended order-independent transparency: accumulation buffer (attachment 0) blends
-		// additively while the revealage buffer (attachment 1) blends multiplicatively, so overlapping
-		// translucent cloud chunks composite correctly without needing back-to-front sorting.
+		// Weighted-blended order-independent transparency: accumulation buffer
+		// (attachment 0) blends
+		// additively while the revealage buffer (attachment 1) blends multiplicatively,
+		// so overlapping
+		// translucent cloud chunks composite correctly without needing back-to-front
+		// sorting.
 		// https://jcgt.org/published/0002/02/09/paper.pdf
 		GL30.glEnablei(GL11.GL_BLEND, 0);
 		GL30.glEnablei(GL11.GL_BLEND, 1);
@@ -982,9 +985,7 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 		if (SimpleCloudsConfig.CLIENT.generateMesh.get() && SimpleCloudsCompatHelper.isPrimaryPass()) {
 			p.push("mesh_generation");
 			this.prepareMeshGenerator(partialTick, camX, camZ);
-			this.meshGenerator.genTick(originX, originY, originZ,
-					SimpleCloudsConfig.CLIENT.frustumCulling.get() && !useDhRendering ? this.cullFrustum : null,
-					partialTick);
+			this.meshGenerator.genTick(originX, originY, originZ, null, partialTick);
 			p.pop();
 		}
 
@@ -1079,12 +1080,16 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 	}
 
 	/**
-	 * Allows callers (such as the Distant Horizons pipeline) to supply a fog range that
-	 * matches the geometry actually being composited. DH's visible LOD terrain extends
-	 * well beyond the renderer's normal cloud fog range, which would otherwise saturate
+	 * Allows callers (such as the Distant Horizons pipeline) to supply a fog range
+	 * that
+	 * matches the geometry actually being composited. DH's visible LOD terrain
+	 * extends
+	 * well beyond the renderer's normal cloud fog range, which would otherwise
+	 * saturate
 	 * the world fog falloff into a flat, depth-independent sheet.
 	 */
-	public void doScreenSpaceWorldFog(Matrix4f camMat, Matrix4f projMat, float partialTick, float fogStart, float fogEnd) {
+	public void doScreenSpaceWorldFog(Matrix4f camMat, Matrix4f projMat, float partialTick, float fogStart,
+			float fogEnd) {
 		this.updateInverseMatrices(projMat, camMat);
 		this.postProcessing.doScreenSpaceWorldFog(partialTick, effect -> {
 			effect.safeGetUniform("InverseWorldProjMat").set(this.inverseProjMatrix);

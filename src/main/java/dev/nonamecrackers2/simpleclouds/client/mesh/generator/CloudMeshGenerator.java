@@ -616,6 +616,12 @@ public abstract class CloudMeshGenerator {
 		return nearestCornerX * nearestCornerX + nearestCornerZ * nearestCornerZ;
 	}
 
+	private static double getChunkDistanceSquared(float minX, float minZ, float maxX, float maxZ) {
+		double nearestX = Math.max(Math.max(minX, -maxX), 0.0D);
+		double nearestZ = Math.max(Math.max(minZ, -maxZ), 0.0D);
+		return nearestX * nearestX + nearestZ * nearestZ;
+	}
+
 	protected Pair<CloudMeshGenerator.MeshGenStatus, CloudMeshGenerator.MeshGenStatus> finalizeMeshGen() {
 		if (this.shader == null || !this.shader.isValid() || this.chunks == null)
 			return Pair.of(CloudMeshGenerator.MeshGenStatus.NOT_INITIALIZED,
@@ -798,7 +804,7 @@ public abstract class CloudMeshGenerator {
 		float maxX = (float) bounds.maxX + meshGenOffsetX;
 		float maxZ = (float) bounds.maxZ + meshGenOffsetZ;
 
-		if (cullDistance <= 0.0D || getChunkDistanceSquared(bounds) < cullDistanceSquared) {
+		if (cullDistance <= 0.0D || getChunkDistanceSquared(minX, minZ, maxX, maxZ) < cullDistanceSquared) {
 			CloudMeshGenerator.ChunkGenSettings settings = this.determineChunkGenSettings(minX, minZ, maxX, maxZ);
 			if (settings.skipChunk()) {
 				chunk.clearChunk();
@@ -920,9 +926,8 @@ public abstract class CloudMeshGenerator {
 						chunk.getBoundsMinZ(), chunk.getBoundsMaxX(), chunk.getBoundsMaxY(), chunk.getBoundsMaxZ());
 
 				if (render) {
-					PreparedChunk chunkInfo = chunk.getChunkInfo();
-					AABB bounds = chunkInfo.bounds();
-					if (cullDistance <= 0.0D || cullDistanceSquared > getChunkDistanceSquared(bounds)) {
+					if (cullDistance <= 0.0D || cullDistanceSquared > getChunkDistanceSquared(chunk.getBoundsMinX(),
+							chunk.getBoundsMinZ(), chunk.getBoundsMaxX(), chunk.getBoundsMaxZ())) {
 						if (updateFade && chunk.enableFade())
 							this.fadingChunks.add(chunk);
 						function.accept(chunk, bufferSet);

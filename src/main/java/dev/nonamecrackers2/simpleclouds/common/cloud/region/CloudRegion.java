@@ -456,9 +456,6 @@ public class CloudRegion implements ScAPICloudRegion {
 					result.region = region;
 					result.fade = innerFactor;
 				}
-			} else if (result.region == null || !result.region.cloudTypeId.equals(region.cloudTypeId)) {
-				float outerFactor = Math.min((d - region.radius) * eff, 1.0F);
-				result.fade *= outerFactor;
 			}
 		}
 		return Pair.of(result.region, result.fade);

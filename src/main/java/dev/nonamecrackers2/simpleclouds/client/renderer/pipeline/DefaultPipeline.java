@@ -28,38 +28,36 @@ public class DefaultPipeline implements CloudsRenderPipeline {
 		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
 				cloudColor.g(), cloudColor.b());
 		p.pop();
+	}
+
+	@Override
+	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
+		ProfilerFiller p = mc.getProfiler();
+		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
 
 		p.push("clouds");
 		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ,
 				frustum, cloudColor, p, true, true);
 		p.pop();
 
-		// Set the frame buffer back to the main one so everything else can render
-		// normally
-		mc.getMainRenderTarget().bindWrite(CompatHelper.isVrActive());
-	}
-
-	@Override
-	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		mc.getProfiler().push("cloud_shadows");
+		p.push("cloud_shadows");
 		renderer.doCloudShadowProcessing(camMat, partialTick, projMat, camX, camY, camZ,
 				mc.getMainRenderTarget().getDepthTextureId());
-		mc.getProfiler().pop();
+		p.pop();
 
-		mc.getProfiler().push("clouds_composite");
+		p.push("clouds_composite");
 		renderer.doFinalCompositePass(camMat, partialTick, projMat,
 				mc.getMainRenderTarget()::getDepthTextureId,
 				renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ));
-		mc.getProfiler().pop();
+		p.pop();
 
 		if (renderer.shouldRenderStormFog(partialTick)) {
-			CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-			mc.getProfiler().push("storm_fog");
+			p.push("storm_fog");
 			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
 					cloudColor);
 			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
-			mc.getProfiler().pop();
+			p.pop();
 		}
 
 		mc.getMainRenderTarget().bindWrite(CompatHelper.isVrActive());

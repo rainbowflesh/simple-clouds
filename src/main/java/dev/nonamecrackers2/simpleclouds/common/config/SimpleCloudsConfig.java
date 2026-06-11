@@ -73,9 +73,9 @@ public class SimpleCloudsConfig {
 		public ClientConfig(ModConfigSpec.Builder builder) {
 			super(builder, SimpleCloudsMod.MODID);
 
-			this.cloudMode = this.createEnumValue(CloudMode.AMBIENT, "clientSideCloudMode", RestartType.NONE,
-					"Specifies how the clouds should behave in a client-side only context. 'Single' uses only a single cloud type. 'Vanilla Fallback' carves clouds around the player, keeping them at a distance. Due to be on a client-side only context, 'Simple Clouds' can not be picked and the vanilla weather system will be used. If Simple Clouds is installed on a server, this option will be ignored and the client will instead use the option set by the server",
-					CloudMode.AMBIENT, CloudMode.SINGLE);
+			this.cloudMode = this.createEnumValue(CloudMode.DEFAULT, "cloudMode", RestartType.NONE,
+					"Specifies how the clouds should behave in a client-side only context. 'Simple Clouds' uses all cloud types with the full Simple Clouds experience. 'Single' uses only a single cloud type. 'Vanilla Fallback' carves clouds around the player, keeping them at a distance. If Simple Clouds is installed on a server, this option will be ignored and the client will instead use the option set by the server",
+					CloudMode.DEFAULT, CloudMode.SINGLE, CloudMode.AMBIENT);
 
 			this.showCloudPreviewerInfoPopup = this.createValue(true, "showCloudPreviewerInfoPopup", RestartType.NONE,
 					"Specifies if the info pop-up should appear when opening the cloud previewer menu");
@@ -202,7 +202,7 @@ public class SimpleCloudsConfig {
 
 			builder.comment("Single Mode").push("single_mode");
 
-			this.singleModeCloudType = this.createValue("simpleclouds:cumulonimbus", "clientSideSingleModeCloudType",
+			this.singleModeCloudType = this.createValue("simpleclouds:cumulonimbus", "singleModeCloudType",
 					RestartType.NONE,
 					"Specifies the cloud type that should be used when the SINGLE cloud mode is active");
 

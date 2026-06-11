@@ -129,6 +129,59 @@ public class SimpleCloudsLangProvider extends LanguageProvider {
 		this.add("gui.simpleclouds.notice.close.title", "Close");
 		this.add("gui.simpleclouds.notice.vivecraft",
 				"Vivecraft support is experimental. Please expect lower framerates, instability, and glitches/visual artifacts. Report bugs and issues on the official GitHub issue tracker.");
+
+		// Config screen
+		this.add("gui.simpleclouds.config.title", "Simple Clouds Config");
+		this.add("gui.simpleclouds.config.subtitle", "Native NeoForge config access for Simple Clouds.");
+		this.add("gui.simpleclouds.config.button.client", "Client Config");
+		this.add("gui.simpleclouds.config.button.server", "Server Config");
+		this.add("gui.simpleclouds.config.button.save", "Save");
+		this.add("gui.simpleclouds.config.server.tooltip.disabled",
+				"Server config can only be edited in singleplayer or by op'd players on a Simple Clouds server.");
+		this.add("gui.simpleclouds.config.presets.title", "Client Presets");
+		this.add("gui.simpleclouds.config.preset.applied", "Applied preset: %s");
+		this.add("gui.simpleclouds.config.preset.applied.notice",
+				"\n\nSome changes may require a renderer or resource reload to fully take effect.");
+		this.add("gui.simpleclouds.config.search", "Search config");
+		this.add("gui.simpleclouds.config.spec.subtitle.remote",
+				"Search, then edit grouped config sections. Changes are sent to the server when saved.");
+		this.add("gui.simpleclouds.config.spec.subtitle.local",
+				"Search, then edit grouped config sections. Changes write directly to disk.");
+		this.add("gui.simpleclouds.config.error.invalid_value", "Invalid value for %s.");
+
+		// Info screen
+		this.add("gui.simpleclouds.info.button.github", "GitHub");
+		this.add("gui.simpleclouds.info.opengl_version", "OpenGL %s");
+
+		// Cloud previewer
+		this.add("gui.simpleclouds.cloud_previewer.label.server_side", " (Server Side)");
+
+		// Profiler
+		this.add("gui.simpleclouds.profiler.running", "Running profiler...");
+		this.add("gui.simpleclouds.profiler.confirm",
+				"You are about to run the cloud generator profiler. This may take a moment. Do you wish to continue?");
+		this.add("gui.simpleclouds.profiler.failed", "Profiler failed. Please see log for details.\n\n%s");
+		this.add("gui.simpleclouds.profiler.error",
+				"An unknown error occurred. See log for more details.\n\n%s");
+		this.add("gui.simpleclouds.profiler.completed",
+				"Profiler completed. Below is a list of cloud types that spawned. Select a cloud type to see its individual stats.");
+		this.add("gui.simpleclouds.profiler.stat.time_elapsed", "Total time elapsed: %s (%s ticks)");
+		this.add("gui.simpleclouds.profiler.stat.clouds_spawned", "Total clouds spawned: %s");
+		this.add("gui.simpleclouds.profiler.stat.avg_spawn_time", "Average spawn time: %s (%s ticks)");
+		this.add("gui.simpleclouds.profiler.stat.avg_rain_spawn_time", "Average rain spawn time: %s (%s ticks)");
+		this.add("gui.simpleclouds.profiler.stat.avg_thunderstorm_spawn_time",
+				"Average thunderstorm spawn time: %s (%s ticks)");
+		this.add("gui.simpleclouds.profiler.stat.individual.total_spawned", "\n\nTotal spawned: %s");
+		this.add("gui.simpleclouds.profiler.stat.individual.avg_ticks_to_spawn",
+				"\n\nAverage ticks to spawn: %s (%s ticks)");
+		this.add("gui.simpleclouds.profiler.stat.minmax", "%s; min: %s, max: %s, avg: %s");
+		this.add("gui.simpleclouds.profiler.stat.clouds_existing", "Clouds existing at once");
+		this.add("gui.simpleclouds.profiler.stat.time_over_player", "Time over player");
+		this.add("gui.simpleclouds.profiler.stat.speed", "Speed");
+		this.add("gui.simpleclouds.profiler.stat.radius", "Radius");
+		this.add("gui.simpleclouds.profiler.stat.stretch_factor", "Stretch factor");
+		this.add("gui.simpleclouds.profiler.stat.exist_time", "Exist time");
+		this.add("gui.simpleclouds.profiler.stat.grow_time", "Grow time");
 	}
 
 	private void addConfigTranslations(String scope, ModConfigSpec spec) {

@@ -49,7 +49,7 @@ public class ProfilingCommands
 	{
 		Popup.createYesNoPopup(null, () ->
 		{
-			Popup primary = Popup.createInfoPopup(null, 300, Component.literal("Running profiler..."));
+			Popup primary = Popup.createInfoPopup(null, 300, Component.translatable("gui.simpleclouds.profiler.running"));
 
 			Minecraft mc = Minecraft.getInstance();
 
@@ -77,7 +77,7 @@ public class ProfilingCommands
 			{
 				ProfilingCloudGenerator.LOGGER.error("Failed to run profiler", e);
 				primary.onClose();
-				Popup.createInfoPopup(null, 200, Component.literal("Profiler failed. Please see log for details.\n\n" + e.getMessage()));
+				Popup.createInfoPopup(null, 200, Component.translatable("gui.simpleclouds.profiler.failed", e.getMessage()));
 				return null;
 			}, mc).thenAcceptAsync(results ->
 			{
@@ -90,35 +90,40 @@ public class ProfilingCommands
 					}
 					catch (Exception e)
 					{
-						Popup.createInfoPopup(null, 200, Component.literal("An unknown error occured. See log for more details.\n\n" + e.getMessage()));
+						Popup.createInfoPopup(null, 200, Component.translatable("gui.simpleclouds.profiler.error", e.getMessage()));
 						ProfilingCloudGenerator.LOGGER.error("Error when handling results", e);
 					}
 				}
 			}, mc);
-		}, 200, Component.literal("You are about to run the cloud generator profiler. This may take a moment. Do you wish to continue?"));
+		}, 200, Component.translatable("gui.simpleclouds.profiler.confirm"));
 
 		return 0;
 	}
 
 	private static void acceptResults(ProfilingCloudGenerator.Results results)
 	{
-		MutableComponent mainMessage = Component.literal("Profiler completed. Below is a list of cloud types that spawned. Select a cloud type to see its individual stats.");
+		MutableComponent mainMessage = Component.translatable("gui.simpleclouds.profiler.completed");
 		int tickCountElapsed = results.getTotalTicksElapsed();
 		mainMessage.append("\n\n");
-		mainMessage.append(Component.literal("Total time elapsed: " + humanReadableTicks(tickCountElapsed) + " (" + tickCountElapsed + " ticks)"));
+		mainMessage.append(Component.translatable("gui.simpleclouds.profiler.stat.time_elapsed",
+				humanReadableTicks(tickCountElapsed), tickCountElapsed));
 		mainMessage.append("\n");
-		mainMessage.append(Component.literal("Total clouds spawned: " + results.getTotalCloudTypesGenerated()));
+		mainMessage.append(Component.translatable("gui.simpleclouds.profiler.stat.clouds_spawned",
+				results.getTotalCloudTypesGenerated()));
 		int averageSpawnTime = Math.round(results.getAverageSpawnTime());
 		mainMessage.append("\n");
-		mainMessage.append(Component.literal("Average spawn time: " + humanReadableTicks(averageSpawnTime) + " (" + averageSpawnTime + " ticks)"));
+		mainMessage.append(Component.translatable("gui.simpleclouds.profiler.stat.avg_spawn_time",
+				humanReadableTicks(averageSpawnTime), averageSpawnTime));
 		int averageRainSpawnTime = Math.round(results.getAverageRainSpawnTime());
 		mainMessage.append("\n");
-		mainMessage.append(Component.literal("Average rain spawn time: " + humanReadableTicks(averageRainSpawnTime) + " (" + averageRainSpawnTime + " ticks)"));
+		mainMessage.append(Component.translatable("gui.simpleclouds.profiler.stat.avg_rain_spawn_time",
+				humanReadableTicks(averageRainSpawnTime), averageRainSpawnTime));
 		int averageThunderstormSpawnTime = Math.round(results.getAverageThunderstormSpawnTime());
 		mainMessage.append("\n");
-		mainMessage.append(Component.literal("Average thunderstorm spawn time: " + humanReadableTicks(averageThunderstormSpawnTime) + " (" + averageThunderstormSpawnTime + " ticks)"));
+		mainMessage.append(Component.translatable("gui.simpleclouds.profiler.stat.avg_thunderstorm_spawn_time",
+				humanReadableTicks(averageThunderstormSpawnTime), averageThunderstormSpawnTime));
 		mainMessage.append("\n");
-		mainMessage.append(createMinMaxInfo("Clouds existing at once", results.getCurrentCloudCountStats()));
+		mainMessage.append(createMinMaxInfo("gui.simpleclouds.profiler.stat.clouds_existing", results.getCurrentCloudCountStats()));
 		MutableObject<Popup> main = new MutableObject<>();
 		Map<ResourceLocation, ProfilingCloudGenerator.CloudStats> individualStats = results.getIndividualStats();
 		Consumer<ResourceLocation> valueAcceptor = id -> {
@@ -133,34 +138,42 @@ public class ProfilingCommands
 	private static Component createIndividualResults(ResourceLocation id, ProfilingCloudGenerator.CloudStats stats)
 	{
 		MutableComponent message = Component.literal(id.toString());
-		message.append("\n\nTotal spawned: " + stats.getTotalSpawned());
+		message.append(Component.translatable("gui.simpleclouds.profiler.stat.individual.total_spawned",
+				stats.getTotalSpawned()));
 		int averageSpawnTicks = Math.round(stats.getAverageTicksToSpawn());
-		message.append("\n\nAverage ticks to spawn: " + humanReadableTicks(averageSpawnTicks) + " (" + averageSpawnTicks + " ticks)");
+		message.append(Component.translatable("gui.simpleclouds.profiler.stat.individual.avg_ticks_to_spawn",
+				humanReadableTicks(averageSpawnTicks), averageSpawnTicks));
 		message.append("\n");
-		message.append(createMinMaxTimeInfo("Time over player", stats.getTimeOverPlayer()));
+		message.append(createMinMaxTimeInfo("gui.simpleclouds.profiler.stat.time_over_player", stats.getTimeOverPlayer()));
 		message.append("\n");
-		message.append(createMinMaxInfo("Speed", stats.getSpeedStats()));
+		message.append(createMinMaxInfo("gui.simpleclouds.profiler.stat.speed", stats.getSpeedStats()));
 		message.append("\n");
-		message.append(createMinMaxInfo("Radius", stats.getRadiusStats()));
+		message.append(createMinMaxInfo("gui.simpleclouds.profiler.stat.radius", stats.getRadiusStats()));
 		message.append("\n");
-		message.append(createMinMaxInfo("Stretch factor", stats.getStretchFactorStats()));
+		message.append(createMinMaxInfo("gui.simpleclouds.profiler.stat.stretch_factor", stats.getStretchFactorStats()));
 		message.append("\n");
-		message.append(createMinMaxTimeInfo("Exist time", stats.getExistTicks()));
+		message.append(createMinMaxTimeInfo("gui.simpleclouds.profiler.stat.exist_time", stats.getExistTicks()));
 		message.append("\n");
-		message.append(createMinMaxTimeInfo("Grow time", stats.getGrowTicks()));
+		message.append(createMinMaxTimeInfo("gui.simpleclouds.profiler.stat.grow_time", stats.getGrowTicks()));
 		return message.withStyle(ChatFormatting.YELLOW);
 	}
-	
-	private static Component createMinMaxTimeInfo(String title, ProfilingCloudGenerator.MinMax minMax)
+
+	private static Component createMinMaxTimeInfo(String titleKey, ProfilingCloudGenerator.MinMax minMax)
 	{
-		String str = String.format("%s; min: %s, max: %s, avg: %s", title, humanReadableTicks(minMax.getMin()), humanReadableTicks(minMax.getMax()), humanReadableTicks(minMax.getAvg()));
-		return Component.literal(str);
+		return Component.translatable("gui.simpleclouds.profiler.stat.minmax",
+				Component.translatable(titleKey),
+				humanReadableTicks(minMax.getMin()),
+				humanReadableTicks(minMax.getMax()),
+				humanReadableTicks(minMax.getAvg()));
 	}
-	
-	private static Component createMinMaxInfo(String title, ProfilingCloudGenerator.MinMax minMax)
+
+	private static Component createMinMaxInfo(String titleKey, ProfilingCloudGenerator.MinMax minMax)
 	{
-		String str = String.format("%s; min: %.2f, max: %.2f, avg: %.3f", title, minMax.getMin(), minMax.getMax(), minMax.getAvg());
-		return Component.literal(str);
+		return Component.translatable("gui.simpleclouds.profiler.stat.minmax",
+				Component.translatable(titleKey),
+				String.format("%.2f", (float) minMax.getMin()),
+				String.format("%.2f", (float) minMax.getMax()),
+				String.format("%.3f", (float) minMax.getAvg()));
 	}
 
 	private static String humanReadableTicks(float ticks)

@@ -50,7 +50,7 @@ public class SimpleCloudsMod {
 		SimpleCloudsCommandArguments.register(modBus);
 		setupSideOnly(modBus, forgeBus);
 		modBus.addListener(SimpleCloudsDataEvents::gatherData);
-		container.registerConfig(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC);
+		container.registerConfig(ModConfig.Type.CLIENT, SimpleCloudsConfig.CLIENT_SPEC, "simpleclouds.toml");
 		container.registerConfig(ModConfig.Type.SERVER, SimpleCloudsConfig.SERVER_SPEC);
 		if (FMLEnvironment.dist.isClient())
 			SimpleCloudsModClient.registerConfigScreen(container);

@@ -142,6 +142,8 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 			p.pop();
 		}
 
+		mc.getMainRenderTarget().bindWrite(false);
+
 		p.push("cloud_shadows");
 		renderer.doCloudShadowProcessing(postProcessModelViewMat, partialTick, postProcessProjMat, camX, camY, camZ,
 				sceneDepthTextureId);
@@ -172,9 +174,12 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 
 		mc.getMainRenderTarget().bindWrite(false);
-		// The depth buffer we just copied in is DH's LOD depth, which was produced using DH's
-		// projection/model-view matrices - so lightning must be rendered with those same matrices,
-		// otherwise the depth test against that buffer will be misaligned with the bolts' positions.
+		// The depth buffer we just copied in is DH's LOD depth, which was produced
+		// using DH's
+		// projection/model-view matrices - so lightning must be rendered with those
+		// same matrices,
+		// otherwise the depth test against that buffer will be misaligned with the
+		// bolts' positions.
 		RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN);
 
 		// We can then render whatever we want to the main MC framebuffer while using DH

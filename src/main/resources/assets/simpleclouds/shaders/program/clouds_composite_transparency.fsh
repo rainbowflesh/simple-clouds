@@ -29,7 +29,17 @@ void main()
 	float cloudDepth = texture(CloudsDepthTexture, texCoord).r;
 	bool sceneHasGeometry = sceneDepth < 1.0;
 	bool cloudInFrontOfScene = cloudDepth < sceneDepth;
-	if (UseSceneDepthOcclusion != 0 && sceneHasGeometry && !cloudInFrontOfScene)
+
+	// Sample revealage before the depth occlusion check so transparent clouds are
+	// not discarded when the opaque cloud depth equals the scene depth (e.g. when
+	// DH LOD terrain depth was copied into the cloud target before opaque cloud
+	// rendering — transparent-only pixels have cloudDepth == sceneDepth, which
+	// would otherwise trigger the early return and hide them entirely).
+	ivec2 uv = ivec2(gl_FragCoord.xy);
+	float revealage = texelFetch(RevealageTexture, uv, 0).r;
+	bool hasTransparency = revealage < 1.0;
+
+	if (UseSceneDepthOcclusion != 0 && sceneHasGeometry && !cloudInFrontOfScene && !hasTransparency)
 	{
 		fragColor = vec4(texture(DiffuseSampler, texCoord).rgb, 1.0);
 		return;
@@ -39,9 +49,7 @@ void main()
 	vec3 cloudPremul = cloudCol.rgb * cloudCol.a;
 	float cloudAlpha = cloudCol.a;
 
-	ivec2 uv = ivec2(gl_FragCoord.xy);
-	float revealage = texelFetch(RevealageTexture, uv, 0).r;
-	if (revealage < 1.0)
+	if (hasTransparency)
 	{
 		vec4 accum = texelFetch(AccumTexture, uv, 0);
 		if (isinf(max4(abs(accum))))
@@ -56,7 +64,9 @@ void main()
 	}
 
 	vec3 bg = texture(DiffuseSampler, texCoord).rgb;
-	if (sceneHasGeometry && cloudInFrontOfScene)
+	// Only floor alpha for purely opaque cloud pixels — OIT transparency controls
+	// its own alpha and the floor would collapse transparent cloud types to near-opaque.
+	if (sceneHasGeometry && cloudInFrontOfScene && !hasTransparency)
 		cloudAlpha = max(cloudAlpha, SceneOcclusionAlphaFloor);
 	vec3 finalCol = cloudPremul + bg * (1.0 - cloudAlpha);
 	fragColor = vec4(finalCol, 1.0);

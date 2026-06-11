@@ -221,7 +221,7 @@ public class CloudPreviewerScreen extends Screen3D {
 					MutableComponent name = Component.literal(entry.getKey().toString());
 					if (!ClientSideCloudTypeManager.getInstance().getClientSideDataManager().getCloudTypes()
 							.containsKey(entry.getKey()))
-						name.append(Component.literal(" (Server Side)").withStyle(ChatFormatting.DARK_GRAY));
+						name.append(Component.translatable("gui.simpleclouds.cloud_previewer.label.server_side").withStyle(ChatFormatting.DARK_GRAY));
 					list.addObject(name, type);
 				}
 			}

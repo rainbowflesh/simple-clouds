@@ -21,8 +21,10 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import dev.nonamecrackers2.simpleclouds.common.config.listener.ConfigListener;
 
 public class SimpleCloudsConfigListeners {
+	private static ConfigListener listener;
+
 	public static void registerListener() {
-		ConfigListener.builder(ModConfig.Type.SERVER, SimpleCloudsMod.MODID)
+		listener = ConfigListener.builder(ModConfig.Type.SERVER, SimpleCloudsMod.MODID)
 				.addListener(SimpleCloudsConfig.SERVER.cloudMode, (o, n) -> onCloudModeChanged(n))
 				.addListener(SimpleCloudsConfig.SERVER.cloudSpeed, (o, n) -> onCloudSpeedChanged(n.floatValue()))
 				.addListener(SimpleCloudsConfig.SERVER.cloudHeight, (o, n) -> onCloudHeightChanged(n))
@@ -33,6 +35,11 @@ public class SimpleCloudsConfigListeners {
 				.addListener(SimpleCloudsConfig.SERVER.normalRainBiomeTags, (o, n) -> onRainBiomeTagsChanged())
 				.addListener(SimpleCloudsConfig.SERVER.singleModeCloudType, (o, n) -> onSingleModeCloudTypeChanged(n))
 				.buildAndRegister();
+	}
+
+	public static void pollNow() {
+		if (listener != null)
+			listener.poll();
 	}
 
 	public static void onCloudModeChanged(CloudMode newMode) {

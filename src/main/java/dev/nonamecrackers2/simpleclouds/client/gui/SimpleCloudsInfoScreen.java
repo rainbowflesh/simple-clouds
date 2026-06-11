@@ -30,14 +30,14 @@ public abstract class SimpleCloudsInfoScreen extends Screen {
 	protected abstract void generateText(List<FormattedCharSequence> text, int maxWidth);
 
 	protected void generateButtons(GridLayout.RowHelper row) {
-		row.addChild(Button.builder(Component.literal("GitHub"), b -> {
+		row.addChild(Button.builder(Component.translatable("gui.simpleclouds.info.button.github"), b -> {
 			GUIUtils.openLink("https://github.com/xvr6/simple-clouds/issues");
 		}).width(100).build());
 	}
 
 	@Override
 	protected void init() {
-		this.openGLVersion = Component.literal("OpenGL " + ImmediateWindowHandler.getGLVersion());
+		this.openGLVersion = Component.translatable("gui.simpleclouds.info.opengl_version", ImmediateWindowHandler.getGLVersion());
 
 		this.text = Lists.newArrayList();
 		int textMaxWidth = Mth.floor((float) this.width / 1.5F);
