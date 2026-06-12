@@ -121,6 +121,7 @@ public class AtmosphericCloudsRenderHandler {
                 transition, this.nextFormation != null ? this.nextFormation : DEFAULT, r, g, b);
 
         this.postProcessingShader.process(partialTick);
+        RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
     }
 
