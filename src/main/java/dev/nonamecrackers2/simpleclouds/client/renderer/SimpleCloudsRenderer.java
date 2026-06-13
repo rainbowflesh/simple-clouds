@@ -1421,6 +1421,6 @@ public class SimpleCloudsRenderer implements ResourceManagerReloadListener {
 
 	private static int calculateMeshGenInterval() {
 		int fps = Minecraft.getInstance().getFps();
-		return Math.max(Mth.ceil((130.0F - (float) fps) / 30.0F) + 5, 1);
+		return Math.max(fps / 15, 1);
 	}
 }
