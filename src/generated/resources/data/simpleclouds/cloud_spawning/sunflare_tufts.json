@@ -1,31 +1,31 @@
-{
-  "type": "simpleclouds:sunflare_tufts",
-  "exist_ticks": {
-    "type": "minecraft:biased_to_bottom",
-    "max_inclusive": 54000,
-    "min_inclusive": 24000
-  },
-  "grow_ticks": {
-    "type": "minecraft:uniform",
-    "max_inclusive": 5600,
-    "min_inclusive": 2600
-  },
-  "moves_to_player": false,
-  "order_weight": 610,
-  "radius": {
-    "type": "minecraft:uniform",
-    "max_inclusive": 5600,
-    "min_inclusive": 2600
-  },
-  "speed": {
-    "type": "minecraft:uniform",
-    "max_exclusive": 0.2,
-    "min_inclusive": 0.1
-  },
-  "stretch_factor": {
-    "type": "minecraft:uniform",
-    "max_exclusive": 1.15,
-    "min_inclusive": 0.85
-  },
-  "weight": 4
+﻿{
+    "type":  "simpleclouds:sunflare_tufts",
+    "exist_ticks":  {
+                        "type":  "minecraft:biased_to_bottom",
+                        "max_inclusive":  54000,
+                        "min_inclusive":  24000
+                    },
+    "grow_ticks":  {
+                       "type":  "minecraft:uniform",
+                       "max_inclusive":  1800,
+                       "min_inclusive":  900
+                   },
+    "moves_to_player":  false,
+    "order_weight":  610,
+    "radius":  {
+                   "type":  "minecraft:uniform",
+                   "max_inclusive":  5600,
+                   "min_inclusive":  2600
+               },
+    "speed":  {
+                  "type":  "minecraft:uniform",
+                  "max_exclusive":  0.2,
+                  "min_inclusive":  0.1
+              },
+    "stretch_factor":  {
+                           "type":  "minecraft:uniform",
+                           "max_exclusive":  1.15,
+                           "min_inclusive":  0.85
+                       },
+    "weight":  4
 }

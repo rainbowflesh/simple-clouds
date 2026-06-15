@@ -419,7 +419,7 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 					}
 
 					return regionFunc.create(info, (float) r.x() + 0.5F, (float) r.z() + 0.5F, x, z,
-							this.random, true).map(apiRegion -> {
+							this.random, false).map(apiRegion -> {
 								CloudRegion region = (CloudRegion) apiRegion;
 								if (!this.hasSpawnSpace(region))
 									return false;
@@ -514,10 +514,8 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 				if (!areRegionsOverlapping(first, second))
 					continue;
 
-				// Prefer dissipating the lower-altitude region when there's a strong
-				// difference in configured start heights for their cloud types. This
-				// preserves high-altitude formations (e.g., altocumulus) from being
-				// unnecessarily removed when overlapping with lower clouds.
+				// Clouds at significantly different altitudes occupy separate layers and
+				// should coexist — skip conflict resolution for those pairs.
 				try {
 					var firstType = this.cloudGetter.getCloudTypeForId(first.getCloudTypeId());
 					var secondType = this.cloudGetter.getCloudTypeForId(second.getCloudTypeId());
@@ -525,11 +523,8 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 						int firstStart = firstType.noiseConfig().getStartHeight();
 						int secondStart = secondType.noiseConfig().getStartHeight();
 						int diff = Math.abs(firstStart - secondStart);
-						if (diff >= 8) {
-							CloudRegion toDissipate = firstStart < secondStart ? first : second;
-							toDissipate.beginDissipating(LAYER_CONFLICT_DISSIPATE_TICKS);
+						if (diff >= 8)
 							continue;
-						}
 					}
 				} catch (Exception e) {
 					// Fall back to default behavior on any unexpected error

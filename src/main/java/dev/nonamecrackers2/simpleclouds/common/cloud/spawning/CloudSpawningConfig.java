@@ -216,7 +216,7 @@ public class CloudSpawningConfig {
 						throw new IllegalArgumentException(e);
 					}).get());
 			object.add("grow_ticks", IntProvider.codec(0, this.existTicks.getMaxValue())
-					.encodeStart(JsonOps.INSTANCE, this.radius).resultOrPartial(e -> {
+					.encodeStart(JsonOps.INSTANCE, this.growTicks).resultOrPartial(e -> {
 						throw new IllegalArgumentException(e);
 					}).get());
 			object.add("stretch_factor", FloatProvider.codec(0.01F, Float.MAX_VALUE)
