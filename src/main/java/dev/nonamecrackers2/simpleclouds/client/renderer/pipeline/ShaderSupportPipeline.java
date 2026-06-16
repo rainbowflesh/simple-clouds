@@ -3,31 +3,28 @@ package dev.nonamecrackers2.simpleclouds.client.renderer.pipeline;
 import org.joml.Matrix4f;
 
 import com.mojang.blaze3d.platform.GlStateManager;
+
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps.CloudColor;
-import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
-import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
-public class ShaderSupportPipeline implements CloudsRenderPipeline {
+/**
+ * Pipeline variant for when a shader mod (e.g. Iris/Oculus) is running.
+ *
+ * <p>Differences from {@link DefaultPipeline}:
+ * <ul>
+ *   <li>Re-enables the depth mask before geometry so shader passes that
+ *       disabled it do not silently corrupt cloud depth writes.</li>
+ *   <li>Binds the main render target (without VR depth) <em>before</em>
+ *       storm fog so the shader post-processing chain sees a clean depth
+ *       buffer during the fog pass.</li>
+ * </ul>
+ */
+public class ShaderSupportPipeline extends AbstractCloudsPipeline {
 	protected ShaderSupportPipeline() {
-	}
-
-	@Override
-	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-	}
-
-	@Override
-	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-		mc.getProfiler().push("atmospheric_clouds");
-		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
-				cloudColor.g(), cloudColor.b());
-		mc.getProfiler().pop();
 	}
 
 	@Override
@@ -39,36 +36,12 @@ public class ShaderSupportPipeline implements CloudsRenderPipeline {
 		if (CompatHelper.areShadersRunning())
 			GlStateManager._depthMask(true);
 
-		p.push("clouds");
-		CloudPipelineRenderSteps.renderCloudGeometry(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ,
-				frustum, cloudColor, p, true, true);
-		p.pop();
+		doStandardRenderPass(mc, renderer, camMat, projMat, partialTick, camX, camY, camZ, frustum, cloudColor, p);
 
-		p.push("cloud_shadows");
-		renderer.doCloudShadowProcessing(camMat, partialTick, projMat, camX, camY, camZ,
-				mc.getMainRenderTarget().getDepthTextureId());
-		p.pop();
-
-		p.push("clouds_composite");
-		renderer.doFinalCompositePass(camMat, partialTick, projMat,
-				mc.getMainRenderTarget()::getDepthTextureId,
-				renderer.shouldUseSceneDepthOcclusion(camX, camY, camZ));
-		p.pop();
-
+		// Bind before storm fog — shader post-processing expects the main FBO
+		// to be active while the fog pass executes.
 		mc.getMainRenderTarget().bindWrite(false);
 
-		if (renderer.shouldRenderStormFog(partialTick)) {
-			p.push("storm_fog");
-			CloudPipelineRenderSteps.prepareStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ,
-					cloudColor);
-			renderer.doScreenSpaceWorldFog(camMat, projMat, partialTick);
-
-			p.pop();
-		}
-	}
-
-	@Override
-	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
+		doStormFog(renderer, camMat, projMat, partialTick, camX, camY, camZ, cloudColor, p);
 	}
 }

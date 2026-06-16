@@ -7,62 +7,51 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.nonamecrackers2.simpleclouds.client.mesh.generator.CloudMeshGenerator;
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
-import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
+import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.AbstractCloudsPipeline;
+import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps;
 import dev.nonamecrackers2.simpleclouds.common.config.SimpleCloudsConfig;
+import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
-import dev.nonamecrackers2.simpleclouds.common.compat.CompatHelper;
 
-public class VoxySupportPipeline implements CloudsRenderPipeline {
+/**
+ * Pipeline for Voxy compatibility.
+ *
+ * <p>Voxy renders terrain after the vanilla sky pass, so cloud geometry must
+ * be deferred to {@link #afterLevel} to composite correctly on top of Voxy's
+ * LOD terrain. Consequently:
+ * <ul>
+ *   <li>{@link #afterSky} is suppressed — atmospheric clouds are rendered
+ *       inline in {@link #afterLevel} instead.</li>
+ *   <li>{@link #beforeWeather} is suppressed — Voxy has not rendered yet at
+ *       that point.</li>
+ *   <li>{@link #afterLevel} runs the full pass: atmospheric clouds, opaque
+ *       geometry (with explicit depth copy), composite, and storm fog.</li>
+ * </ul>
+ */
+public class VoxySupportPipeline extends AbstractCloudsPipeline {
 
 	public static final VoxySupportPipeline INSTANCE = new VoxySupportPipeline();
 
 	private VoxySupportPipeline() {
 	}
 
-	/**
-	 * Some renderer methods (renderCloudsOpaque/Transparency, translateClouds)
-	 * still take a PoseStack in 1.21.1. Build one whose top pose matches viewMat.
-	 */
-	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
-		PoseStack stack = new PoseStack();
-		stack.last().pose().set(mat);
-		return stack;
+	/** Suppressed — atmospheric clouds are rendered in {@link #afterLevel}. */
+	@Override
+	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f viewMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 	}
 
-	// -----------------------------------------------------------------------
-	// prepare — no-op
-	// -----------------------------------------------------------------------
+	/** Suppressed — Voxy has not rendered its terrain yet at this point. */
 	@Override
-	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer,
-			Matrix4f viewMat, Matrix4f projMat, float partialTick,
-			double camX, double camY, double camZ, Frustum frustum) {
+	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f viewMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 	}
 
 	@Override
-	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer,
-			Matrix4f viewMat, Matrix4f projMat, float partialTick,
-			double camX, double camY, double camZ, Frustum frustum) {
-	}
-
-	// -----------------------------------------------------------------------
-	// beforeWeather — screen-space fog only
-	// doScreenSpaceWorldFog takes Matrix4f in 1.21.1, NOT PoseStack
-	// -----------------------------------------------------------------------
-	@Override
-	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer,
-			Matrix4f viewMat, Matrix4f projMat, float partialTick,
-			double camX, double camY, double camZ, Frustum frustum) {
-	}
-
-	// -----------------------------------------------------------------------
-	// afterLevel — fires at TAIL of renderLevel, after Voxy has rendered.
-	// -----------------------------------------------------------------------
-	@Override
-	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer,
-			Matrix4f viewMat, Matrix4f projMat, float partialTick,
-			double camX, double camY, double camZ, Frustum frustum) {
+	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f viewMat, Matrix4f projMat,
+			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 		ProfilerFiller p = mc.getProfiler();
 		float[] cloudCol = renderer.getCloudColor(partialTick);
 		float cloudR = cloudCol[0];
@@ -70,13 +59,14 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		float cloudB = cloudCol[2];
 		Matrix4f cloudWorldMat = renderer.createCloudWorldMatrix();
 
-		// -- Volumetric cloud geometry --------------------------------------
 		p.push("clouds");
+
 		p.push("atmospheric_clouds");
 		renderer.renderAtmosphericClouds(viewMat, projMat, partialTick, camX, camY, camZ, cloudR, cloudG, cloudB);
 		p.pop();
 
-		// translateClouds / renderCloudsOpaque/Transparency still use PoseStack
+		// Some renderer methods (renderCloudsOpaque/Transparency, translateClouds)
+		// still take a PoseStack in 1.21.1.
 		PoseStack cloudStack = poseStackFromMatrix(viewMat);
 		renderer.translateClouds(cloudStack, camX, camY, camZ);
 
@@ -92,9 +82,10 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 				renderer.getFogEnd(), partialTick, cloudR, cloudG, cloudB,
 				SimpleCloudsConfig.CLIENT.frustumCulling.get() ? frustum : null, viewMat, cloudWorldMat, camX, camY,
 				camZ);
+		// Voxy modifies scene depth; copy cloud depth back so the composite pass uses
+		// up-to-date occlusion data.
 		renderer.copyDepthFromCloudsToMain();
 
-		// doFinalCompositePass takes Matrix4f in 1.21.1, NOT PoseStack
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(viewMat, partialTick, projMat,
 				mc.getMainRenderTarget()::getDepthTextureId, useSceneDepthOcclusion);
@@ -102,7 +93,6 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 
 		p.pop(); // "clouds"
 
-		// -- Storm fog ------------------------------------------------------
 		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
 			renderer.doStormPostProcessing(viewMat, partialTick, projMat, camX, camY, camZ, cloudR, cloudG, cloudB);
@@ -112,5 +102,11 @@ public class VoxySupportPipeline implements CloudsRenderPipeline {
 		}
 
 		mc.getMainRenderTarget().bindWrite(CompatHelper.isVrActive());
+	}
+
+	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
+		PoseStack stack = new PoseStack();
+		stack.last().pose().set(mat);
+		return stack;
 	}
 }

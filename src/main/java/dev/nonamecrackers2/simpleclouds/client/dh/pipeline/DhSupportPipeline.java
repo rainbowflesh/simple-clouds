@@ -18,9 +18,9 @@ import com.mojang.blaze3d.vertex.VertexSorting;
 
 import dev.nonamecrackers2.simpleclouds.client.renderer.SimpleCloudsRenderer;
 import dev.nonamecrackers2.simpleclouds.client.renderer.WorldEffects;
+import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.AbstractCloudsPipeline;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps;
 import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudPipelineRenderSteps.CloudColor;
-import dev.nonamecrackers2.simpleclouds.client.renderer.pipeline.CloudsRenderPipeline;
 import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.mixin.MixinRenderTargetAccessor;
 import net.minecraft.client.Minecraft;
@@ -28,55 +28,29 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.util.profiling.ProfilerFiller;
 
-public class DhSupportPipeline implements CloudsRenderPipeline {
+/**
+ * Pipeline for Distant Horizons compatibility.
+ *
+ * <p>The standard {@link #beforeWeather} and {@link #afterLevel} passes are
+ * suppressed — cloud rendering is deferred entirely to the DH-specific hooks
+ * ({@link #beforeDistantHorizonsApplyShader} and
+ * {@link #afterDistantHorizonsRender}) so that clouds are composited against
+ * DH's LOD depth buffer rather than the vanilla scene depth.
+ *
+ * <p>{@link #afterSky} is inherited unchanged from
+ * {@link AbstractCloudsPipeline} to render atmospheric clouds at the normal
+ * sky stage.
+ */
+public class DhSupportPipeline extends AbstractCloudsPipeline {
 	public static final DhSupportPipeline INSTANCE = new DhSupportPipeline();
 	private static final float CLOUD_WORLD_SCALE = (float) SimpleCloudsConstants.CLOUD_SCALE;
 
 	private DhSupportPipeline() {
 	}
 
-	private static void copyDepthFromFramebuffer(int sourceFramebuffer, RenderTarget target) {
-		GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, sourceFramebuffer);
-		GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER,
-				((MixinRenderTargetAccessor) target).simpleclouds$getFrameBufferId());
-		GL30.glBlitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height,
-				GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
-	}
-
-	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
-		PoseStack stack = new PoseStack();
-		stack.last().pose().set(mat);
-		return stack;
-	}
-
-	private static float getDhGeometryFogEnd(SimpleCloudsRenderer renderer) {
-		float cloudSpan = renderer.getMeshGenerator().getCloudAreaMaxRadius() * CLOUD_WORLD_SCALE;
-		return Math.max(renderer.getFogEnd(), cloudSpan);
-	}
-
-	private static float getDhGeometryFogStart(SimpleCloudsRenderer renderer, float fogEnd) {
-		float currentFogEnd = renderer.getFogEnd();
-		if (currentFogEnd <= 0.0F)
-			return renderer.getFogStart();
-		return renderer.getFogStart() * (fogEnd / currentFogEnd);
-	}
-
-	@Override
-	public void prepare(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-	}
-
-	@Override
-	public void afterSky(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
-			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
-		CloudColor cloudColor = CloudPipelineRenderSteps.resolveCloudColor(renderer, partialTick);
-		ProfilerFiller p = mc.getProfiler();
-		p.push("atmospheric_clouds");
-		renderer.renderAtmosphericClouds(camMat, projMat, partialTick, camX, camY, camZ, cloudColor.r(),
-				cloudColor.g(), cloudColor.b());
-		p.pop();
-	}
+	// -----------------------------------------------------------------------
+	// Standard pipeline hooks — suppressed; rendering happens in DH hooks
+	// -----------------------------------------------------------------------
 
 	@Override
 	public void beforeWeather(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
@@ -87,6 +61,10 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 	public void afterLevel(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f camMat, Matrix4f projMat,
 			float partialTick, double camX, double camY, double camZ, Frustum frustum) {
 	}
+
+	// -----------------------------------------------------------------------
+	// DH-specific hooks
+	// -----------------------------------------------------------------------
 
 	@Override
 	public void beforeDistantHorizonsApplyShader(Minecraft mc, SimpleCloudsRenderer renderer, Matrix4f modelViewMat,
@@ -105,8 +83,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		cloudTarget.bindWrite(false);
 		SimpleCloudsRenderer.renderCloudsOpaque(renderer.getMeshGenerator(), cloudStack, projMat,
 				fogStart, fogEnd, partialTick, cloudColor.r(), cloudColor.g(), cloudColor.b(),
-				null, modelViewMat,
-				cloudWorldMat, camX, camY, camZ);
+				null, modelViewMat, cloudWorldMat, camX, camY, camZ);
 	}
 
 	@Override
@@ -117,7 +94,6 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		float fogStart = getDhGeometryFogStart(renderer, fogEnd);
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 		int sceneDepthTextureId = mc.getMainRenderTarget().getDepthTextureId();
-		boolean useSceneDepthOcclusion = true;
 		Matrix4f postProcessProjMat = projMat;
 		Matrix4f postProcessModelViewMat = modelViewMat;
 
@@ -151,7 +127,7 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		p.push("clouds_composite");
 		renderer.doFinalCompositePass(postProcessModelViewMat, partialTick, postProcessProjMat,
-				() -> sceneDepthTextureId, useSceneDepthOcclusion, 0.85F);
+				() -> sceneDepthTextureId, true, 0.85F);
 		p.pop();
 
 		p.pop();
@@ -160,30 +136,22 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 
 		if (renderer.shouldRenderStormFog(partialTick)) {
 			p.push("storm_fog");
-			CloudPipelineRenderSteps.prepareStormFog(renderer, postProcessModelViewMat, postProcessProjMat, partialTick,
-					camX, camY, camZ,
-					cloudColor, () -> sceneDepthTextureId);
+			CloudPipelineRenderSteps.prepareStormFog(renderer, postProcessModelViewMat, postProcessProjMat,
+					partialTick, camX, camY, camZ, cloudColor, () -> sceneDepthTextureId);
 			renderer.doScreenSpaceWorldFog(postProcessModelViewMat, postProcessProjMat, partialTick);
-
 			p.pop();
 		}
 
 		// Storm-fog overlays can replace framebuffer attachments; refresh DH depth
-		// before
-		// drawing lightning so strikes remain terrain-occluded.
+		// before drawing lightning so strikes remain terrain-occluded.
 		copyDepthFromFramebuffer(dhFbo, mc.getMainRenderTarget());
 
 		mc.getMainRenderTarget().bindWrite(false);
-		// The depth buffer we just copied in is DH's LOD depth, which was produced
-		// using DH's
-		// projection/model-view matrices - so lightning must be rendered with those
-		// same matrices,
-		// otherwise the depth test against that buffer will be misaligned with the
-		// bolts' positions.
+		// The depth buffer we just copied in is DH's LOD depth, produced using DH's
+		// projection/model-view matrices — so lightning must be rendered with those
+		// same matrices, otherwise the depth test will be misaligned with the bolts.
 		RenderSystem.setProjectionMatrix(projMat, VertexSorting.DISTANCE_TO_ORIGIN);
 
-		// We can then render whatever we want to the main MC framebuffer while using DH
-		// LOD depth
 		PoseStack stack = new PoseStack();
 		stack.mulPose(modelViewMat);
 		stack.pushPose();
@@ -191,16 +159,38 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 		renderLightning(renderer.getWorldEffectsManager(), renderer, mc, stack, partialTick, camX, camY, camZ);
 		stack.popPose();
 
-		// mc.getProfiler().push("clouds_debug");
-		// stack.pushPose();
-		// renderer.translateClouds(stack, camX, camY, camZ);
-		// SimpleCloudsRenderer.renderCloudsDebug(renderer.getMeshGenerator(), stack,
-		// projMat, partialTick, renderer.getFogStart(), renderer.getFogEnd(), frustum,
-		// false, true);
-		// stack.popPose();
-		// mc.getProfiler().pop();
-
 		RenderSystem.setProjectionMatrix(oldMcProjMat, VertexSorting.DISTANCE_TO_ORIGIN);
+	}
+
+	// -----------------------------------------------------------------------
+	// Private helpers
+	// -----------------------------------------------------------------------
+
+	private static void copyDepthFromFramebuffer(int sourceFramebuffer, RenderTarget target) {
+		GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, sourceFramebuffer);
+		GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER,
+				((MixinRenderTargetAccessor) target).simpleclouds$getFrameBufferId());
+		GL30.glBlitFramebuffer(0, 0, target.width, target.height, 0, 0, target.width, target.height,
+				GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+		GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, sourceFramebuffer);
+	}
+
+	private static PoseStack poseStackFromMatrix(Matrix4f mat) {
+		PoseStack stack = new PoseStack();
+		stack.last().pose().set(mat);
+		return stack;
+	}
+
+	private static float getDhGeometryFogEnd(SimpleCloudsRenderer renderer) {
+		float cloudSpan = renderer.getMeshGenerator().getCloudAreaMaxRadius() * CLOUD_WORLD_SCALE;
+		return Math.max(renderer.getFogEnd(), cloudSpan);
+	}
+
+	private static float getDhGeometryFogStart(SimpleCloudsRenderer renderer, float fogEnd) {
+		float currentFogEnd = renderer.getFogEnd();
+		if (currentFogEnd <= 0.0F)
+			return renderer.getFogStart();
+		return renderer.getFogStart() * (fogEnd / currentFogEnd);
 	}
 
 	private static void renderLightning(WorldEffects effects, SimpleCloudsRenderer renderer, Minecraft mc,
@@ -232,7 +222,6 @@ public class DhSupportPipeline implements CloudsRenderPipeline {
 				BufferUploader.drawWithShader(data);
 
 			RenderSystem.setShaderFogStart(cachedFogStart);
-
 			RenderSystem.defaultBlendFunc();
 		}
 
