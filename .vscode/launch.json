@@ -52,7 +52,8 @@
         "-Dneoforge.enableGameTest\u003dtrue",
         "-DlegacyClassPath.file\u003dC:\\Users\\Prectriv\\Desktop\\Coding\\simple-clouds\\.gradle\\configuration\\neoForm\\neoFormJoined1.21.1-20240808.144430\\steps\\writeMinecraftClasspathClient\\classpath.txt",
         "-DignoreList\u003dmixinextras-neoforge-0.5.3.jar,client-extra,neoforge-",
-        "-Djava.net.preferIPv6Addresses\u003dsystem"
+        "-Djava.net.preferIPv6Addresses\u003dsystem",
+        "-Dlog4j2.level=DEBUG"
       ],
       "cwd": "${workspaceFolder}\\runs\\client",
       "env": {

@@ -67,10 +67,14 @@ public class CloudSpawningDataManager extends SimpleJsonResourceReloadListener {
 		}
 
 		mergeBuiltInEntries(entries);
+		LOGGER.info("Cloud spawning: loaded {} type entries: {}", entries.size(),
+				entries.keySet().stream().map(id -> id.getPath()).sorted().toList());
 		JsonObject rootObject = root == null ? createBuiltInRootConfig() : GsonHelper.convertToJsonObject(root, "root");
 
 		try {
 			this.config = CloudSpawningConfig.fromJson(this.source, rootObject, ImmutableMap.copyOf(entries));
+			LOGGER.info("Cloud spawning config loaded: {} max formations, {} max initial",
+					this.config.getMaxRegions(), this.config.getMaxInitialRegions());
 		} catch (JsonSyntaxException | IllegalArgumentException | NullPointerException e) {
 			LOGGER.error("Failed to parse cloud spawn config", e);
 			this.config = CloudSpawningConfig.EMPTY;

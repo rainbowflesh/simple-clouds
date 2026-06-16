@@ -31,6 +31,7 @@ import dev.nonamecrackers2.simpleclouds.common.cloud.SimpleCloudsConstants;
 import dev.nonamecrackers2.simpleclouds.common.cloud.region.CloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.packet.impl.RemovedCloudRegion;
 import dev.nonamecrackers2.simpleclouds.common.world.SpawnRegion;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
@@ -179,17 +180,24 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 		if (this.clouds.contains(region))
 			return false;
 
-		// Ensures we wont go over the maximum cloud formations for all regions that
-		// would include
-		// this cloud formation
+		// Ensures we wont go over the maximum cloud formations per altitude layer per
+		// spawn region
+		int addedStartHeight = addedType.noiseConfig().getStartHeight();
 		for (SpawnRegion spawnRegion : this.getRegionsThatOccupyCloud(region)) {
 			int totalCount = 0;
 			for (CloudRegion cloud : this.clouds) {
-				if (cloud.intersects(spawnRegion))
-					totalCount++;
+				if (!cloud.intersects(spawnRegion))
+					continue;
+				// Only count clouds at the same altitude layer
+				try {
+					var cloudType = this.cloudGetter.getCloudTypeForId(cloud.getCloudTypeId());
+					if (cloudType != null && Math.abs(cloudType.noiseConfig().getStartHeight() - addedStartHeight) >= 8)
+						continue;
+				} catch (Exception ignored) {
+				}
+				totalCount++;
 			}
 			if (totalCount >= SimpleCloudsConstants.MAX_CLOUD_FORMATIONS) {
-				// System.out.println("refusing cloud region, too many");
 				return false;
 			}
 		}
@@ -204,7 +212,13 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 	private boolean hasSpawnSpace(CloudRegion candidate) {
 		float candidateRadius = candidate.getInitialWorldRadius() / candidate.getStretch();
 		float minSpacing = SimpleCloudsConstants.MIN_SPAWN_DIST_BETWEEN_REGIONS;
+		int candidateStartHeight = getCloudStartHeight(candidate);
 		for (CloudRegion existing : this.clouds) {
+			// Clouds at significantly different altitudes are independent layers — skip.
+			int existingStartHeight = getCloudStartHeight(existing);
+			if (Math.abs(existingStartHeight - candidateStartHeight) >= 8)
+				continue;
+
 			float existingRadius = existing.getWorldRadius() / existing.getStretch();
 			float minDistance = existingRadius + candidateRadius + minSpacing;
 			float deltaX = existing.getWorldX() - candidate.getWorldX();
@@ -213,6 +227,19 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 				return false;
 		}
 		return true;
+	}
+
+	private int getCloudStartHeight(CloudRegion region) {
+		return getCloudStartHeight(region.getCloudTypeId());
+	}
+
+	private int getCloudStartHeight(ResourceLocation id) {
+		try {
+			var type = this.cloudGetter.getCloudTypeForId(id);
+			return type != null ? type.noiseConfig().getStartHeight() : 0;
+		} catch (Exception e) {
+			return 0;
+		}
 	}
 
 	private static float getCollisionRadius(CloudRegion region) {
@@ -401,9 +428,6 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 
 		SpawnRegion.randomPointForEachRegion(this.spawnRegions, this.random, SimpleCloudsConstants.SPAWN_ATTEMPTS,
 				(r, p) -> {
-					if (this.getCloudsInRegion(r).size() >= maxRegions)
-						return true;
-
 					float x = (float) p.x + 0.5F;
 					float z = (float) p.y + 0.5F;
 
@@ -413,6 +437,15 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 						return false;
 
 					CloudType type = this.cloudGetter.getCloudTypeForId(info.cloudType());
+					if (type != null) {
+						int typeStart = type.noiseConfig().getStartHeight();
+						long sameLayerCount = this.getCloudsInRegion(r).stream().filter(c -> {
+							int h = getCloudStartHeight(c);
+							return Math.abs(h - typeStart) < 8;
+						}).count();
+						if (sameLayerCount >= maxRegions)
+							return true;
+					}
 					if (type == null) {
 						LOGGER.warn("Spawn config has unknown cloud type with id '{}'", info.cloudType());
 						return false;
@@ -421,13 +454,19 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 					return regionFunc.create(info, (float) r.x() + 0.5F, (float) r.z() + 0.5F, x, z,
 							this.random, false).map(apiRegion -> {
 								CloudRegion region = (CloudRegion) apiRegion;
-								if (!this.hasSpawnSpace(region))
+								if (!this.hasSpawnSpace(region)) {
+									LOGGER.debug("Spawn rejected (no space): {} at ({}, {})",
+											info.cloudType().getPath(), x, z);
 									return false;
+								}
 								if (this.addCloud(region, CloudGenerator.Order.USE_WEIGHT)) {
+									LOGGER.debug("Spawned cloud: {} (total: {})", info.cloudType().getPath(), this.clouds.size());
 									spawnedCloud.setValue(region);
 									NeoForge.EVENT_BUS.post(new CloudRegionNaturallySpawnEvent(level, apiRegion));
 									return true;
 								} else {
+									LOGGER.debug("Spawn rejected (addCloud failed): {} (total: {})",
+											info.cloudType().getPath(), this.clouds.size());
 									return false;
 								}
 							}).orElse(false);
@@ -467,25 +506,40 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 
 		CloudSpawningConfig config = this.spawnConfig.get();
 
-		if (this.getCloudsInRegion(region).size() > config.getMaxInitialRegions())
+		if (config.isEmpty()) {
+			LOGGER.warn("doInitialGen: spawning config is EMPTY, no clouds will spawn");
 			return;
+		}
+
+		LOGGER.debug("doInitialGen: spawning up to {} initial clouds at ({}, {})", config.getMaxInitialRegions(), x, z);
 
 		for (int i = 0; i < config.getMaxInitialRegions(); i++) {
 			for (int j = 0; j < SimpleCloudsConstants.SPAWN_ATTEMPTS; j++) {
 				Vector2i pos = SpawnRegion.getRandomPointInRegion(region, this.random);
-				if (this.getCloudsInRegion(region).size() >= config.getMaxInitialRegions())
-					continue;
 				if (!ignoreOtherRegions && this.spawnRegions.stream().anyMatch(r -> r.includesPoint(pos.x, pos.y)))
 					continue;
 				CloudSpawningConfig.Info info = this.selectSpawnInfo(config);
+				if (info == null)
+					continue;
+				// Count only clouds in the same altitude layer as the selected type
+				int targetHeight = getCloudStartHeight(info.cloudType());
+				long sameLayerCount = this.getCloudsInRegion(region).stream().filter(c -> {
+					int h = getCloudStartHeight(c);
+					return Math.abs(h - targetHeight) < 8;
+				}).count();
+				if (sameLayerCount >= config.getMaxInitialRegions())
+					continue;
 				CloudRegion cloudFormation = this
 						.createRegion(info, (float) x + 0.5F, (float) z + 0.5F,
 								(float) pos.x + 0.5F, (float) pos.y + 0.5F, this.random, false)
 						.orElse(null);
 				if (cloudFormation == null)
 					continue;
-				if (!this.hasSpawnSpace(cloudFormation))
+				if (!this.hasSpawnSpace(cloudFormation)) {
+					LOGGER.debug("doInitialGen: no space for {} at ({}, {})", info.cloudType().getPath(), pos.x, pos.y);
 					continue;
+				}
+				LOGGER.debug("doInitialGen: spawned initial cloud: {}", info.cloudType().getPath());
 				this.addCloud(cloudFormation, CloudGenerator.Order.USE_WEIGHT);
 				break;
 			}
@@ -523,14 +577,25 @@ public abstract class CloudGenerator implements ScAPICloudGeneratorImplHelper {
 						int firstStart = firstType.noiseConfig().getStartHeight();
 						int secondStart = secondType.noiseConfig().getStartHeight();
 						int diff = Math.abs(firstStart - secondStart);
-						if (diff >= 8)
+						if (diff >= 8) {
+							LOGGER.debug("Layer conflict: {} (h={}) and {} (h={}) coexist (diff={})",
+									first.getCloudTypeId().getPath(), firstStart,
+									second.getCloudTypeId().getPath(), secondStart, diff);
 							continue;
+						}
+					} else {
+						LOGGER.debug("Layer conflict: could not resolve types for {} and {} — falling back to dissipate",
+								first.getCloudTypeId().getPath(), second.getCloudTypeId().getPath());
 					}
 				} catch (Exception e) {
 					// Fall back to default behavior on any unexpected error
 				}
 
 				CloudRegion weaker = selectRegionToDissipate(first, second);
+				LOGGER.debug("Layer conflict: dissipating {} (order={}) in favour of {} (order={})",
+						weaker.getCloudTypeId().getPath(), weaker.getOrderWeight(),
+						(weaker == first ? second : first).getCloudTypeId().getPath(),
+						(weaker == first ? second : first).getOrderWeight());
 				weaker.beginDissipating(LAYER_CONFLICT_DISSIPATE_TICKS);
 			}
 		}
