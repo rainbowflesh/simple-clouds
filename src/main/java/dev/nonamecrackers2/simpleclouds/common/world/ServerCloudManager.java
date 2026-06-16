@@ -19,6 +19,7 @@ import dev.nonamecrackers2.simpleclouds.common.packet.impl.SpawnLightningPayload
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.GameRules;
@@ -33,6 +34,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 public class ServerCloudManager extends CloudManager<ServerLevel> {
 	private Queue<SyncType> toSync = Queues.newArrayDeque();
+	private float managedThunderLevel = 0.0F;
 
 	public ServerCloudManager(ServerLevel level) {
 		super(level, CloudTypeDataManager.getServerInstance(), CloudSpawningDataManager.getInstance()::getConfig,
@@ -81,11 +83,24 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 	private void clearVanillaWeatherState() {
 		boolean wasRaining = this.level.isRaining();
 		float rainLevel = this.level.getRainLevel(1.0F);
-		float thunderLevel = this.level.getThunderLevel(1.0F);
+		float prevThunderLevel = this.managedThunderLevel;
 
 		this.level.setWeatherParameters(0, 0, false, false);
 		this.level.setRainLevel(0.0F);
 		this.level.setThunderLevel(0.0F);
+
+		// Compute cloud-based thunder level across all players and sync to the level
+		// field so mods reading level.getThunderLevel() receive the correct value
+		float newThunderLevel = 0.0F;
+		for (ServerPlayer player : this.level.players()) {
+			if (player.isSpectator())
+				continue;
+			newThunderLevel = Math.max(newThunderLevel,
+					this.getThunderLevel((float) player.getX(), (float) player.getY(), (float) player.getZ()));
+		}
+		this.managedThunderLevel = newThunderLevel;
+		if (newThunderLevel > 0.0F)
+			this.level.setThunderLevel(newThunderLevel);
 
 		PlayerList list = this.level.getServer().getPlayerList();
 		if (wasRaining)
@@ -94,7 +109,9 @@ public class ServerCloudManager extends CloudManager<ServerLevel> {
 		if (rainLevel > 0.0F)
 			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, 0.0F),
 					this.level.dimension());
-		if (thunderLevel > 0.0F)
+		// Only zero out thunder for clients when transitioning from active to inactive,
+		// not every tick — prevents packet spam while thundering clouds are present
+		if (prevThunderLevel > 0.0F && newThunderLevel <= 0.0F)
 			list.broadcastAll(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, 0.0F),
 					this.level.dimension());
 	}
